@@ -84,3 +84,34 @@ export async function resetPassword(formData: FormData) {
   revalidatePath('/', 'layout')
   redirect('/home')
 }
+
+export async function updateDisplayName(formData: FormData) {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const fullName = (formData.get('full_name') as string).trim()
+
+  if (!fullName) {
+    return { error: 'Name cannot be empty' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ full_name: fullName, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/settings')
+  revalidatePath('/home')
+  return { success: true }
+}

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
+import EditDisplayName from './EditDisplayName'
 
 export default async function SettingsPage() {
   const supabase = createClient()
@@ -20,39 +21,98 @@ export default async function SettingsPage() {
     .single()
 
   return (
-    <div className="min-h-screen bg-background px-5 pt-12">
+    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
       <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
 
-      {/* Profile section */}
-      <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-        <h2 className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-4">
+      {/* Account section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
           Account
-        </h2>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground-secondary">Name</span>
-            <span className="text-sm text-foreground font-medium">
-              {profile?.full_name ?? '—'}
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          {/* Display name — editable */}
+          <EditDisplayName currentName={profile?.full_name ?? ''} />
+
+          <div className="h-px bg-border mx-4" />
+
+          {/* Email — read-only */}
+          <div className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground-secondary">Email</span>
+            <span className="text-sm text-foreground font-medium truncate max-w-[200px]">
+              {user.email}
             </span>
           </div>
-          <div className="h-px bg-border" />
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground-secondary">Email</span>
-            <span className="text-sm text-foreground font-medium">{user.email}</span>
+        </div>
+      </div>
+
+      {/* Payout settings — placeholder */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          Payout Settings
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          {[
+            { label: 'Payment Method', value: 'Not set', href: '#' },
+            { label: 'Payout Schedule', value: 'Weekly', href: '#' },
+            { label: 'Minimum Payout', value: '$25.00', href: '#' },
+          ].map(({ label, value }, i, arr) => (
+            <div key={label}>
+              <div className="flex items-center justify-between px-4 py-4">
+                <span className="text-sm text-foreground-secondary">{label}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-foreground font-medium">{value}</span>
+                  <svg
+                    className="w-4 h-4 text-foreground-secondary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+              {i < arr.length - 1 && <div className="h-px bg-border mx-4" />}
+            </div>
+          ))}
+          <div className="px-4 py-3 border-t border-border">
+            <p className="text-xs text-foreground-secondary text-center">
+              Payout configuration coming soon.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* App section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          App
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground-secondary">Version</span>
+            <span className="text-sm text-foreground font-medium">0.3.0</span>
+          </div>
+          <div className="h-px bg-border mx-4" />
+          <div className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground-secondary">Build</span>
+            <span className="text-sm text-foreground font-medium">Session 3</span>
           </div>
         </div>
       </div>
 
       {/* Sign out */}
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-        <form action={signout}>
-          <button
-            type="submit"
-            className="w-full text-left px-5 py-4 text-sm font-medium text-red-400 hover:bg-red-900/10 transition"
-          >
-            Sign out
-          </button>
-        </form>
+      <div>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <form action={signout}>
+            <button
+              type="submit"
+              className="w-full text-left px-4 py-4 text-sm font-medium text-red-400 hover:bg-red-900/10 transition"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )
