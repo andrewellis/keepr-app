@@ -73,7 +73,7 @@ export default async function HomePage() {
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 8H3m18-8h-2M5 4H3m2 16H3m18-4h-2M19 4h-2" />
             </svg>
-            <span className="text-sm font-semibold text-white">Scan Receipt</span>
+            <span className="text-sm font-semibold text-white">Scan Product</span>
           </a>
           <a
             href="/history"
@@ -93,8 +93,8 @@ export default async function HomePage() {
           Recent Activity
         </h2>
         <div className="bg-surface border border-border rounded-2xl p-6 text-center">
-          <p className="text-foreground-secondary text-sm">No transactions yet.</p>
-          <p className="text-foreground-secondary text-xs mt-1">Scan a receipt to get started.</p>
+          <p className="text-foreground-secondary text-sm">No items scanned yet.</p>
+          <p className="text-foreground-secondary text-xs mt-1">Scan a product to get started.</p>
         </div>
       </div>
     </div>

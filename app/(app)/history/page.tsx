@@ -78,16 +78,16 @@ export default async function HistoryPage() {
             </svg>
           </div>
           <div className="text-center">
-            <p className="text-foreground font-semibold">No transactions yet</p>
+            <p className="text-foreground font-semibold">No items yet</p>
             <p className="text-foreground-secondary text-sm mt-1">
-              Scan a receipt to log your first earning.
+              Scan a product to log your first earning.
             </p>
           </div>
           <a
             href="/scan"
             className="mt-2 bg-primary text-white text-sm font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition"
           >
-            Scan a Receipt
+            Scan a Product
           </a>
         </div>
       )}
@@ -118,7 +118,7 @@ export default async function HistoryPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {tx.description ?? 'Receipt'}
+                    {tx.description ?? 'Item'}
                   </p>
                   <p className="text-xs text-foreground-secondary mt-0.5">
                     {formatDate(tx.created_at)}

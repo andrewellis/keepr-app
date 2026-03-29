@@ -49,9 +49,9 @@ export default function ScanClient() {
   return (
     <div className="min-h-screen bg-background px-5 pt-12 pb-24">
       {/* Header */}
-      <h1 className="text-2xl font-bold text-foreground mb-1">Scan Receipt</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-1">Scan Product</h1>
       <p className="text-sm text-foreground-secondary mb-6">
-        Take a photo or upload an image to log earnings.
+        Take a photo or upload an image of a clothing or product tag.
       </p>
 
       {/* Hidden camera input */}
@@ -80,7 +80,7 @@ export default function ScanClient() {
             </div>
             <div className="text-center">
               <p className="text-white font-semibold text-base">Take Photo</p>
-              <p className="text-white/70 text-xs mt-0.5">Use your camera</p>
+              <p className="text-white/70 text-xs mt-0.5">Photograph the item</p>
             </div>
           </button>
 
@@ -96,7 +96,7 @@ export default function ScanClient() {
             </div>
             <div className="text-center">
               <p className="text-foreground font-semibold text-base">Upload Image</p>
-              <p className="text-foreground-secondary text-xs mt-0.5">Choose from library</p>
+              <p className="text-foreground-secondary text-xs mt-0.5">Choose from photo library</p>
             </div>
           </button>
 
@@ -105,8 +105,8 @@ export default function ScanClient() {
             <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2">Tips for best results</p>
             <ul className="space-y-1.5">
               {[
-                'Lay receipt flat on a dark surface',
-                'Ensure all text is clearly visible',
+                'Lay the item flat on a neutral surface',
+                'Ensure the tag or label is clearly visible',
                 'Avoid shadows and glare',
               ].map((tip) => (
                 <li key={tip} className="flex items-start gap-2 text-xs text-foreground-secondary">
@@ -126,7 +126,7 @@ export default function ScanClient() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewUrl}
-              alt="Receipt preview"
+              alt="Product preview"
               className="w-full object-contain max-h-96"
             />
           </div>
@@ -141,7 +141,7 @@ export default function ScanClient() {
               onClick={handleProcess}
               className="flex-1 bg-primary rounded-xl py-3.5 text-sm font-semibold text-white hover:opacity-90 transition"
             >
-              Process Receipt
+              Process Image
             </button>
           </div>
         </div>
@@ -152,8 +152,8 @@ export default function ScanClient() {
         <div className="flex flex-col items-center justify-center py-20 gap-5">
           <div className="w-16 h-16 rounded-full border-4 border-border border-t-primary animate-spin" />
           <div className="text-center">
-            <p className="text-foreground font-semibold">Processing receipt…</p>
-            <p className="text-foreground-secondary text-sm mt-1">Extracting earnings data</p>
+              <p className="text-foreground font-semibold">Processing image…</p>
+              <p className="text-foreground-secondary text-sm mt-1">Extracting product data</p>
           </div>
         </div>
       )}
@@ -169,7 +169,7 @@ export default function ScanClient() {
                 </svg>
               </div>
               <div>
-                <p className="text-foreground font-semibold text-sm">Receipt scanned</p>
+                <p className="text-foreground font-semibold text-sm">Product scanned</p>
                 <p className="text-foreground-secondary text-xs">Review and confirm below</p>
               </div>
             </div>
@@ -177,9 +177,9 @@ export default function ScanClient() {
             {/* Placeholder result fields */}
             <div className="space-y-3">
               {[
-                { label: 'Merchant', value: '—' },
-                { label: 'Date', value: '—' },
-                { label: 'Amount', value: '—' },
+                { label: 'Brand', value: '—' },
+                { label: 'Item', value: '—' },
+                { label: 'Price', value: '—' },
                 { label: 'Category', value: '—' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
@@ -190,7 +190,7 @@ export default function ScanClient() {
             </div>
 
             <p className="text-xs text-foreground-secondary mt-4 text-center">
-              OCR extraction coming in the next session.
+              Product data extraction coming in the next session.
             </p>
           </div>
 
@@ -199,7 +199,7 @@ export default function ScanClient() {
               onClick={handleReset}
               className="flex-1 bg-surface border border-border rounded-xl py-3.5 text-sm font-semibold text-foreground hover:border-primary transition"
             >
-              Scan Another
+              Scan Another Item
             </button>
             <button
               onClick={handleReset}
