@@ -10,7 +10,12 @@ const config: Config = {
     extend: {
       colors: {
         background: "var(--background)",
+        surface: "var(--surface)",
+        primary: "var(--primary)",
+        "primary-hover": "var(--primary-hover)",
         foreground: "var(--foreground)",
+        "foreground-secondary": "var(--foreground-secondary)",
+        border: "var(--border)",
       },
     },
   },
