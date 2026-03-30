@@ -142,6 +142,7 @@ export default function ScanClient() {
         estimatedCashbackCents: p.estimatedCashbackCents,
         totalReturnCents: p.totalReturnCents,
         affiliateUrl: p.affiliateUrl,
+        productUrl: p.productUrl,
       }),
     }).catch(() => {})
   }
