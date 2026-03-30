@@ -468,6 +468,12 @@ export default function ScanClient() {
             </div>
           )}
 
+          {storeState === 'done' && products.length > 0 && (
+            <p className="text-xs text-center" style={{ color: '#6b7280' }}>
+              As an Amazon Associate, GRMtek LLC earns from qualifying purchases.
+            </p>
+          )}
+
           <button
             onClick={handleReset}
             className="w-full bg-surface border border-border rounded-xl py-3.5 text-sm font-semibold text-foreground hover:border-primary transition"
