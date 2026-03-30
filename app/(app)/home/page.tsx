@@ -29,6 +29,15 @@ export default async function HomePage() {
             Sign in
           </Link>
         </p>
+        <div className="flex items-center justify-center gap-4 mt-6">
+          <a href="/privacy" className="text-xs text-foreground-secondary hover:text-primary transition">
+            Privacy Policy
+          </a>
+          <span className="text-xs text-foreground-secondary">·</span>
+          <a href="/terms" className="text-xs text-foreground-secondary hover:text-primary transition">
+            Terms of Service
+          </a>
+        </div>
       </div>
     )
   }
