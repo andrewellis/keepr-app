@@ -24,6 +24,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
   }
 
+  if (!body.productName || !body.retailer || !body.affiliateUrl || !body.productUrl) {
+    return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
+  }
+
+  if (typeof body.priceCents !== 'number' || body.priceCents <= 0) {
+    return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
+  }
+
   const cookieStore = cookies()
   const authClient = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

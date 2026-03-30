@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import type { MatchResult } from '@/lib/affiliates/amazon'
+import ResultSkeleton from '@/components/ResultSkeleton'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -19,6 +20,53 @@ function fmt(cents: number) {
   return '$' + (cents / 100).toFixed(2)
 }
 
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      let width = img.width
+      let height = img.height
+
+      // Scale down if width > 1200px
+      if (width > 1200) {
+        height = Math.round((height * 1200) / width)
+        width = 1200
+      }
+
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // Try quality 0.75 first
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return }
+          if (blob.size <= 800_000) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+            return
+          }
+          // Retry at quality 0.6
+          canvas.toBlob(
+            (blob2) => {
+              if (!blob2) { resolve(file); return }
+              resolve(new File([blob2], file.name, { type: 'image/jpeg' }))
+            },
+            'image/jpeg',
+            0.6
+          )
+        },
+        'image/jpeg',
+        0.75
+      )
+    }
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 export default function ScanClient() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [scanState, setScanState] = useState<ScanState>('idle')
@@ -29,6 +77,21 @@ export default function ScanClient() {
   const [storeState, setStoreState] = useState<StoreState>('idle')
   const [products, setProducts] = useState<MatchResult[]>([])
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
+  const [isOffline, setIsOffline] = useState(false)
+
+  useEffect(() => {
+    function handleOnline() { setIsOffline(false) }
+    function handleOffline() { setIsOffline(true) }
+
+    setIsOffline(!navigator.onLine)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -62,9 +125,21 @@ export default function ScanClient() {
     if (!currentFile) return
     setScanState('processing')
 
+    // Check network connectivity
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setErrorMsg('No internet connection. Please check your network and try again.')
+      setScanState('error')
+      return
+    }
+
     try {
+      const compressed = await compressImage(currentFile)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Image compressed: ${currentFile.size} → ${compressed.size} bytes`)
+      }
+
       const formData = new FormData()
-      formData.append('image', currentFile)
+      formData.append('image', compressed)
       const res = await fetch('/api/scan', {
         method: 'POST',
         body: formData,
@@ -99,6 +174,12 @@ export default function ScanClient() {
     if (!scanResult) return
     setStoreState('loading')
     setProducts([])
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setStoreState('error')
+      return
+    }
+
     try {
       const res = await fetch('/api/match', {
         method: 'POST',
@@ -160,6 +241,12 @@ export default function ScanClient() {
 
   return (
     <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+      {isOffline && (
+        <div className="bg-red-900/30 border border-red-800 rounded-xl p-3 mb-4">
+          <p className="text-sm text-red-400 text-center">No internet connection.</p>
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold text-foreground mb-1">Scan Product</h1>
       <p className="text-sm text-foreground-secondary mb-6">
         Take a photo or upload an image of a clothing or product tag.
@@ -316,25 +403,12 @@ export default function ScanClient() {
             </button>
           )}
 
-          {storeState === 'loading' && (
-            <div className="space-y-3">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="bg-surface border border-border rounded-2xl p-4 animate-pulse">
-                  <div className="flex gap-3">
-                    <div className="w-16 h-16 rounded-xl bg-border flex-shrink-0" />
-                    <div className="flex-1 space-y-2 py-1">
-                      <div className="h-3 bg-border rounded w-3/4" />
-                      <div className="h-3 bg-border rounded w-1/2" />
-                      <div className="h-3 bg-border rounded w-1/3" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {storeState === 'loading' && <ResultSkeleton />}
 
           {storeState === 'done' && products.length === 0 && (
-            <p className="text-sm text-center" style={{ color: '#9ca3af' }}>No matching products found.</p>
+            <p className="text-sm text-center" style={{ color: '#9ca3af' }}>
+              No matching products found{scanResult?.productName ? ` for ${scanResult.productName}` : ''}.
+            </p>
           )}
 
           {storeState === 'done' && products.length > 0 && (
@@ -379,7 +453,19 @@ export default function ScanClient() {
           )}
 
           {storeState === 'error' && (
-            <p className="text-sm text-center" style={{ color: '#f87171' }}>Could not load store results.</p>
+            <div className="bg-surface border border-red-800/50 rounded-2xl p-5 text-center space-y-3">
+              <p className="text-sm font-semibold text-foreground">
+                {scanResult?.productName
+                  ? `Found ${scanResult.productName} but couldn't load store results right now.`
+                  : 'Couldn\'t load store results.'}
+              </p>
+              <button
+                onClick={handleFindBestPrice}
+                className="text-sm text-primary font-medium hover:opacity-80 transition"
+              >
+                Try Again
+              </button>
+            </div>
           )}
 
           <button
