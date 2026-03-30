@@ -27,14 +27,14 @@ export async function signup(formData: FormData) {
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
-  const fullName = formData.get('full_name') as string
+  const fullName = formData.get('display_name') as string
 
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
-        full_name: fullName,
+        display_name: fullName,
       },
     },
   })
@@ -104,7 +104,7 @@ export async function updateDisplayName(formData: FormData) {
 
   const { error } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, updated_at: new Date().toISOString() })
+    .update({ display_name: fullName, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
   if (error) {

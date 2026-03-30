@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await serviceClient.from('audit_log').insert({
-      action: 'session_migrated',
+      event_type: 'session_migrated',
       metadata: { session_token: sessionToken, migrated_count: migratedCount },
     })
   } catch {}

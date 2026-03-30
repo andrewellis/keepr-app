@@ -10,11 +10,11 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, full_name, role, created_at, updated_at)
+  insert into public.profiles (id, email, display_name, role, created_at, updated_at)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    coalesce(new.raw_user_meta_data->>'display_name', ''),
     'user',
     now(),
     now()

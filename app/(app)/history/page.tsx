@@ -38,11 +38,12 @@ export default async function HistoryPage() {
 
   function statusColor(status: string) {
     switch (status) {
-      case 'approved':
+      case 'confirmed':
+      case 'paid':
         return 'text-green-400'
       case 'pending':
         return 'text-primary'
-      case 'rejected':
+      case 'failed':
         return 'text-red-400'
       default:
         return 'text-foreground-secondary'
@@ -118,7 +119,7 @@ export default async function HistoryPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {tx.description ?? 'Item'}
+                    {tx.product_name}
                   </p>
                   <p className="text-xs text-foreground-secondary mt-0.5">
                     {formatDate(tx.created_at)}
@@ -127,7 +128,7 @@ export default async function HistoryPage() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-foreground">
-                  {formatAmount(tx.amount)}
+                  {formatAmount(tx.user_payout_cents / 100)}
                 </p>
                 <p className={`text-xs mt-0.5 capitalize ${statusColor(tx.status)}`}>
                   {tx.status}

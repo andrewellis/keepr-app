@@ -50,7 +50,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
+          <h1 className="text-3xl font-bold text-foreground">K33pr</h1>
           <p className="mt-2 text-sm text-foreground-secondary">Create your account</p>
         </div>
 
@@ -68,7 +68,7 @@ export default function SignupPage() {
               </label>
               <input
                 id="full_name"
-                name="full_name"
+                name="display_name"
                 type="text"
                 autoComplete="name"
                 required

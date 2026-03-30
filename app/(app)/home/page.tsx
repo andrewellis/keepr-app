@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
 
@@ -9,17 +9,38 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Anonymous visitor — show intro
   if (!user) {
-    redirect('/login')
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5">
+        <h1 className="text-4xl font-bold text-foreground mb-3">K33pr</h1>
+        <p className="text-foreground-secondary text-center text-base mb-8">
+          Scan products. Find deals. Earn cashback.
+        </p>
+        <Link
+          href="/scan"
+          className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block"
+        >
+          Start Scanning
+        </Link>
+        <p className="text-sm text-foreground-secondary mt-6">
+          Already have an account?{' '}
+          <Link href="/login" className="text-primary hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    )
   }
 
+  // Authenticated user — show dashboard
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  const displayName = profile?.full_name ?? user.email ?? 'there'
+  const displayName = profile?.display_name ?? user.email ?? 'there'
   const firstName = displayName.split(' ')[0]
 
   return (

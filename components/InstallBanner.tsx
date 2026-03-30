@@ -51,7 +51,7 @@ export default function InstallBanner() {
       }}
     >
       <p className="text-white text-xs flex-1 mr-3">
-        Add Keepr to your home screen
+        Add K33pr to your home screen
       </p>
       <div className="flex items-center gap-2">
         <button

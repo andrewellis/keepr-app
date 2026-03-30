@@ -1,30 +1,18 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { getAnonSessionId } from '@/lib/anonSession'
 import type { MatchResult } from '@/lib/affiliates/amazon'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
 type BuyState = 'idle' | 'opening'
 
-interface VisionResult {
-  labels: string[]
-  webEntities: string[]
-  bestGuess: string
-}
-
-async function trackAnonScan() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) return
-  const anonId = getAnonSessionId()
-  await fetch('/api/anon-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ anonId }),
-  }).catch(() => {})
+interface ScanResult {
+  productName: string | null
+  category: string | null
+  confidence: number
+  searchTerms: string[]
+  error: string | null
 }
 
 function fmt(cents: number) {
@@ -36,7 +24,7 @@ export default function ScanClient() {
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [currentFile, setCurrentFile] = useState<File | null>(null)
-  const [visionResult, setVisionResult] = useState<VisionResult | null>(null)
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [storeState, setStoreState] = useState<StoreState>('idle')
   const [products, setProducts] = useState<MatchResult[]>([])
@@ -73,12 +61,11 @@ export default function ScanClient() {
   async function handleProcess() {
     if (!currentFile) return
     setScanState('processing')
-    trackAnonScan()
 
     try {
       const formData = new FormData()
       formData.append('image', currentFile)
-      const res = await fetch('/api/vision', {
+      const res = await fetch('/api/scan', {
         method: 'POST',
         body: formData,
       })
@@ -88,8 +75,17 @@ export default function ScanClient() {
         throw new Error(err.error ?? 'Vision API error')
       }
 
-      const data: VisionResult = await res.json()
-      setVisionResult(data)
+      const data: ScanResult = await res.json()
+      if (data.error) {
+        if (data.error === 'recognition_timeout') {
+          throw new Error('Scan took too long. Try again.')
+        }
+        throw new Error(data.error)
+      }
+      if (!data.productName) {
+        throw new Error("Couldn't identify that product. Try a different angle or better lighting.")
+      }
+      setScanResult(data)
       setStoreState('idle')
       setProducts([])
       setScanState('result')
@@ -100,18 +96,22 @@ export default function ScanClient() {
   }
 
   async function handleFindBestPrice() {
-    if (!visionResult) return
+    if (!scanResult) return
     setStoreState('loading')
     setProducts([])
     try {
-      const res = await fetch('/api/amazon', {
+      const res = await fetch('/api/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: visionResult.bestGuess, category: 'General' }),
+        body: JSON.stringify({
+          productName: scanResult.productName,
+          category: scanResult.category,
+          searchTerms: scanResult.searchTerms,
+        }),
       })
       if (!res.ok) throw new Error('store error')
       const data = await res.json()
-      setProducts(data.products ?? [])
+      setProducts(data.results ?? [])
       setStoreState('done')
     } catch {
       setStoreState('error')
@@ -150,7 +150,7 @@ export default function ScanClient() {
   function handleReset() {
     setPreviewUrl(null)
     setCurrentFile(null)
-    setVisionResult(null)
+    setScanResult(null)
     setErrorMsg(null)
     setScanState('idle')
     setStoreState('idle')
@@ -275,28 +275,33 @@ export default function ScanClient() {
         </div>
       )}
 
-      {scanState === 'result' && visionResult && (
+      {scanState === 'result' && scanResult && (
         <div className="space-y-4">
           <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>Identified as</p>
-              <p className="text-xl font-bold text-white capitalize">{visionResult.bestGuess}</p>
+              <p className="text-xl font-bold text-white capitalize">{scanResult.productName}</p>
             </div>
 
-            {visionResult.labels.length > 0 && (
+            {scanResult.category && scanResult.category !== 'General' && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Tags</p>
-                <p className="text-xs" style={{ color: '#9ca3af' }}>
-                  {visionResult.labels.join(', ')}
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>Category</p>
+                <p className="text-sm text-white">{scanResult.category}</p>
               </div>
             )}
 
-            {visionResult.webEntities.length > 0 && (
+            {scanResult.confidence > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Related</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>Confidence</p>
+                <p className="text-sm text-white">{Math.round(scanResult.confidence * 100)}%</p>
+              </div>
+            )}
+
+            {scanResult.searchTerms.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Search Terms</p>
                 <p className="text-xs" style={{ color: '#9ca3af' }}>
-                  {visionResult.webEntities.join(', ')}
+                  {scanResult.searchTerms.join(', ')}
                 </p>
               </div>
             )}

@@ -31,7 +31,7 @@ export default async function SettingsPage() {
         </p>
         <div className="bg-surface border border-border rounded-2xl overflow-hidden">
           {/* Display name — editable */}
-          <EditDisplayName currentName={profile?.full_name ?? ''} />
+          <EditDisplayName currentName={profile?.display_name ?? ''} />
 
           <div className="h-px bg-border mx-4" />
 
@@ -45,41 +45,27 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      {/* Payout settings — placeholder */}
+      {/* Payout settings */}
       <div className="mb-4">
         <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
           Payout Settings
         </p>
         <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-          {[
-            { label: 'Payment Method', value: 'Not set', href: '#' },
-            { label: 'Payout Schedule', value: 'Weekly', href: '#' },
-            { label: 'Minimum Payout', value: '$25.00', href: '#' },
-          ].map(({ label, value }, i, arr) => (
-            <div key={label}>
-              <div className="flex items-center justify-between px-4 py-4">
-                <span className="text-sm text-foreground-secondary">{label}</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm text-foreground font-medium">{value}</span>
-                  <svg
-                    className="w-4 h-4 text-foreground-secondary"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-              {i < arr.length - 1 && <div className="h-px bg-border mx-4" />}
+          <a href="/settings/payout" className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground">Payout Method</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-foreground-secondary">Not configured</span>
+              <svg
+                className="w-4 h-4 text-foreground-secondary"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-          ))}
-          <div className="px-4 py-3 border-t border-border">
-            <p className="text-xs text-foreground-secondary text-center">
-              Payout configuration coming soon.
-            </p>
-          </div>
+          </a>
         </div>
       </div>
 

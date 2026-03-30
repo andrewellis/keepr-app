@@ -15,37 +15,41 @@ export interface MatchResult {
   imageUrl: string | null
 }
 
-const CASHBACK_RATE = 0.05
-
-export async function searchAmazon(searchTerms: string[], category: string): Promise<MatchResult[]> {
+export async function searchAmazon(
+  searchTerms: string[],
+  category: string,
+  cashbackRate: number = 0.05
+): Promise<MatchResult[]> {
   const affiliateRate = getAffiliateRate(category)
+  const tag = process.env.AMAZON_ASSOCIATE_TAG ?? 'k33pr-20'
 
   // TODO: Replace mock block below with real PA-API calls once approved
-  const mockProducts: { asin: string; productName: string; priceCents: number; imageUrl: string }[] = [
+  const searchLabel = searchTerms[0] ?? 'Product'
+  const mockProducts = [
     {
       asin: 'B0CHWWXKZQ',
-      productName: 'Velo Nicotine Pouches Freeze 11mg — 5-Pack',
+      productName: `${searchLabel} — Option A`,
       priceCents: 2499,
-      imageUrl: 'https://m.media-amazon.com/images/I/61Q2vBqFMIL._AC_SL1500_.jpg',
+      imageUrl: null as string | null,
     },
     {
       asin: 'B09NQKX7ZP',
-      productName: 'ZYN Nicotine Pouches Cool Mint 6mg — 5-Pack',
+      productName: `${searchLabel} — Option B`,
       priceCents: 2299,
-      imageUrl: 'https://m.media-amazon.com/images/I/71kXnWZJS5L._AC_SL1500_.jpg',
+      imageUrl: null as string | null,
     },
     {
       asin: 'B0BT3YNKQR',
-      productName: 'Nordic Spirit Nicotine Pouches Spearmint — 20 Pouches',
+      productName: `${searchLabel} — Option C`,
       priceCents: 1999,
-      imageUrl: 'https://m.media-amazon.com/images/I/61mFnSmNURL._AC_SL1500_.jpg',
+      imageUrl: null as string | null,
     },
   ]
 
   const results: MatchResult[] = mockProducts.map((p) => {
-    const payout = calculatePayout(p.priceCents, affiliateRate, CASHBACK_RATE)
+    const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
     return {
-      retailer: 'Amazon',
+      retailer: 'Amazon' as const,
       productName: p.productName,
       priceCents: p.priceCents,
       affiliateRate,
@@ -53,8 +57,8 @@ export async function searchAmazon(searchTerms: string[], category: string): Pro
       userPayoutCents: payout.userPayoutCents,
       estimatedCashbackCents: payout.estimatedCashbackCents,
       totalReturnCents: payout.totalReturnCents,
-      affiliateUrl: `https://www.amazon.com/dp/${p.asin}?tag=grmtek-20`,
-      productUrl: `https://www.amazon.com/dp/${p.asin}?tag=grmtek-20`,
+      affiliateUrl: `https://www.amazon.com/dp/${p.asin}?tag=${tag}`,
+      productUrl: `https://www.amazon.com/dp/${p.asin}?tag=${tag}`,
       imageUrl: p.imageUrl,
     }
   })
