@@ -25,7 +25,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-foreground">Wearnings</h1>
+          <h1 className="text-xl font-bold text-foreground">Keepr</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500">
               {profile?.full_name ?? user.email}
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
             Welcome back{profile?.full_name ? `, ${profile.full_name}` : ''}!
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Here&apos;s an overview of your Wearnings account.
+            Here&apos;s an overview of your Keepr account.
           </p>
         </div>
 

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
+import InstallBanner from '@/components/InstallBanner'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -14,13 +16,13 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Wearnings',
-  description: 'Track your earnings, manage payouts, and grow your income.',
+  title: 'Keepr',
+  description: 'Scan products. Earn cashback.',
   manifest: '/manifest.json',
 }
 
 export const viewport: Viewport = {
-  themeColor: '#4f46e5',
+  themeColor: '#FF6B35',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -33,10 +35,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Keepr" />
+        <link rel="apple-touch-icon" href="/icon-1024.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <ServiceWorkerRegistration />
+        <InstallBanner />
       </body>
     </html>
   )

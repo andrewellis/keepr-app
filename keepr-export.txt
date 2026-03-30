@@ -1,0 +1,2620 @@
+import { type NextRequest } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
+
+export async function middleware(request: NextRequest) {
+  return await updateSession(request)
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}
+'use client'
+
+import { useState, useTransition } from 'react'
+import { updateDisplayName } from '@/app/auth/actions'
+
+export default function EditDisplayName({ currentName }: { currentName: string }) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(currentName)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  function handleEdit() {
+    setEditing(true)
+    setError(null)
+    setSuccess(false)
+  }
+
+  function handleCancel() {
+    setName(currentName)
+    setEditing(false)
+    setError(null)
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    const formData = new FormData(e.currentTarget)
+    startTransition(async () => {
+      const result = await updateDisplayName(formData)
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        setSuccess(true)
+        setEditing(false)
+      }
+    })
+  }
+
+  if (editing) {
+    return (
+      <form onSubmit={handleSubmit} className="px-4 py-4">
+        <label className="block text-xs text-foreground-secondary mb-1.5">Display Name</label>
+        <input
+          name="full_name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+          className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:border-primary transition"
+          placeholder="Your name"
+        />
+        {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+        <div className="flex gap-2 mt-3">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="flex-1 bg-background border border-border rounded-xl py-2.5 text-sm font-medium text-foreground hover:border-primary transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isPending || !name.trim()}
+            className="flex-1 bg-primary rounded-xl py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 transition"
+          >
+            {isPending ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </form>
+    )
+  }
+
+  return (
+    <div className="flex items-center justify-between px-4 py-4">
+      <span className="text-sm text-foreground-secondary">Display Name</span>
+      <div className="flex items-center gap-2">
+        {success && (
+          <span className="text-xs text-green-400">Saved</span>
+        )}
+        <span className="text-sm text-foreground font-medium">
+          {name || '—'}
+        </span>
+        <button
+          onClick={handleEdit}
+          className="text-xs text-primary font-medium hover:opacity-80 transition"
+        >
+          Edit
+        </button>
+      </div>
+    </div>
+  )
+}
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { signout } from '@/app/auth/actions'
+import EditDisplayName from './EditDisplayName'
+
+export default async function SettingsPage() {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  return (
+    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+      <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
+
+      {/* Account section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          Account
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          {/* Display name — editable */}
+          <EditDisplayName currentName={profile?.full_name ?? ''} />
+
+          <div className="h-px bg-border mx-4" />
+
+          {/* Email — read-only */}
+          <div className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground-secondary">Email</span>
+            <span className="text-sm text-foreground font-medium truncate max-w-[200px]">
+              {user.email}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payout settings — placeholder */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          Payout Settings
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          {[
+            { label: 'Payment Method', value: 'Not set', href: '#' },
+            { label: 'Payout Schedule', value: 'Weekly', href: '#' },
+            { label: 'Minimum Payout', value: '$25.00', href: '#' },
+          ].map(({ label, value }, i, arr) => (
+            <div key={label}>
+              <div className="flex items-center justify-between px-4 py-4">
+                <span className="text-sm text-foreground-secondary">{label}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-foreground font-medium">{value}</span>
+                  <svg
+                    className="w-4 h-4 text-foreground-secondary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+              {i < arr.length - 1 && <div className="h-px bg-border mx-4" />}
+            </div>
+          ))}
+          <div className="px-4 py-3 border-t border-border">
+            <p className="text-xs text-foreground-secondary text-center">
+              Payout configuration coming soon.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* App section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          App
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground-secondary">Version</span>
+            <span className="text-sm text-foreground font-medium">0.3.0</span>
+          </div>
+          <div className="h-px bg-border mx-4" />
+          <div className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground-secondary">Build</span>
+            <span className="text-sm text-foreground font-medium">Session 3</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sign out */}
+      <div>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <form action={signout}>
+            <button
+              type="submit"
+              className="w-full text-left px-4 py-4 text-sm font-medium text-red-400 hover:bg-red-900/10 transition"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { signout } from '@/app/auth/actions'
+
+export default async function HomePage() {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  const displayName = profile?.full_name ?? user.email ?? 'there'
+  const firstName = displayName.split(' ')[0]
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="px-5 pt-12 pb-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm text-foreground-secondary">Good day,</p>
+          <h1 className="text-2xl font-bold text-foreground">{firstName} 👋</h1>
+        </div>
+        <form action={signout}>
+          <button
+            type="submit"
+            className="text-xs text-foreground-secondary border border-border rounded-lg px-3 py-1.5 hover:border-primary hover:text-primary transition"
+          >
+            Sign out
+          </button>
+        </form>
+      </header>
+
+      {/* Balance card */}
+      <div className="mx-5 mt-2 bg-surface border border-border rounded-2xl p-6">
+        <p className="text-sm text-foreground-secondary mb-1">Total Earnings</p>
+        <p className="text-4xl font-bold text-foreground">$0.00</p>
+        <div className="mt-4 flex gap-3">
+          <div className="flex-1 bg-background rounded-xl p-3 text-center">
+            <p className="text-xs text-foreground-secondary">This Week</p>
+            <p className="text-lg font-semibold text-foreground mt-0.5">$0.00</p>
+          </div>
+          <div className="flex-1 bg-background rounded-xl p-3 text-center">
+            <p className="text-xs text-foreground-secondary">This Month</p>
+            <p className="text-lg font-semibold text-foreground mt-0.5">$0.00</p>
+          </div>
+          <div className="flex-1 bg-background rounded-xl p-3 text-center">
+            <p className="text-xs text-foreground-secondary">Pending</p>
+            <p className="text-lg font-semibold text-primary mt-0.5">$0.00</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="mx-5 mt-5">
+        <h2 className="text-sm font-semibold text-foreground-secondary uppercase tracking-wider mb-3">
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          <a
+            href="/scan"
+            className="bg-primary rounded-2xl p-5 flex flex-col gap-2 hover:opacity-90 transition"
+          >
+            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 8H3m18-8h-2M5 4H3m2 16H3m18-4h-2M19 4h-2" />
+            </svg>
+            <span className="text-sm font-semibold text-white">Scan Product</span>
+          </a>
+          <a
+            href="/history"
+            className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-2 hover:border-primary transition"
+          >
+            <svg className="w-7 h-7 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <span className="text-sm font-semibold text-foreground">View History</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Recent activity placeholder */}
+      <div className="mx-5 mt-5">
+        <h2 className="text-sm font-semibold text-foreground-secondary uppercase tracking-wider mb-3">
+          Recent Activity
+        </h2>
+        <div className="bg-surface border border-border rounded-2xl p-6 text-center">
+          <p className="text-foreground-secondary text-sm">No items scanned yet.</p>
+          <p className="text-foreground-secondary text-xs mt-1">Scan a product to get started.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+'use client'
+
+import { useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { getAnonSessionId } from '@/lib/anonSession'
+import type { MatchResult } from '@/lib/affiliates/amazon'
+
+type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
+type StoreState = 'idle' | 'loading' | 'done' | 'error'
+type BuyState = 'idle' | 'opening'
+
+interface VisionResult {
+  labels: string[]
+  webEntities: string[]
+  bestGuess: string
+}
+
+async function trackAnonScan() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) return
+  const anonId = getAnonSessionId()
+  await fetch('/api/anon-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ anonId }),
+  }).catch(() => {})
+}
+
+function fmt(cents: number) {
+  return '$' + (cents / 100).toFixed(2)
+}
+
+export default function ScanClient() {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [scanState, setScanState] = useState<ScanState>('idle')
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [currentFile, setCurrentFile] = useState<File | null>(null)
+  const [visionResult, setVisionResult] = useState<VisionResult | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [storeState, setStoreState] = useState<StoreState>('idle')
+  const [products, setProducts] = useState<MatchResult[]>([])
+  const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    setCurrentFile(file)
+    setScanState('preview')
+  }
+
+  function handleCameraCapture() {
+    fileInputRef.current?.click()
+  }
+
+  function handleUpload() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+      setCurrentFile(file)
+      setScanState('preview')
+    }
+    input.click()
+  }
+
+  async function handleProcess() {
+    if (!currentFile) return
+    setScanState('processing')
+    trackAnonScan()
+
+    try {
+      const formData = new FormData()
+      formData.append('image', currentFile)
+      const res = await fetch('/api/vision', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Vision API error')
+      }
+
+      const data: VisionResult = await res.json()
+      setVisionResult(data)
+      setStoreState('idle')
+      setProducts([])
+      setScanState('result')
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
+      setScanState('error')
+    }
+  }
+
+  async function handleFindBestPrice() {
+    if (!visionResult) return
+    setStoreState('loading')
+    setProducts([])
+    try {
+      const res = await fetch('/api/amazon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: visionResult.bestGuess, category: 'General' }),
+      })
+      if (!res.ok) throw new Error('store error')
+      const data = await res.json()
+      setProducts(data.products ?? [])
+      setStoreState('done')
+    } catch {
+      setStoreState('error')
+    }
+  }
+
+  function handleBuy(p: MatchResult) {
+    window.open(p.affiliateUrl, '_blank', 'noopener,noreferrer')
+    setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'opening' }))
+    setTimeout(() => {
+      setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'idle' }))
+    }, 1500)
+    const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('keepr_anon_id') : null
+    fetch('/api/transaction', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
+      },
+      body: JSON.stringify({
+        productName: p.productName,
+        retailer: p.retailer,
+        priceCents: p.priceCents,
+        commissionRate: p.affiliateRate,
+        commissionCents: p.commissionCents,
+        processingFeeCents: 20,
+        userPayoutCents: p.userPayoutCents,
+        estimatedCashbackCents: p.estimatedCashbackCents,
+        totalReturnCents: p.totalReturnCents,
+        affiliateUrl: p.affiliateUrl,
+      }),
+    }).catch(() => {})
+  }
+
+  function handleReset() {
+    setPreviewUrl(null)
+    setCurrentFile(null)
+    setVisionResult(null)
+    setErrorMsg(null)
+    setScanState('idle')
+    setStoreState('idle')
+    setProducts([])
+    setBuyStates({})
+  }
+
+  return (
+    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+      <h1 className="text-2xl font-bold text-foreground mb-1">Scan Product</h1>
+      <p className="text-sm text-foreground-secondary mb-6">
+        Take a photo or upload an image of a clothing or product tag.
+      </p>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {scanState === 'idle' && (
+        <div className="space-y-3">
+          <button
+            onClick={handleCameraCapture}
+            className="w-full bg-primary rounded-2xl p-6 flex flex-col items-center gap-3 hover:opacity-90 active:scale-[0.98] transition"
+          >
+            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <p className="text-white font-semibold text-base">Take Photo</p>
+              <p className="text-white/70 text-xs mt-0.5">Photograph the item</p>
+            </div>
+          </button>
+
+          <button
+            onClick={handleUpload}
+            className="w-full bg-surface border border-border rounded-2xl p-6 flex flex-col items-center gap-3 hover:border-primary active:scale-[0.98] transition"
+          >
+            <div className="w-16 h-16 rounded-full bg-border flex items-center justify-center">
+              <svg className="w-8 h-8 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <p className="text-foreground font-semibold text-base">Upload Image</p>
+              <p className="text-foreground-secondary text-xs mt-0.5">Choose from photo library</p>
+            </div>
+          </button>
+
+          <div className="bg-surface border border-border rounded-2xl p-4 mt-2">
+            <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2">Tips for best results</p>
+            <ul className="space-y-1.5">
+              {[
+                'Lay the item flat on a neutral surface',
+                'Ensure the tag or label is clearly visible',
+                'Avoid shadows and glare',
+              ].map((tip) => (
+                <li key={tip} className="flex items-start gap-2 text-xs text-foreground-secondary">
+                  <span className="text-primary mt-0.5">•</span>
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {scanState === 'preview' && previewUrl && (
+        <div className="space-y-4">
+          <div className="relative rounded-2xl overflow-hidden border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="Product preview" className="w-full object-contain max-h-96" />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleReset}
+              className="flex-1 bg-surface border border-border rounded-xl py-3.5 text-sm font-semibold text-foreground hover:border-primary transition"
+            >
+              Retake
+            </button>
+            <button
+              onClick={handleProcess}
+              className="flex-1 bg-primary rounded-xl py-3.5 text-sm font-semibold text-white hover:opacity-90 transition"
+            >
+              Identify Product
+            </button>
+          </div>
+        </div>
+      )}
+
+      {scanState === 'processing' && (
+        <div className="flex flex-col items-center justify-center py-20 gap-6">
+          <div className="w-24 h-24 rounded-2xl bg-surface border border-border animate-pulse" />
+          <p className="text-sm" style={{ color: '#9ca3af' }}>Identifying product...</p>
+        </div>
+      )}
+
+      {scanState === 'error' && (
+        <div className="space-y-4">
+          <div className="bg-surface border border-red-800/50 rounded-2xl p-5 text-center space-y-3">
+            <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center mx-auto">
+              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <p className="text-foreground font-semibold text-sm">Identification failed</p>
+            <p className="text-xs" style={{ color: '#9ca3af' }}>{errorMsg}</p>
+          </div>
+          <button
+            onClick={handleReset}
+            className="w-full bg-surface border border-border rounded-xl py-3.5 text-sm font-semibold text-foreground hover:border-primary transition"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {scanState === 'result' && visionResult && (
+        <div className="space-y-4">
+          <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>Identified as</p>
+              <p className="text-xl font-bold text-white capitalize">{visionResult.bestGuess}</p>
+            </div>
+
+            {visionResult.labels.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Tags</p>
+                <p className="text-xs" style={{ color: '#9ca3af' }}>
+                  {visionResult.labels.join(', ')}
+                </p>
+              </div>
+            )}
+
+            {visionResult.webEntities.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Related</p>
+                <p className="text-xs" style={{ color: '#9ca3af' }}>
+                  {visionResult.webEntities.join(', ')}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {storeState === 'idle' && (
+            <button
+              onClick={handleFindBestPrice}
+              className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white hover:opacity-90 transition"
+            >
+              Find Best Price
+            </button>
+          )}
+
+          {storeState === 'loading' && (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="bg-surface border border-border rounded-2xl p-4 animate-pulse">
+                  <div className="flex gap-3">
+                    <div className="w-16 h-16 rounded-xl bg-border flex-shrink-0" />
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="h-3 bg-border rounded w-3/4" />
+                      <div className="h-3 bg-border rounded w-1/2" />
+                      <div className="h-3 bg-border rounded w-1/3" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {storeState === 'done' && products.length === 0 && (
+            <p className="text-sm text-center" style={{ color: '#9ca3af' }}>No matching products found.</p>
+          )}
+
+          {storeState === 'done' && products.length > 0 && (
+            <div className="space-y-3">
+              {products.map((p, i) => (
+                <div key={p.affiliateUrl} className="bg-surface border border-border rounded-2xl p-4 space-y-3">
+                  <div className="flex gap-3">
+                    {p.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imageUrl} alt={p.productName} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 mb-1">
+                        <p className="text-sm font-semibold text-foreground leading-snug flex-1">{p.productName}</p>
+                        {i === 0 && (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#FF6B35', color: '#fff' }}>
+                            Best Deal
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-base font-bold text-white">{fmt(p.priceCents)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-xs" style={{ color: '#9ca3af' }}>Commission: {fmt(p.commissionCents)}</p>
+                      <p className="text-xs" style={{ color: '#9ca3af' }}>Fee: -$0.20</p>
+                      <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>You earn: {fmt(p.userPayoutCents)}</p>
+                      <p className="text-xs" style={{ color: '#9ca3af' }}>Cashback: {fmt(p.estimatedCashbackCents)}</p>
+                      <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>Total back: {fmt(p.totalReturnCents)}</p>
+                    </div>
+                    <button
+                      onClick={() => handleBuy(p)}
+                      className="bg-primary rounded-xl px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition"
+                    >
+                      {buyStates[p.affiliateUrl] === 'opening' ? 'Opening...' : 'Buy'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {storeState === 'error' && (
+            <p className="text-sm text-center" style={{ color: '#f87171' }}>Could not load store results.</p>
+          )}
+
+          <button
+            onClick={handleReset}
+            className="w-full bg-surface border border-border rounded-xl py-3.5 text-sm font-semibold text-foreground hover:border-primary transition"
+          >
+            Scan Again
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+import ScanClient from './ScanClient'
+
+export default function ScanPage() {
+  return <ScanClient />
+}
+import BottomNav from '@/components/BottomNav'
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="pb-16">{children}</div>
+      <BottomNav />
+    </div>
+  )
+}
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function HistoryPage() {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: transactions } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const hasTransactions = transactions && transactions.length > 0
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+
+  function formatAmount(amount: number) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
+
+  function statusColor(status: string) {
+    switch (status) {
+      case 'approved':
+        return 'text-green-400'
+      case 'pending':
+        return 'text-primary'
+      case 'rejected':
+        return 'text-red-400'
+      default:
+        return 'text-foreground-secondary'
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+      {/* Header */}
+      <h1 className="text-2xl font-bold text-foreground mb-1">History</h1>
+      <p className="text-sm text-foreground-secondary mb-6">
+        {hasTransactions
+          ? `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`
+          : 'Your transaction history'}
+      </p>
+
+      {/* Empty state */}
+      {!hasTransactions && (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="w-20 h-20 rounded-full bg-surface border border-border flex items-center justify-center">
+            <svg
+              className="w-9 h-9 text-foreground-secondary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+          </div>
+          <div className="text-center">
+            <p className="text-foreground font-semibold">No items yet</p>
+            <p className="text-foreground-secondary text-sm mt-1">
+              Scan a product to log your first earning.
+            </p>
+          </div>
+          <a
+            href="/scan"
+            className="mt-2 bg-primary text-white text-sm font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition"
+          >
+            Scan a Product
+          </a>
+        </div>
+      )}
+
+      {/* Transaction list */}
+      {hasTransactions && (
+        <div className="space-y-2">
+          {transactions.map((tx) => (
+            <div
+              key={tx.id}
+              className="bg-surface border border-border rounded-2xl px-4 py-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center shrink-0">
+                  <svg
+                    className="w-5 h-5 text-foreground-secondary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {tx.description ?? 'Item'}
+                  </p>
+                  <p className="text-xs text-foreground-secondary mt-0.5">
+                    {formatDate(tx.created_at)}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-foreground">
+                  {formatAmount(tx.amount)}
+                </p>
+                <p className={`text-xs mt-0.5 capitalize ${statusColor(tx.status)}`}>
+                  {tx.status}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+import { redirect } from 'next/navigation'
+
+// The (app) route group root — redirect to /home
+export default function AppRootPage() {
+  redirect('/home')
+}
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export async function login(formData: FormData) {
+  const supabase = createClient()
+
+  const data = {
+    email: formData.get('email') as string,
+    password: formData.get('password') as string,
+  }
+
+  const { error } = await supabase.auth.signInWithPassword(data)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/home')
+}
+
+export async function signup(formData: FormData) {
+  const supabase = createClient()
+
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+  const fullName = formData.get('full_name') as string
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+      },
+    },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/verify-email')
+}
+
+export async function signout() {
+  const supabase = createClient()
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login')
+}
+
+export async function forgotPassword(formData: FormData) {
+  const supabase = createClient()
+
+  const email = formData.get('email') as string
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/auth/callback?next=/reset-password`,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { success: true }
+}
+
+export async function resetPassword(formData: FormData) {
+  const supabase = createClient()
+
+  const password = formData.get('password') as string
+
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/home')
+}
+
+export async function updateDisplayName(formData: FormData) {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const fullName = (formData.get('full_name') as string).trim()
+
+  if (!fullName) {
+    return { error: 'Name cannot be empty' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ full_name: fullName, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/settings')
+  revalidatePath('/home')
+  return { success: true }
+}
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? '/dashboard'
+
+  if (code) {
+    const supabase = createClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error) {
+      const forwardedHost = request.headers.get('x-forwarded-host')
+      const isLocalEnv = process.env.NODE_ENV === 'development'
+      if (isLocalEnv) {
+        // In development, use the origin directly
+        return NextResponse.redirect(`${origin}${next}`)
+      } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`)
+      } else {
+        return NextResponse.redirect(`${origin}${next}`)
+      }
+    }
+  }
+
+  // Return the user to an error page with instructions
+  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+}
+import type { Metadata, Viewport } from 'next'
+import localFont from 'next/font/local'
+import './globals.css'
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
+import InstallBanner from '@/components/InstallBanner'
+
+const geistSans = localFont({
+  src: './fonts/GeistVF.woff',
+  variable: '--font-geist-sans',
+  weight: '100 900',
+})
+const geistMono = localFont({
+  src: './fonts/GeistMonoVF.woff',
+  variable: '--font-geist-mono',
+  weight: '100 900',
+})
+
+export const metadata: Metadata = {
+  title: 'Keepr',
+  description: 'Scan products. Earn cashback.',
+  manifest: '/manifest.json',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#FF6B35',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html lang="en">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Keepr" />
+        <link rel="apple-touch-icon" href="/icon-1024.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+        <ServiceWorkerRegistration />
+        <InstallBanner />
+      </body>
+    </html>
+  )
+}
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
+
+export async function POST(req: NextRequest) {
+  let body: {
+    productName?: string
+    retailer?: string
+    priceCents?: number
+    commissionRate?: number
+    commissionCents?: number
+    processingFeeCents?: number
+    userPayoutCents?: number
+    estimatedCashbackCents?: number
+    totalReturnCents?: number
+    affiliateUrl?: string
+    productUrl?: string
+  }
+
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
+  }
+
+  const cookieStore = cookies()
+  const authClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {}
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await authClient.auth.getUser()
+
+  const serviceClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const row: Record<string, unknown> = {
+    product_name: body.productName,
+    retailer: body.retailer,
+    price_cents: body.priceCents,
+    commission_rate: body.commissionRate,
+    commission_cents: body.commissionCents,
+    processing_fee_cents: body.processingFeeCents,
+    user_payout_cents: body.userPayoutCents,
+    estimated_cashback_cents: body.estimatedCashbackCents,
+    total_return_cents: body.totalReturnCents,
+    affiliate_url: body.affiliateUrl,
+    product_url: body.productUrl,
+  }
+
+  if (user) {
+    row.user_id = user.id
+  } else {
+    const sessionToken = req.headers.get('X-Session-Token')
+    if (sessionToken) row.session_token = sessionToken
+  }
+
+  const { data, error } = await serviceClient
+    .from('transactions')
+    .insert(row)
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error('Transaction log error:', error)
+    return NextResponse.json({ error: 'log_failed' }, { status: 500 })
+  }
+
+  return NextResponse.json({ transactionId: data.id })
+}
+import { NextRequest, NextResponse } from 'next/server'
+import { searchAmazon } from '@/lib/affiliates/amazon'
+
+export async function POST(req: NextRequest) {
+  let body: { query?: string; category?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const query = body.query?.trim()
+  const category = body.category?.trim() ?? 'General'
+
+  if (!query) {
+    return NextResponse.json({ error: 'query is required' }, { status: 400 })
+  }
+
+  try {
+    const products = await searchAmazon([query], category)
+    return NextResponse.json({ products })
+  } catch (err) {
+    console.error('Amazon search error:', err)
+    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+  }
+}
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(req: NextRequest) {
+  const { anonId } = await req.json()
+  if (!anonId) return NextResponse.json({ error: 'missing anonId' }, { status: 400 })
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const now = new Date().toISOString()
+
+  // Try insert first (new session)
+  const { error: insertError } = await supabase
+    .from('anon_sessions')
+    .insert({ id: anonId, last_seen: now, scan_count: 1 })
+
+  if (insertError) {
+    // Row exists — increment scan_count and update last_seen via raw SQL increment
+    await supabase.rpc('increment_anon_scan', { p_id: anonId, p_last_seen: now })
+      .then(async ({ error: rpcError }) => {
+        if (rpcError) {
+          // RPC not available yet — just update last_seen
+          await supabase
+            .from('anon_sessions')
+            .update({ last_seen: now })
+            .eq('id', anonId)
+        }
+      })
+  }
+
+  return NextResponse.json({ ok: true })
+}
+import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
+
+export async function POST(req: NextRequest) {
+  const formData = await req.formData()
+  const file = formData.get('image') as File | null
+  if (!file) return NextResponse.json({ error: 'missing image' }, { status: 400 })
+  console.log('File received:', file.name, file.type, file.size, 'bytes')
+
+  // TEMP: mock vision response for development
+  return NextResponse.json({ labels: ['Nicotine pouch', 'Tobacco product', 'Consumer goods'], webEntities: ['Velo Nicotine Pouches', 'Nordic Spirit', 'ZYN'], bestGuess: 'Velo nicotine pouches' })
+
+  let imageBase64: string
+  const buffer = Buffer.from(await file.arrayBuffer())
+
+  // Resize if image is over 800KB to stay within Vision API limits
+  if (buffer.length > 800000) {
+    try {
+      const jpegBuffer = await sharp(buffer)
+        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer()
+      imageBase64 = jpegBuffer.toString('base64')
+    } catch {
+      // If sharp fails, reject with a clear error instead of sending bad data
+      return NextResponse.json({ error: 'Image too large. Please use a smaller image.' }, { status: 400 })
+    }
+  } else {
+    imageBase64 = buffer.toString('base64')
+  }
+
+  const apiKey = process.env.GOOGLE_CLOUD_API_KEY
+  console.log('API key present:', !!apiKey, 'length:', apiKey?.length)
+  const url = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`
+
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{
+          image: { content: imageBase64 },
+          features: [
+            { type: 'LABEL_DETECTION', maxResults: 10 },
+            { type: 'WEB_DETECTION', maxResults: 5 },
+          ],
+        }],
+      }),
+    })
+  } catch {
+    return NextResponse.json({ error: 'Vision API request failed' }, { status: 500 })
+  }
+
+  if (!res.ok) {
+    const text = await res.text()
+    return NextResponse.json({ error: text }, { status: 500 })
+  }
+
+  const data = await res.json()
+  console.log('Vision response:', JSON.stringify(data, null, 2))
+  const result = data.responses?.[0] ?? {}
+
+  const labels: string[] = (result.labelAnnotations ?? []).map((l: { description: string }) => l.description)
+  const webEntities: string[] = (result.webDetection?.webEntities ?? [])
+    .map((e: { description?: string }) => e.description)
+    .filter(Boolean)
+  const bestGuess: string = result.webDetection?.bestGuessLabels?.[0]?.label ?? labels[0] ?? 'Unknown product'
+
+  return NextResponse.json({ labels, webEntities, bestGuess })
+}
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
+
+export async function POST(req: NextRequest) {
+  const cookieStore = cookies()
+  const authClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {}
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  const sessionToken = req.headers.get('X-Session-Token')
+  if (!sessionToken) {
+    return NextResponse.json({ error: 'missing session token' }, { status: 400 })
+  }
+
+  const serviceClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data, error } = await serviceClient
+    .from('transactions')
+    .update({ user_id: user.id })
+    .eq('session_token', sessionToken)
+    .is('user_id', null)
+    .select('id')
+
+  if (error) {
+    console.error('migrate-session error:', error)
+    return NextResponse.json({ error: 'migration_failed' }, { status: 500 })
+  }
+
+  const migratedCount = data?.length ?? 0
+
+  try {
+    await serviceClient.from('audit_log').insert({
+      action: 'session_migrated',
+      metadata: { session_token: sessionToken, migrated_count: migratedCount },
+    })
+  } catch {}
+
+  return NextResponse.json({ migrated: migratedCount })
+}
+import Link from 'next/link'
+
+export default function AuthCodeErrorPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
+        </div>
+
+        <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4">
+          <div className="mx-auto flex items-center justify-center w-14 h-14 rounded-full bg-red-900/30">
+            <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+
+          <h2 className="text-xl font-semibold text-foreground">Authentication error</h2>
+
+          <p className="text-sm text-foreground-secondary">
+            The link you used is invalid or has expired. Please request a new one.
+          </p>
+
+          <div className="flex flex-col gap-2 pt-2">
+            <Link
+              href="/forgot-password"
+              className="inline-flex justify-center items-center rounded-lg bg-primary hover:opacity-90 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition"
+            >
+              Request new reset link
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex justify-center items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-surface transition"
+            >
+              Back to sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { signup } from '@/app/auth/actions'
+
+export default function SignupPage() {
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(formData: FormData) {
+    setLoading(true)
+    setError(null)
+
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirm_password') as string
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      setLoading(false)
+      return
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      setLoading(false)
+      return
+    }
+
+    const result = await signup(formData)
+    if (result?.error) {
+      setError(result.error)
+      setLoading(false)
+      return
+    }
+
+    const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('keepr_anon_id') : null
+    if (sessionToken) {
+      try {
+        await fetch('/api/migrate-session', {
+          method: 'POST',
+          headers: { 'X-Session-Token': sessionToken },
+        })
+      } catch {}
+      localStorage.removeItem('keepr_anon_id')
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
+          <p className="mt-2 text-sm text-foreground-secondary">Create your account</p>
+        </div>
+
+        <div className="bg-surface border border-border rounded-2xl p-8">
+          <form action={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="full_name" className="block text-sm font-medium text-foreground mb-1.5">
+                Full name
+              </label>
+              <input
+                id="full_name"
+                name="full_name"
+                type="text"
+                autoComplete="name"
+                required
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="Jane Smith"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="Min. 8 characters"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirm_password" className="block text-sm font-medium text-foreground mb-1.5">
+                Confirm password
+              </label>
+              <input
+                id="confirm_password"
+                name="confirm_password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center rounded-lg bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+            >
+              {loading ? (
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                'Create account'
+              )}
+            </button>
+
+            <p className="text-xs text-foreground-secondary text-center">
+              By signing up, you agree to our{' '}
+              <Link href="/terms" className="text-primary hover:opacity-80">Terms of Service</Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="text-primary hover:opacity-80">Privacy Policy</Link>.
+            </p>
+          </form>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-foreground-secondary">
+          Already have an account?{' '}
+          <Link href="/login" className="font-medium text-primary hover:opacity-80">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </div>
+  )
+}
+import Link from 'next/link'
+
+export default function VerifyEmailPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
+        </div>
+
+        <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4">
+          <div className="mx-auto flex items-center justify-center w-14 h-14 rounded-full bg-primary/20">
+            <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+
+          <h2 className="text-xl font-semibold text-foreground">Verify your email</h2>
+
+          <p className="text-sm text-foreground-secondary">
+            We&apos;ve sent a confirmation link to your email address. Please check your inbox and click the link to activate your account.
+          </p>
+
+          <p className="text-xs text-foreground-secondary">
+            Didn&apos;t receive an email? Check your spam folder or{' '}
+            <Link href="/signup" className="text-primary hover:opacity-80">
+              try signing up again
+            </Link>.
+          </p>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-foreground-secondary">
+          Already verified?{' '}
+          <Link href="/login" className="font-medium text-primary hover:opacity-80">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </div>
+  )
+}
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { forgotPassword } from '@/app/auth/actions'
+
+export default function ForgotPasswordPage() {
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(formData: FormData) {
+    setLoading(true)
+    setError(null)
+    const result = await forgotPassword(formData)
+    if (result?.error) {
+      setError(result.error)
+    } else {
+      setSuccess(true)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
+          <p className="mt-2 text-sm text-foreground-secondary">Reset your password</p>
+        </div>
+
+        <div className="bg-surface border border-border rounded-2xl p-8">
+          {success ? (
+            <div className="text-center space-y-4">
+              <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-green-900/30">
+                <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Check your email</h2>
+              <p className="text-sm text-foreground-secondary">
+                We&apos;ve sent a password reset link to your email address. It may take a few minutes to arrive.
+              </p>
+              <Link href="/login" className="inline-block mt-2 text-sm font-medium text-primary hover:opacity-80">
+                Back to sign in
+              </Link>
+            </div>
+          ) : (
+            <form action={handleSubmit} className="space-y-5">
+              <p className="text-sm text-foreground-secondary">
+                Enter your email address and we&apos;ll send you a link to reset your password.
+              </p>
+
+              {error && (
+                <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center items-center rounded-lg bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+              >
+                {loading ? (
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  'Send reset link'
+                )}
+              </button>
+            </form>
+          )}
+        </div>
+
+        <p className="mt-6 text-center text-sm text-foreground-secondary">
+          Remember your password?{' '}
+          <Link href="/login" className="font-medium text-primary hover:opacity-80">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </div>
+  )
+}
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return <>{children}</>
+}
+'use client'
+
+import { useState } from 'react'
+import { resetPassword } from '@/app/auth/actions'
+
+export default function ResetPasswordPage() {
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(formData: FormData) {
+    setLoading(true)
+    setError(null)
+
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirm_password') as string
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      setLoading(false)
+      return
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      setLoading(false)
+      return
+    }
+
+    const result = await resetPassword(formData)
+    if (result?.error) {
+      setError(result.error)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
+          <p className="mt-2 text-sm text-foreground-secondary">Set a new password</p>
+        </div>
+
+        <div className="bg-surface border border-border rounded-2xl p-8">
+          <form action={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">
+                New password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="Min. 8 characters"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirm_password" className="block text-sm font-medium text-foreground mb-1.5">
+                Confirm new password
+              </label>
+              <input
+                id="confirm_password"
+                name="confirm_password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center rounded-lg bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+            >
+              {loading ? (
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                'Update password'
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { login } from '@/app/auth/actions'
+
+export default function LoginPage() {
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(formData: FormData) {
+    setLoading(true)
+    setError(null)
+    const result = await login(formData)
+    if (result?.error) {
+      setError(result.error)
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        {/* Logo / Brand */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
+          <p className="mt-2 text-sm text-foreground-secondary">Sign in to your account</p>
+        </div>
+
+        <div className="bg-surface border border-border rounded-2xl p-8">
+          <form action={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-foreground mb-1.5"
+              >
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-primary hover:opacity-80"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center rounded-lg bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+            >
+              {loading ? (
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                'Sign in'
+              )}
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-foreground-secondary">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="font-medium text-primary hover:opacity-80">
+            Sign up
+          </Link>
+        </p>
+      </div>
+    </div>
+  )
+}
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { signout } from '@/app/auth/actions'
+
+export default async function DashboardPage() {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Fetch profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-foreground">Keepr</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              {profile?.full_name ?? user.email}
+            </span>
+            <form action={signout}>
+              <button
+                type="submit"
+                className="text-sm font-medium text-gray-500 hover:text-foreground transition"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-foreground">
+            Welcome back{profile?.full_name ? `, ${profile.full_name}` : ''}!
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Here&apos;s an overview of your Keepr account.
+          </p>
+        </div>
+
+        {/* Placeholder cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { label: 'Total Earnings', value: '$0.00', icon: '💰' },
+            { label: 'Transactions', value: '0', icon: '📋' },
+            { label: 'Pending Payouts', value: '$0.00', icon: '⏳' },
+          ].map((card) => (
+            <div
+              key={card.label}
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-500">
+                  {card.label}
+                </span>
+                <span className="text-2xl">{card.icon}</span>
+              </div>
+              <p className="text-3xl font-bold text-foreground">{card.value}</p>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  )
+}
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return <>{children}</>
+}
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function RootPage() {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    redirect('/home')
+  } else {
+    redirect('/login')
+  }
+}
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: "var(--background)",
+        surface: "var(--surface)",
+        primary: "var(--primary)",
+        "primary-hover": "var(--primary-hover)",
+        foreground: "var(--foreground)",
+        "foreground-secondary": "var(--foreground-secondary)",
+        border: "var(--border)",
+      },
+    },
+  },
+  plugins: [],
+};
+export default config;
+'use client'
+
+import { useEffect, useState } from 'react'
+
+const DISMISSED_KEY = 'keepr_install_dismissed'
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
+export default function InstallBanner() {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (localStorage.getItem(DISMISSED_KEY)) return
+
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      setVisible(true)
+    }
+
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function handleAdd() {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    await deferredPrompt.userChoice
+    setVisible(false)
+    setDeferredPrompt(null)
+  }
+
+  function handleDismiss() {
+    localStorage.setItem(DISMISSED_KEY, '1')
+    setVisible(false)
+  }
+
+  if (!visible) return null
+
+  return (
+    <div
+      className="fixed left-0 right-0 z-40 flex items-center justify-between px-4 py-3"
+      style={{
+        bottom: '64px',
+        backgroundColor: '#1a1a1a',
+        borderTop: '1px solid #2a2a2a',
+      }}
+    >
+      <p className="text-white text-xs flex-1 mr-3">
+        Add Keepr to your home screen
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleAdd}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+          style={{ backgroundColor: '#FF6B35' }}
+        >
+          Add
+        </button>
+        <button
+          onClick={handleDismiss}
+          className="px-2 py-1.5 text-sm font-medium"
+          style={{ color: '#9ca3af' }}
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  )
+}
+'use client'
+
+import { useEffect } from 'react'
+
+export default function ServiceWorkerRegistration() {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+  }, [])
+
+  return null
+}
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
+const tabs = [
+  {
+    label: 'Home',
+    href: '/home',
+    icon: (active: boolean) => (
+      <svg
+        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        fill={active ? 'currentColor' : 'none'}
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.8}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+        />
+      </svg>
+    ),
+  },
+  {
+    label: 'Scan',
+    href: '/scan',
+    icon: (active: boolean) => (
+      <svg
+        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.8}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 8H3m18-8h-2M5 4H3m2 16H3m18-4h-2M19 4h-2"
+        />
+      </svg>
+    ),
+  },
+  {
+    label: 'History',
+    href: '/history',
+    icon: (active: boolean) => (
+      <svg
+        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        fill={active ? 'currentColor' : 'none'}
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.8}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+        />
+      </svg>
+    ),
+  },
+  {
+    label: 'Settings',
+    href: '/settings',
+    icon: (active: boolean) => (
+      <svg
+        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        fill={active ? 'currentColor' : 'none'}
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.8}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+]
+
+export default function BottomNav() {
+  const pathname = usePathname()
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border">
+      <div className="max-w-lg mx-auto flex items-center justify-around h-16 px-2">
+        {tabs.map((tab) => {
+          const isActive =
+            tab.href === '/'
+              ? pathname === '/'
+              : pathname.startsWith(tab.href)
+
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className="flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-opacity hover:opacity-80"
+            >
+              {tab.icon(isActive)}
+              <span
+                className={`text-[10px] font-medium ${
+                  isActive ? 'text-primary' : 'text-foreground-secondary'
+                }`}
+              >
+                {tab.label}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      resolve(result.split(',')[1])
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+export function prepareImageForUpload(file: File): File {
+  return file
+}
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Refresh session if expired - required for Server Components
+  // Do NOT remove. This keeps the user's session alive.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Protected routes - redirect to login if not authenticated
+  const protectedPaths = ['/history', '/settings']
+  const isProtectedPath = protectedPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  if (isProtectedPath && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Redirect authenticated users away from auth pages
+  const authPaths = ['/login', '/signup']
+  const isAuthPath = authPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  if (isAuthPath && user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/home'
+    return NextResponse.redirect(url)
+  }
+
+  return supabaseResponse
+}
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string
+          full_name: string | null
+          email: string | null
+          avatar_url: string | null
+          role: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string | null
+          email?: string | null
+          avatar_url?: string | null
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string | null
+          email?: string | null
+          avatar_url?: string | null
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      transactions: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          description: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          description?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          description?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      payouts: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      audit_log: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          table_name: string | null
+          record_id: string | null
+          old_data: Json | null
+          new_data: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          table_name?: string | null
+          record_id?: string | null
+          old_data?: Json | null
+          new_data?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          table_name?: string | null
+          record_id?: string | null
+          old_data?: Json | null
+          new_data?: Json | null
+          created_at?: string
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+  }
+}
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export function createClient() {
+  const cookieStore = cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  )
+}
+const ANON_ID_KEY = 'keepr_anon_id'
+
+export function getAnonSessionId(): string {
+  const existing = localStorage.getItem(ANON_ID_KEY)
+  if (existing) return existing
+  const id = crypto.randomUUID()
+  localStorage.setItem(ANON_ID_KEY, id)
+  return id
+}
+import { calculatePayout } from './calculator'
+import { getAffiliateRate } from './rateTable'
+
+export interface MatchResult {
+  retailer: 'Amazon'
+  productName: string
+  priceCents: number
+  affiliateRate: number
+  commissionCents: number
+  userPayoutCents: number
+  estimatedCashbackCents: number
+  totalReturnCents: number
+  affiliateUrl: string
+  productUrl: string
+  imageUrl: string | null
+}
+
+const CASHBACK_RATE = 0.05
+
+export async function searchAmazon(searchTerms: string[], category: string): Promise<MatchResult[]> {
+  const affiliateRate = getAffiliateRate(category)
+
+  // TODO: Replace mock block below with real PA-API calls once approved
+  const mockProducts: { asin: string; productName: string; priceCents: number; imageUrl: string }[] = [
+    {
+      asin: 'B0CHWWXKZQ',
+      productName: 'Velo Nicotine Pouches Freeze 11mg — 5-Pack',
+      priceCents: 2499,
+      imageUrl: 'https://m.media-amazon.com/images/I/61Q2vBqFMIL._AC_SL1500_.jpg',
+    },
+    {
+      asin: 'B09NQKX7ZP',
+      productName: 'ZYN Nicotine Pouches Cool Mint 6mg — 5-Pack',
+      priceCents: 2299,
+      imageUrl: 'https://m.media-amazon.com/images/I/71kXnWZJS5L._AC_SL1500_.jpg',
+    },
+    {
+      asin: 'B0BT3YNKQR',
+      productName: 'Nordic Spirit Nicotine Pouches Spearmint — 20 Pouches',
+      priceCents: 1999,
+      imageUrl: 'https://m.media-amazon.com/images/I/61mFnSmNURL._AC_SL1500_.jpg',
+    },
+  ]
+
+  const results: MatchResult[] = mockProducts.map((p) => {
+    const payout = calculatePayout(p.priceCents, affiliateRate, CASHBACK_RATE)
+    return {
+      retailer: 'Amazon',
+      productName: p.productName,
+      priceCents: p.priceCents,
+      affiliateRate,
+      commissionCents: payout.commissionCents,
+      userPayoutCents: payout.userPayoutCents,
+      estimatedCashbackCents: payout.estimatedCashbackCents,
+      totalReturnCents: payout.totalReturnCents,
+      affiliateUrl: `https://www.amazon.com/dp/${p.asin}?tag=grmtek-20`,
+      productUrl: `https://www.amazon.com/dp/${p.asin}?tag=grmtek-20`,
+      imageUrl: p.imageUrl,
+    }
+  })
+
+  return results.sort((a, b) =>
+    b.totalReturnCents !== a.totalReturnCents
+      ? b.totalReturnCents - a.totalReturnCents
+      : a.priceCents - b.priceCents
+  )
+}
+const RATES: Record<string, number> = {
+  'Apparel & Accessories': 0.04,
+  Electronics: 0.03,
+  'Home & Garden': 0.03,
+  Shoes: 0.04,
+  Sports: 0.03,
+  Beauty: 0.06,
+  Books: 0.045,
+  General: 0.03,
+}
+
+export function getAffiliateRate(category: string): number {
+  return RATES[category] ?? 0.03
+}
+export interface PayoutResult {
+  commissionCents: number
+  processingFeeCents: number
+  userPayoutCents: number
+  estimatedCashbackCents: number
+  totalReturnCents: number
+}
+
+export function calculatePayout(
+  priceCents: number,
+  affiliateRate: number,
+  cashbackRate: number
+): PayoutResult {
+  const commissionCents = Math.floor(priceCents * affiliateRate)
+  const processingFeeCents = 20
+  const userPayoutCents = Math.max(0, commissionCents - processingFeeCents)
+  const estimatedCashbackCents = Math.floor(priceCents * cashbackRate)
+  const totalReturnCents = userPayoutCents + estimatedCashbackCents
+  return { commissionCents, processingFeeCents, userPayoutCents, estimatedCashbackCents, totalReturnCents }
+}

@@ -23,7 +23,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Wearnings</h1>
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
           <p className="mt-2 text-sm text-foreground-secondary">Sign in to your account</p>
         </div>
 

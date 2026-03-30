@@ -31,6 +31,18 @@ export default function SignupPage() {
     if (result?.error) {
       setError(result.error)
       setLoading(false)
+      return
+    }
+
+    const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('keepr_anon_id') : null
+    if (sessionToken) {
+      try {
+        await fetch('/api/migrate-session', {
+          method: 'POST',
+          headers: { 'X-Session-Token': sessionToken },
+        })
+      } catch {}
+      localStorage.removeItem('keepr_anon_id')
     }
   }
 
@@ -38,7 +50,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Wearnings</h1>
+          <h1 className="text-3xl font-bold text-foreground">Keepr</h1>
           <p className="mt-2 text-sm text-foreground-secondary">Create your account</p>
         </div>
 
