@@ -8,6 +8,15 @@ interface ScanResult {
   error: string | null
 }
 
+const NON_PRODUCT_TERMS = [
+  'tan', 'white', 'black', 'blue', 'red', 'green', 'yellow', 'brown', 'gray', 'grey', 'beige', 'cream', 'orange', 'pink', 'purple',
+  'wall', 'ceiling', 'floor', 'surface', 'texture', 'pattern', 'color', 'colour', 'paint', 'background',
+  'wood', 'concrete', 'brick', 'tile', 'metal', 'plastic', 'fabric', 'paper',
+  'room', 'interior', 'exterior', 'building', 'architecture',
+  'sky', 'cloud', 'grass', 'tree', 'water', 'ground', 'dirt', 'sand',
+  'light', 'shadow', 'dark', 'bright',
+]
+
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   'Apparel & Accessories': ['shirt', 'dress', 'jacket', 'clothing', 'apparel', 'fashion', 'jeans', 'pants', 'sweater', 'hoodie', 'coat', 'blouse', 't-shirt'],
   'Shoes': ['shoe', 'sneaker', 'boot', 'sandal', 'heel', 'slipper', 'footwear'],
@@ -143,6 +152,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
     const searchTerms = bestGuess
       ? [bestGuess, ...webEntityNames.filter(n => n !== bestGuess)].slice(0, 5)
       : webEntityNames.slice(0, 5)
+
+    if (bestGuess) {
+      const guessLower = bestGuess.toLowerCase().trim()
+      if (NON_PRODUCT_TERMS.includes(guessLower)) {
+        return NextResponse.json({
+          productName: null,
+          category: null,
+          confidence: 0,
+          searchTerms: [],
+          error: 'Could not identify a product. Try a clearer photo of a product with a visible label.',
+        })
+      }
+    }
 
     return NextResponse.json({
       productName: bestGuess,
