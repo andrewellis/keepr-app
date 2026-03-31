@@ -1,10 +1,16 @@
 import { calculatePayout } from './calculator'
 import { getAffiliateRate } from './rateTable'
+import type { AffiliateResult, AffiliateSearchFn } from './types'
 
+/**
+ * @deprecated Use AffiliateResult from './types' instead.
+ * Kept for backward compatibility with ScanClient.tsx
+ */
 export interface MatchResult {
-  retailer: 'Amazon'
+  retailer: string
   productName: string
   priceCents: number
+  price: number
   affiliateRate: number
   commissionCents: number
   userPayoutCents: number
@@ -13,13 +19,14 @@ export interface MatchResult {
   affiliateUrl: string
   productUrl: string
   imageUrl: string | null
+  inStock: boolean
 }
 
-export async function searchAmazon(
-  searchTerms: string[],
-  category: string,
-  cashbackRate: number = 0.05
-): Promise<MatchResult[]> {
+export const searchAmazon: AffiliateSearchFn = async (
+  searchTerms,
+  category,
+  cashbackRate = 0.05
+) => {
   const affiliateRate = getAffiliateRate(category)
   const tag = process.env.AMAZON_ASSOCIATE_TAG ?? 'k33pr-20'
 
@@ -46,12 +53,12 @@ export async function searchAmazon(
     },
   ]
 
-  const results: MatchResult[] = mockProducts.map((p) => {
+  const results: AffiliateResult[] = mockProducts.map((p) => {
     const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
     return {
-      retailer: 'Amazon' as const,
+      retailer: 'Amazon',
       productName: p.productName,
-      priceCents: p.priceCents,
+      price: p.priceCents,
       affiliateRate,
       commissionCents: payout.commissionCents,
       userPayoutCents: payout.userPayoutCents,
@@ -60,12 +67,13 @@ export async function searchAmazon(
       affiliateUrl: `https://www.amazon.com/dp/${p.asin}?tag=${tag}`,
       productUrl: `https://www.amazon.com/dp/${p.asin}?tag=${tag}`,
       imageUrl: p.imageUrl,
+      inStock: true,
     }
   })
 
   return results.sort((a, b) =>
     b.totalReturnCents !== a.totalReturnCents
       ? b.totalReturnCents - a.totalReturnCents
-      : a.priceCents - b.priceCents
+      : a.price - b.price
   )
 }

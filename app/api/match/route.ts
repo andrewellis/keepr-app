@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { searchAmazon } from '@/lib/affiliates/amazon'
+import { getActiveNetworks } from '@/lib/affiliates/registry'
+import { rankResults } from '@/lib/affiliates/ranker'
+import type { AffiliateResult } from '@/lib/affiliates/types'
+
+const NETWORK_TIMEOUT_MS = 5_000
 
 export async function POST(req: NextRequest) {
   let body: { productName?: string; category?: string; searchTerms?: string[] }
@@ -38,8 +42,33 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const results = await searchAmazon(searchTerms, category, cashbackRate)
-    return NextResponse.json({ results })
+    const networks = getActiveNetworks()
+
+    // Call all networks in parallel with per-network timeout
+    const settled = await Promise.all(
+      networks.map((searchFn) =>
+        Promise.race<AffiliateResult[]>([
+          searchFn(searchTerms, category, cashbackRate),
+          new Promise<AffiliateResult[]>((resolve) =>
+            setTimeout(() => {
+              console.warn(
+                `[match] Affiliate network timed out after ${NETWORK_TIMEOUT_MS}ms`
+              )
+              resolve([])
+            }, NETWORK_TIMEOUT_MS)
+          ),
+        ]).catch((err) => {
+          console.warn('[match] Affiliate network error:', err)
+          return [] as AffiliateResult[]
+        })
+      )
+    )
+
+    // Flatten all results and run through ranker
+    const allResults = settled.flat()
+    const ranked = rankResults(allResults)
+
+    return NextResponse.json({ results: ranked })
   } catch (err) {
     console.error('Match error:', err)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
