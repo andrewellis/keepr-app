@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { AffiliateResult } from '@/lib/affiliates/types'
@@ -18,6 +18,14 @@ function fmtPrice(priceCents: number) {
 }
 
 export default function ResultsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background px-5 pt-12 pb-36"><ResultSkeleton /></div>}>
+      <ResultsContent />
+    </Suspense>
+  )
+}
+
+function ResultsContent() {
   const searchParams = useSearchParams()
   const productName = searchParams.get('productName') ?? ''
   const category = searchParams.get('category') ?? 'General'
@@ -141,10 +149,16 @@ export default function ResultsPage() {
 
       {/* No results */}
       {fetchState === 'done' && results.length === 0 && (
-        <div className="bg-surface border border-border rounded-2xl p-6 text-center">
+        <div className="bg-surface border border-border rounded-2xl p-6 text-center space-y-4">
           <p className="text-sm" style={{ color: '#9ca3af' }}>
-            No matching products found{productName ? ` for "${productName}"` : ''}.
+            No results found. Try scanning again.
           </p>
+          <Link
+            href="/scan"
+            className="inline-block bg-primary text-white rounded-xl px-6 py-3 text-sm font-semibold hover:opacity-90 transition"
+          >
+            Scan Another
+          </Link>
         </div>
       )}
 

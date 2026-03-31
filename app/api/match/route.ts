@@ -46,22 +46,32 @@ export async function POST(req: NextRequest) {
 
     // Call all networks in parallel with per-network timeout
     const settled = await Promise.all(
-      networks.map((searchFn) =>
-        Promise.race<AffiliateResult[]>([
-          searchFn(searchTerms, category, cashbackRate),
-          new Promise<AffiliateResult[]>((resolve) =>
-            setTimeout(() => {
-              console.warn(
-                `[match] Affiliate network timed out after ${NETWORK_TIMEOUT_MS}ms`
-              )
-              resolve([])
-            }, NETWORK_TIMEOUT_MS)
-          ),
-        ]).catch((err) => {
-          console.warn('[match] Affiliate network error:', err)
+      networks.map(async (searchFn) => {
+        const networkName = searchFn.name || 'unknown'
+        const start = Date.now()
+
+        console.log(`[match] Calling ${networkName}...`)
+
+        try {
+          const result = await Promise.race<AffiliateResult[]>([
+            searchFn(searchTerms, category, cashbackRate),
+            new Promise<AffiliateResult[]>((resolve) =>
+              setTimeout(() => {
+                console.log(`[match] ${networkName} timed out after ${NETWORK_TIMEOUT_MS}ms`)
+                resolve([])
+              }, NETWORK_TIMEOUT_MS)
+            ),
+          ])
+
+          const elapsed = Date.now() - start
+          console.log(`[match] ${networkName} returned ${result.length} results in ${elapsed}ms`)
+          return result
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          console.log(`[match] ${networkName} error: ${message}`)
           return [] as AffiliateResult[]
-        })
-      )
+        }
+      })
     )
 
     // Flatten all results and run through ranker

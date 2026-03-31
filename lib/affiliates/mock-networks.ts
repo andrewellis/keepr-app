@@ -41,7 +41,7 @@ export const searchCJ: AffiliateSearchFn = async (
   return mockProducts.map((p) => {
     const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
     return {
-      retailer: 'Nike (CJ)',
+      retailer: p.url.includes('adidas') ? 'Adidas (CJ)' : 'Nike (CJ)',
       productName: p.productName,
       price: p.priceCents,
       affiliateRate,
