@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
           <p>
             K33pr is operated by GRMtek LLC, a Florida limited liability company. This Privacy Policy
             describes how we collect, use, and protect your information when you use the K33pr
-            application at k33pr.com.
+            website at k33pr.com.
           </p>
         </section>
 
@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
           <p className="mb-1">— Identify products you scan and find matching affiliate listings</p>
           <p className="mb-1">— Track affiliate link clicks and attribute commissions to your account</p>
           <p className="mb-1">— Process payouts for confirmed purchases</p>
-          <p className="mb-1">— Maintain and improve the K33pr application</p>
+          <p className="mb-1">— Maintain and improve the K33pr website</p>
           <p className="mt-2">We do not sell your personal information to third parties. We do not use your data for advertising or profiling.</p>
         </section>
 
@@ -39,7 +39,7 @@ export default function PrivacyPolicyPage() {
           <p className="mb-1">— <span className="text-foreground font-medium">Google Cloud Vision API:</span> Processes product images for identification. Google&apos;s privacy policy applies to image processing.</p>
           <p className="mb-1">— <span className="text-foreground font-medium">Amazon Associates:</span> Affiliate links direct you to Amazon.com. Amazon&apos;s privacy policy governs your interactions with Amazon.</p>
           <p className="mb-1">— <span className="text-foreground font-medium">Supabase:</span> Hosts our database and authentication. Data is stored in the United States.</p>
-          <p className="mb-1">— <span className="text-foreground font-medium">Vercel:</span> Hosts our application. Standard web hosting logs apply.</p>
+          <p className="mb-1">— <span className="text-foreground font-medium">Vercel:</span> Hosts our website. Standard web hosting logs apply.</p>
           <p className="mt-2">When you click an affiliate link and visit a retailer&apos;s website, that retailer&apos;s privacy policy governs your interaction with them.</p>
         </section>
 

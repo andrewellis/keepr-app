@@ -8,8 +8,8 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-base font-semibold text-foreground mb-2">1. Acceptance of Terms</h2>
           <p>
-            By accessing or using K33pr (&ldquo;the App&rdquo;), operated by GRMtek LLC (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;),
-            you agree to be bound by these Terms of Service. If you do not agree, do not use the App.
+            By accessing or using K33pr (&ldquo;the Site&rdquo;), operated by GRMtek LLC (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;),
+            you agree to be bound by these Terms of Service. If you do not agree, do not use the Site.
           </p>
         </section>
 
@@ -79,10 +79,10 @@ export default function TermsOfServicePage() {
           <h2 className="text-base font-semibold text-foreground mb-2">7. Prohibited Conduct</h2>
           <p className="mb-2">You agree not to:</p>
           <p className="mb-1">— Click affiliate links with no intent to purchase in order to inflate metrics</p>
-          <p className="mb-1">— Use automated tools, bots, or scripts to interact with the App</p>
+          <p className="mb-1">— Use automated tools, bots, or scripts to interact with the Site</p>
           <p className="mb-1">— Create multiple accounts to circumvent any limitations</p>
           <p className="mb-1">— Attempt to manipulate or reverse-engineer the payout calculation system</p>
-          <p className="mb-1">— Use the App for any illegal purpose</p>
+          <p className="mb-1">— Use the Site for any illegal purpose</p>
           <p className="mt-2">
             Violation of these terms may result in account suspension, forfeiture of pending payouts,
             and permanent ban from the service.
@@ -93,7 +93,7 @@ export default function TermsOfServicePage() {
           <h2 className="text-base font-semibold text-foreground mb-2">8. Affiliate Disclosure</h2>
           <p>
             K33pr earns commissions from qualifying purchases made through affiliate links displayed
-            in the App. As an Amazon Associate, GRMtek LLC earns from qualifying purchases. Affiliate
+            on the Site. As an Amazon Associate, GRMtek LLC earns from qualifying purchases. Affiliate
             relationships exist with other retailers as well. The ranking of results is based on
             estimated total return to the user, not on commission rates paid to GRMtek.
           </p>
@@ -102,20 +102,20 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-base font-semibold text-foreground mb-2">9. Disclaimers</h2>
           <p className="mb-2">
-            The App is provided &ldquo;as is&rdquo; without warranties of any kind, express or implied.
+            The Site is provided &ldquo;as is&rdquo; without warranties of any kind, express or implied.
             GRMtek does not guarantee:
           </p>
           <p className="mb-1">— The accuracy of product identification</p>
           <p className="mb-1">— The availability or pricing of products shown</p>
           <p className="mb-1">— That any specific commission rate will apply to a purchase</p>
-          <p className="mb-1">— Uninterrupted or error-free operation of the App</p>
+          <p className="mb-1">— Uninterrupted or error-free operation of the Site</p>
         </section>
 
         <section>
           <h2 className="text-base font-semibold text-foreground mb-2">10. Limitation of Liability</h2>
           <p>
             To the fullest extent permitted by law, GRMtek LLC shall not be liable for any indirect,
-            incidental, special, consequential, or punitive damages arising from your use of the App,
+            incidental, special, consequential, or punitive damages arising from your use of the Site,
             including but not limited to lost profits, lost commissions, or data loss. GRMtek&apos;s total
             liability for any claim arising from these terms shall not exceed the total payouts made
             to your account in the 12 months preceding the claim.
@@ -126,7 +126,7 @@ export default function TermsOfServicePage() {
           <h2 className="text-base font-semibold text-foreground mb-2">11. Modifications</h2>
           <p>
             GRMtek may modify these Terms of Service at any time. We will notify registered users of
-            material changes via email. Continued use of the App after changes constitutes acceptance
+            material changes via email. Continued use of the Site after changes constitutes acceptance
             of the revised terms.
           </p>
         </section>

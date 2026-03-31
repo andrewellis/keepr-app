@@ -69,10 +69,32 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      {/* App section */}
+      {/* Help section */}
       <div className="mb-4">
         <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
-          App
+          Help
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <a href="/how-it-works" className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground">How It Works</span>
+            <svg className="w-4 h-4 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+          <div className="h-px bg-border mx-4" />
+          <a href="/faq" className="flex items-center justify-between px-4 py-4">
+            <span className="text-sm text-foreground">FAQ</span>
+            <svg className="w-4 h-4 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      {/* About section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          About
         </p>
         <div className="bg-surface border border-border rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-4">

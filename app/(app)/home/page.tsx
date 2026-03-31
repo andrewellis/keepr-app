@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
+import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 
 export default async function HomePage() {
   const supabase = createClient()
@@ -9,35 +10,147 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Anonymous visitor — show intro
+  // Anonymous visitor — show landing page
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5">
-        <h1 className="text-4xl font-bold text-foreground mb-3">K33pr</h1>
-        <p className="text-foreground-secondary text-center text-base mb-8">
-          Scan products. Find deals. Earn cashback.
-        </p>
-        <Link
-          href="/scan"
-          className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block"
-        >
-          Start Scanning
-        </Link>
-        <p className="text-sm text-foreground-secondary mt-6">
-          Already have an account?{' '}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
+      <div className="min-h-screen bg-background">
+        {/* Hero section */}
+        <section className="px-5 pt-16 pb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-4">
+            Scan any product.<br />
+            Find the best price.<br />
+            Earn cashback.
+          </h1>
+          <p className="text-base text-foreground-secondary leading-relaxed mb-8">
+            K33pr compares prices across retailers and shows you where to buy for the
+            most money back. Visit k33pr.com, point your camera at any product, and
+            get started.
+          </p>
+          <Link
+            href="/scan"
+            className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block"
+          >
+            Start Scanning
           </Link>
-        </p>
-        <div className="flex items-center justify-center gap-4 mt-6">
-          <a href="/privacy" className="text-xs text-foreground-secondary hover:text-primary transition">
-            Privacy Policy
-          </a>
-          <span className="text-xs text-foreground-secondary">·</span>
-          <a href="/terms" className="text-xs text-foreground-secondary hover:text-primary transition">
-            Terms of Service
-          </a>
-        </div>
+          <p className="text-sm text-foreground-secondary mt-6 text-center">
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </section>
+
+        {/* How it works summary */}
+        <section className="px-5 pb-12">
+          <h2 className="text-xl font-bold text-foreground mb-6">How It Works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Step 1 */}
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center mb-3">
+                <span className="text-primary font-bold text-sm">1</span>
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1.5">Scan</h3>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                Point your camera at any product. K33pr identifies it instantly using
+                image recognition.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center mb-3">
+                <span className="text-primary font-bold text-sm">2</span>
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1.5">Compare</h3>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                See prices across multiple retailers, ranked by how much money you
+                get back.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center mb-3">
+                <span className="text-primary font-bold text-sm">3</span>
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1.5">Earn</h3>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                Buy through K33pr and earn cashback on every purchase. We send your
+                earnings via PayPal or Venmo.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Link
+              href="/how-it-works"
+              className="text-sm text-primary font-medium hover:underline transition"
+            >
+              Learn more about how it works →
+            </Link>
+          </div>
+        </section>
+
+        {/* Value proposition */}
+        <section className="px-5 pb-12">
+          <h2 className="text-xl font-bold text-foreground mb-6">Why K33pr?</h2>
+          <div className="space-y-4">
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <h3 className="text-base font-semibold text-foreground mb-1.5">
+                Real cashback, real money
+              </h3>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                Unlike coupon sites that give you points or gift cards, K33pr pays you
+                real cash via PayPal or Venmo.
+              </p>
+            </div>
+
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <h3 className="text-base font-semibold text-foreground mb-1.5">
+                Multi-retailer comparison
+              </h3>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                We don&apos;t just check one store. K33pr searches across Amazon, Target,
+                Macy&apos;s, Nordstrom, and more to find where you save the most.
+              </p>
+            </div>
+
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <h3 className="text-base font-semibold text-foreground mb-1.5">
+                No browser extension required
+              </h3>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                K33pr works right in your browser. No desktop extension, no toolbar,
+                no tracking your browsing. Just visit k33pr.com and start scanning.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer links */}
+        <section className="px-5 pb-4">
+          <div className="flex items-center justify-center gap-4">
+            <Link href="/how-it-works" className="text-xs text-foreground-secondary hover:text-primary transition">
+              How It Works
+            </Link>
+            <span className="text-xs text-foreground-secondary">·</span>
+            <Link href="/faq" className="text-xs text-foreground-secondary hover:text-primary transition">
+              FAQ
+            </Link>
+            <span className="text-xs text-foreground-secondary">·</span>
+            <Link href="/privacy" className="text-xs text-foreground-secondary hover:text-primary transition">
+              Privacy Policy
+            </Link>
+            <span className="text-xs text-foreground-secondary">·</span>
+            <Link href="/terms" className="text-xs text-foreground-secondary hover:text-primary transition">
+              Terms of Service
+            </Link>
+          </div>
+        </section>
+
+        {/* Affiliate disclosure */}
+        <section className="px-5 pb-8">
+          <AffiliateDisclosure />
+        </section>
       </div>
     )
   }
