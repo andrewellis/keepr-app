@@ -122,12 +122,12 @@ function ResultsContent() {
     <div className="min-h-screen bg-background px-5 pt-12 pb-36">
       {/* Header */}
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">
           Results for
         </p>
-        <h1 className="text-2xl font-bold text-white capitalize">{productName || 'Product'}</h1>
+        <h1 className="text-2xl font-bold text-foreground capitalize">{productName || 'Product'}</h1>
         {category && category !== 'General' && (
-          <p className="text-sm mt-1" style={{ color: '#9ca3af' }}>{category}</p>
+          <p className="text-sm mt-1 text-foreground-secondary">{category}</p>
         )}
       </div>
 
@@ -137,9 +137,9 @@ function ResultsContent() {
       {/* Error */}
       {fetchState === 'error' && (
         <div className="space-y-4">
-          <div className="bg-surface border border-red-800/50 rounded-2xl p-5 text-center space-y-3">
-            <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center mx-auto">
-              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
+            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto">
+              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
@@ -161,7 +161,7 @@ function ResultsContent() {
       {/* No results */}
       {fetchState === 'done' && results.length === 0 && (
         <div className="bg-surface border border-border rounded-2xl p-6 text-center space-y-4">
-          <p className="text-sm" style={{ color: '#9ca3af' }}>
+          <p className="text-sm text-foreground-secondary">
             No results found. Try scanning again.
           </p>
           <Link
@@ -190,7 +190,7 @@ function ResultsContent() {
               >
                 {/* Retailer + Product info */}
                 <div>
-                  <p className="text-base font-bold text-white">{p.retailer}</p>
+                  <p className="text-base font-bold text-foreground">{p.retailer}</p>
                   <p className="text-sm text-foreground-secondary leading-snug mt-0.5">
                     {p.productName}
                   </p>
@@ -211,18 +211,18 @@ function ResultsContent() {
                 {/* Price + earnings breakdown — only when price is known */}
                 {priceKnown && (
                   <div className="space-y-1.5">
-                    <p className="text-2xl font-bold text-white">{fmtPrice(p.price)}</p>
+                    <p className="text-2xl font-bold text-foreground">{fmtPrice(p.price)}</p>
 
-                    <p className="text-sm font-semibold" style={{ color: '#4ade80' }}>
+                    <p className="text-sm font-semibold text-primary">
                       You earn: {fmt(p.userPayoutCents)}
                     </p>
-                    <p className="text-xs" style={{ color: '#9ca3af' }}>
+                    <p className="text-xs text-foreground-secondary">
                       Est. cashback: {fmt(p.estimatedCashbackCents)}
                     </p>
-                    <p className="text-sm font-bold" style={{ color: '#4ade80' }}>
+                    <p className="text-sm font-bold text-primary">
                       Total back: {fmt(p.totalReturnCents)}
                     </p>
-                    <p className="text-xs" style={{ color: '#9ca3af' }}>
+                    <p className="text-xs text-foreground-secondary">
                       Net cost: {fmt(Math.max(0, netCostCents))}
                     </p>
                   </div>
@@ -232,7 +232,7 @@ function ResultsContent() {
                 {isOutOfStock ? (
                   <button
                     disabled
-                    className="w-full rounded-xl py-3 text-sm font-semibold text-white/50 bg-gray-700 cursor-not-allowed"
+                    className="w-full rounded-xl py-3 text-sm font-semibold text-foreground-secondary bg-border cursor-not-allowed"
                   >
                     Out of Stock
                   </button>
@@ -240,15 +240,14 @@ function ResultsContent() {
                   <>
                     <button
                       onClick={() => handleBuy(p)}
-                      className="w-full rounded-xl py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition"
-                      style={{ backgroundColor: '#FF6B35' }}
+                      className="w-full bg-primary rounded-xl py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition"
                     >
                       {buyStates[p.affiliateUrl] === 'opening'
                         ? 'Opening...'
                         : buyButtonLabel(p)}
                     </button>
                     {!priceKnown && (
-                      <p className="text-xs text-center" style={{ color: '#9ca3af' }}>
+                      <p className="text-xs text-center text-foreground-secondary">
                         Find this product on {p.retailer.replace(/ \(.*\)$/, '')}. Your purchase earns cashback through K33pr.
                       </p>
                     )}
@@ -263,7 +262,7 @@ function ResultsContent() {
       {/* Cashback rate note — only show when prices are known */}
       {fetchState === 'done' && results.length > 0 && !hasCustomRate && results.some((r) => r.price > 0) && (
         <div className="bg-surface border border-border rounded-2xl p-4 mt-4">
-          <p className="text-xs" style={{ color: '#9ca3af' }}>
+          <p className="text-xs text-foreground-secondary">
             Cashback estimate based on {cashbackPct}% card rate.{' '}
             <Link href="/settings" className="text-primary hover:underline">
               Update your rate in Settings
@@ -275,7 +274,7 @@ function ResultsContent() {
 
       {/* Affiliate disclosure */}
       {fetchState === 'done' && results.length > 0 && (
-        <p className="text-xs text-center mt-4" style={{ color: '#6b7280' }}>
+        <p className="text-xs text-center mt-4 text-foreground-secondary">
           As an Amazon Associate, GRMtek LLC earns from qualifying purchases.
         </p>
       )}

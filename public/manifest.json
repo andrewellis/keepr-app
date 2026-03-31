@@ -4,8 +4,8 @@
   "description": "Scan products. Earn cashback.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f0f",
-  "theme_color": "#FF6B35",
+  "background_color": "#FFFFFF",
+  "theme_color": "#534AB7",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon-1024.png", "sizes": "192x192", "type": "image/png" },

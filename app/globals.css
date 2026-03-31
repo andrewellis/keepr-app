@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #0f0f0f;
-  --surface: #1a1a1a;
-  --primary: #FF6B35;
-  --primary-hover: #e85d2a;
-  --foreground: #ffffff;
-  --foreground-secondary: #9ca3af;
-  --border: #2a2a2a;
+  --background: #FFFFFF;
+  --surface: #F8F8F6;
+  --primary: #534AB7;
+  --primary-hover: #7F77DD;
+  --foreground: #1a1a1a;
+  --foreground-secondary: #666666;
+  --border: #E5E5E3;
 }
 
 body {

@@ -46,25 +46,23 @@ export default function InstallBanner() {
       className="fixed left-0 right-0 z-40 flex items-center justify-between px-4 py-3"
       style={{
         bottom: '64px',
-        backgroundColor: '#1a1a1a',
-        borderTop: '1px solid #2a2a2a',
+        backgroundColor: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
       }}
     >
-      <p className="text-white text-xs flex-1 mr-3">
+      <p className="text-foreground text-xs flex-1 mr-3">
         Add K33pr to your home screen
       </p>
       <div className="flex items-center gap-2">
         <button
           onClick={handleAdd}
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-          style={{ backgroundColor: '#FF6B35' }}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-primary"
         >
           Add
         </button>
         <button
           onClick={handleDismiss}
-          className="px-2 py-1.5 text-sm font-medium"
-          style={{ color: '#9ca3af' }}
+          className="px-2 py-1.5 text-sm font-medium text-foreground-secondary"
         >
           ×
         </button>

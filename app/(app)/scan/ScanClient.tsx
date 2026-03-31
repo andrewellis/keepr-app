@@ -248,8 +248,8 @@ export default function ScanClient() {
   return (
     <div className="min-h-screen bg-background px-5 pt-12 pb-24">
       {isOffline && (
-        <div className="bg-red-900/30 border border-red-800 rounded-xl p-3 mb-4">
-          <p className="text-sm text-red-400 text-center">No internet connection.</p>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+          <p className="text-sm text-red-600 text-center">No internet connection.</p>
         </div>
       )}
 
@@ -344,20 +344,20 @@ export default function ScanClient() {
       {scanState === 'processing' && (
         <div className="flex flex-col items-center justify-center py-20 gap-6">
           <div className="w-24 h-24 rounded-2xl bg-surface border border-border animate-pulse" />
-          <p className="text-sm" style={{ color: '#9ca3af' }}>Identifying product...</p>
+          <p className="text-sm text-foreground-secondary">Identifying product...</p>
         </div>
       )}
 
       {scanState === 'error' && (
         <div className="space-y-4">
-          <div className="bg-surface border border-red-800/50 rounded-2xl p-5 text-center space-y-3">
-            <div className="w-10 h-10 rounded-full bg-red-900/30 flex items-center justify-center mx-auto">
-              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
+            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto">
+              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
             <p className="text-foreground font-semibold text-sm">Identification failed</p>
-            <p className="text-xs" style={{ color: '#9ca3af' }}>{errorMsg}</p>
+            <p className="text-xs text-foreground-secondary">{errorMsg}</p>
           </div>
           <button
             onClick={handleReset}
@@ -372,28 +372,28 @@ export default function ScanClient() {
         <div className="space-y-4">
           <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>Identified as</p>
-              <p className="text-xl font-bold text-white capitalize">{scanResult.productName}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Identified as</p>
+              <p className="text-xl font-bold text-foreground capitalize">{scanResult.productName}</p>
             </div>
 
             {scanResult.category && scanResult.category !== 'General' && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>Category</p>
-                <p className="text-sm text-white">{scanResult.category}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Category</p>
+                <p className="text-sm text-foreground">{scanResult.category}</p>
               </div>
             )}
 
             {scanResult.confidence > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>Confidence</p>
-                <p className="text-sm text-white">{Math.round(scanResult.confidence * 100)}%</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Confidence</p>
+                <p className="text-sm text-foreground">{Math.round(scanResult.confidence * 100)}%</p>
               </div>
             )}
 
             {scanResult.searchTerms.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Search Terms</p>
-                <p className="text-xs" style={{ color: '#9ca3af' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5 text-foreground-secondary">Search Terms</p>
+                <p className="text-xs text-foreground-secondary">
                   {scanResult.searchTerms.join(', ')}
                 </p>
               </div>
@@ -412,7 +412,7 @@ export default function ScanClient() {
           {storeState === 'loading' && <ResultSkeleton />}
 
           {storeState === 'done' && products.length === 0 && (
-            <p className="text-sm text-center" style={{ color: '#9ca3af' }}>
+            <p className="text-sm text-center text-foreground-secondary">
               No matching products found{scanResult?.productName ? ` for ${scanResult.productName}` : ''}.
             </p>
           )}
@@ -426,7 +426,7 @@ export default function ScanClient() {
                   <div key={p.affiliateUrl} className="bg-surface border border-border rounded-2xl p-4 space-y-3">
                     {/* Retailer + product name */}
                     <div>
-                      <p className="text-base font-bold text-white">{p.retailer}</p>
+                      <p className="text-base font-bold text-foreground">{p.retailer}</p>
                       <p className="text-sm text-foreground-secondary leading-snug mt-0.5">{p.productName}</p>
                     </div>
 
@@ -439,12 +439,12 @@ export default function ScanClient() {
                     {/* Price + earnings — only when price is known */}
                     {priceKnown && (
                       <div className="space-y-0.5">
-                        <p className="text-base font-bold text-white">${(p.price / 100).toFixed(2)}</p>
-                        <p className="text-xs" style={{ color: '#9ca3af' }}>Commission: ${(p.commissionCents / 100).toFixed(2)}</p>
-                        <p className="text-xs" style={{ color: '#9ca3af' }}>Fee: -$0.20</p>
-                        <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>You earn: ${(p.userPayoutCents / 100).toFixed(2)}</p>
-                        <p className="text-xs" style={{ color: '#9ca3af' }}>Cashback: ${(p.estimatedCashbackCents / 100).toFixed(2)}</p>
-                        <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>Total back: ${(p.totalReturnCents / 100).toFixed(2)}</p>
+                        <p className="text-base font-bold text-foreground">${(p.price / 100).toFixed(2)}</p>
+                        <p className="text-xs text-foreground-secondary">Commission: ${(p.commissionCents / 100).toFixed(2)}</p>
+                        <p className="text-xs text-foreground-secondary">Fee: -$0.20</p>
+                        <p className="text-xs font-semibold text-primary">You earn: ${(p.userPayoutCents / 100).toFixed(2)}</p>
+                        <p className="text-xs text-foreground-secondary">Cashback: ${(p.estimatedCashbackCents / 100).toFixed(2)}</p>
+                        <p className="text-xs font-semibold text-primary">Total back: ${(p.totalReturnCents / 100).toFixed(2)}</p>
                       </div>
                     )}
 
@@ -458,7 +458,7 @@ export default function ScanClient() {
 
                     {/* Helper text for search links */}
                     {!priceKnown && (
-                      <p className="text-xs text-center" style={{ color: '#9ca3af' }}>
+                      <p className="text-xs text-center text-foreground-secondary">
                         Find this product on {p.retailer.replace(/ \(.*\)$/, '')}. Your purchase earns cashback through K33pr.
                       </p>
                     )}
@@ -469,7 +469,7 @@ export default function ScanClient() {
           )}
 
           {storeState === 'error' && (
-            <div className="bg-surface border border-red-800/50 rounded-2xl p-5 text-center space-y-3">
+            <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
               <p className="text-sm font-semibold text-foreground">
                 {scanResult?.productName
                   ? `Found ${scanResult.productName} but couldn't load store results right now.`
@@ -485,7 +485,7 @@ export default function ScanClient() {
           )}
 
           {storeState === 'done' && products.length > 0 && (
-            <p className="text-xs text-center" style={{ color: '#6b7280' }}>
+            <p className="text-xs text-center text-foreground-secondary">
               As an Amazon Associate, GRMtek LLC earns from qualifying purchases.
             </p>
           )}

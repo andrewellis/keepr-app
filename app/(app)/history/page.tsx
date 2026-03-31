@@ -40,11 +40,11 @@ export default async function HistoryPage() {
     switch (status) {
       case 'confirmed':
       case 'paid':
-        return 'text-green-400'
+        return 'text-green-600'
       case 'pending':
         return 'text-primary'
       case 'failed':
-        return 'text-red-400'
+        return 'text-red-500'
       default:
         return 'text-foreground-secondary'
     }
