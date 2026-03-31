@@ -126,4 +126,98 @@ describe('rankResults', () => {
     expect(ranked).toHaveLength(1)
     expect(ranked[0].productName).toBe('Solo Product')
   })
+
+  // ─── Search-link mode (price = 0) ──────────────────────────────────────────
+
+  it('search-link mode: sorts Amazon first, then alphabetically by retailer', () => {
+    const results: AffiliateResult[] = [
+      makeResult({
+        retailer: 'Nike (CJ)',
+        productName: 'Nike Air Max 90',
+        price: 0,
+        totalReturnCents: 0,
+        affiliateUrl: 'https://nike.com/s?q=nike+air+max+90',
+        productUrl: 'https://nike.com/s?q=nike+air+max+90',
+      }),
+      makeResult({
+        retailer: 'Amazon',
+        productName: 'Nike Air Max 90',
+        price: 0,
+        totalReturnCents: 0,
+        affiliateUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+        productUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+      }),
+      makeResult({
+        retailer: 'Adidas (CJ)',
+        productName: 'Nike Air Max 90',
+        price: 0,
+        totalReturnCents: 0,
+        affiliateUrl: 'https://adidas.com/us/search?q=nike+air+max+90',
+        productUrl: 'https://adidas.com/us/search?q=nike+air+max+90',
+      }),
+    ]
+
+    const ranked = rankResults(results)
+
+    expect(ranked).toHaveLength(3)
+    // Amazon should be first
+    expect(ranked[0].retailer).toBe('Amazon')
+    // Then alphabetically: Adidas (CJ) before Nike (CJ)
+    expect(ranked[1].retailer).toBe('Adidas (CJ)')
+    expect(ranked[2].retailer).toBe('Nike (CJ)')
+  })
+
+  it('search-link mode: deduplicates same retailer + same name, keeps one', () => {
+    const results: AffiliateResult[] = [
+      makeResult({
+        retailer: 'Amazon',
+        productName: 'Nike Air Max 90',
+        price: 0,
+        totalReturnCents: 0,
+        affiliateUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+        productUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+      }),
+      makeResult({
+        retailer: 'Amazon',
+        productName: 'Nike Air Max 90',
+        price: 0,
+        totalReturnCents: 0,
+        affiliateUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+        productUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+      }),
+    ]
+
+    const ranked = rankResults(results)
+
+    expect(ranked).toHaveLength(1)
+    expect(ranked[0].retailer).toBe('Amazon')
+  })
+
+  it('search-link mode: does NOT deduplicate same name across different retailers', () => {
+    const results: AffiliateResult[] = [
+      makeResult({
+        retailer: 'Amazon',
+        productName: 'Nike Air Max 90',
+        price: 0,
+        totalReturnCents: 0,
+        affiliateUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+        productUrl: 'https://amazon.com/s?k=nike+air+max+90&tag=k33pr-20',
+      }),
+      makeResult({
+        retailer: 'Nike (CJ)',
+        productName: 'Nike Air Max 90',
+        price: 0,
+        totalReturnCents: 0,
+        affiliateUrl: 'https://nike.com/w?q=nike+air+max+90',
+        productUrl: 'https://nike.com/w?q=nike+air+max+90',
+      }),
+    ]
+
+    const ranked = rankResults(results)
+
+    // Different retailers — both should be kept
+    expect(ranked).toHaveLength(2)
+    expect(ranked[0].retailer).toBe('Amazon')
+    expect(ranked[1].retailer).toBe('Nike (CJ)')
+  })
 })

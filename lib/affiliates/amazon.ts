@@ -30,50 +30,32 @@ export const searchAmazon: AffiliateSearchFn = async (
   const affiliateRate = getAffiliateRate(category)
   const tag = process.env.AMAZON_ASSOCIATE_TAG ?? 'k33pr-20'
 
-  // TODO: Replace mock block below with real PA-API calls once approved
+  // TODO: Replace with real PA-API calls once approved.
+  // For now, generate an Amazon search URL using the product's search terms.
+  // This is a valid Amazon Associates affiliate link — any purchase within
+  // 24 hours of clicking earns the commission. No PA-API required.
   const searchLabel = searchTerms[0] ?? 'Product'
-  const mockProducts = [
-    {
-      asin: 'B0CHWWXKZQ',
-      productName: `${searchLabel} — Option A`,
-      priceCents: 2499,
-      imageUrl: null as string | null,
-    },
-    {
-      asin: 'B09NQKX7ZP',
-      productName: `${searchLabel} — Option B`,
-      priceCents: 2299,
-      imageUrl: null as string | null,
-    },
-    {
-      asin: 'B0BT3YNKQR',
-      productName: `${searchLabel} — Option C`,
-      priceCents: 1999,
-      imageUrl: null as string | null,
-    },
-  ]
+  const searchQuery = searchTerms.join('+')
+  const affiliateUrl = `https://www.amazon.com/s?k=${encodeURIComponent(searchQuery)}&tag=${tag}`
 
-  const results: AffiliateResult[] = mockProducts.map((p) => {
-    const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
-    return {
-      retailer: 'Amazon',
-      productName: p.productName,
-      price: p.priceCents,
-      affiliateRate,
-      commissionCents: payout.commissionCents,
-      userPayoutCents: payout.userPayoutCents,
-      estimatedCashbackCents: payout.estimatedCashbackCents,
-      totalReturnCents: payout.totalReturnCents,
-      affiliateUrl: `https://www.amazon.com/dp/${p.asin}?tag=${tag}`,
-      productUrl: `https://www.amazon.com/dp/${p.asin}?tag=${tag}`,
-      imageUrl: p.imageUrl,
-      inStock: true,
-    }
-  })
+  // Price is unknown for search links — set to 0
+  const priceCents = 0
+  const payout = calculatePayout(priceCents, affiliateRate, cashbackRate)
 
-  return results.sort((a, b) =>
-    b.totalReturnCents !== a.totalReturnCents
-      ? b.totalReturnCents - a.totalReturnCents
-      : a.price - b.price
-  )
+  const result: AffiliateResult = {
+    retailer: 'Amazon',
+    productName: searchLabel,
+    price: priceCents,
+    affiliateRate,
+    commissionCents: payout.commissionCents,
+    userPayoutCents: payout.userPayoutCents,
+    estimatedCashbackCents: payout.estimatedCashbackCents,
+    totalReturnCents: payout.totalReturnCents,
+    affiliateUrl,
+    productUrl: affiliateUrl,
+    imageUrl: null,
+    inStock: true,
+  }
+
+  return [result]
 }

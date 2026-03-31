@@ -5,6 +5,10 @@ import type { AffiliateResult, AffiliateSearchFn } from './types'
  * Mock affiliate network implementations.
  * Each checks for its env var (or MOCK_AFFILIATES=true) before returning data.
  * When real API integrations are built, these will be replaced with actual calls.
+ *
+ * NOTE: These use real retailer search URLs so buttons go to working pages,
+ * but affiliate tracking won't work until we have approved network accounts.
+ * Amazon is the only one with a real affiliate tag right now.
  */
 
 function isMockEnabled(): boolean {
@@ -22,28 +26,28 @@ export const searchCJ: AffiliateSearchFn = async (
 
   const label = searchTerms[0] ?? 'Product'
   const affiliateRate = 0.05
+  const priceCents = 0
+  const searchQuery = encodeURIComponent(searchTerms.join(' '))
 
   const mockProducts = [
     {
-      productName: `${label} — Nike via CJ`,
-      priceCents: 5999,
-      url: 'https://www.nike.com/mock-product-cj',
-      imageUrl: null as string | null,
+      retailer: 'Nike (CJ)',
+      productName: label,
+      url: `https://www.nike.com/w?q=${searchQuery}`,
     },
     {
-      productName: `${label} — Adidas via CJ`,
-      priceCents: 4999,
-      url: 'https://www.adidas.com/mock-product-cj',
-      imageUrl: null as string | null,
+      retailer: 'Adidas (CJ)',
+      productName: label,
+      url: `https://www.adidas.com/us/search?q=${searchQuery}`,
     },
   ]
 
   return mockProducts.map((p) => {
-    const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
+    const payout = calculatePayout(priceCents, affiliateRate, cashbackRate)
     return {
-      retailer: p.url.includes('adidas') ? 'Adidas (CJ)' : 'Nike (CJ)',
+      retailer: p.retailer,
       productName: p.productName,
-      price: p.priceCents,
+      price: priceCents,
       affiliateRate,
       commissionCents: payout.commissionCents,
       userPayoutCents: payout.userPayoutCents,
@@ -51,7 +55,7 @@ export const searchCJ: AffiliateSearchFn = async (
       totalReturnCents: payout.totalReturnCents,
       affiliateUrl: p.url,
       productUrl: p.url,
-      imageUrl: p.imageUrl,
+      imageUrl: null,
       inStock: true,
     } satisfies AffiliateResult
   })
@@ -68,33 +72,27 @@ export const searchImpact: AffiliateSearchFn = async (
 
   const label = searchTerms[0] ?? 'Product'
   const affiliateRate = 0.07
+  const priceCents = 0
+  const searchQuery = encodeURIComponent(searchTerms.join(' '))
 
-  const mockProducts = [
+  const payout = calculatePayout(priceCents, affiliateRate, cashbackRate)
+
+  return [
     {
-      productName: `${label} — Target via Impact`,
-      priceCents: 3499,
-      url: 'https://www.target.com/mock-product-impact',
-      imageUrl: null as string | null,
-    },
-  ]
-
-  return mockProducts.map((p) => {
-    const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
-    return {
       retailer: 'Target (Impact)',
-      productName: p.productName,
-      price: p.priceCents,
+      productName: label,
+      price: priceCents,
       affiliateRate,
       commissionCents: payout.commissionCents,
       userPayoutCents: payout.userPayoutCents,
       estimatedCashbackCents: payout.estimatedCashbackCents,
       totalReturnCents: payout.totalReturnCents,
-      affiliateUrl: p.url,
-      productUrl: p.url,
-      imageUrl: p.imageUrl,
+      affiliateUrl: `https://www.target.com/s?searchTerm=${searchQuery}`,
+      productUrl: `https://www.target.com/s?searchTerm=${searchQuery}`,
+      imageUrl: null,
       inStock: true,
-    } satisfies AffiliateResult
-  })
+    } satisfies AffiliateResult,
+  ]
 }
 
 // ─── Rakuten ─────────────────────────────────────────────────────────────────
@@ -108,28 +106,28 @@ export const searchRakuten: AffiliateSearchFn = async (
 
   const label = searchTerms[0] ?? 'Product'
   const affiliateRate = 0.04
+  const priceCents = 0
+  const searchQuery = encodeURIComponent(searchTerms.join(' '))
 
   const mockProducts = [
     {
-      productName: `${label} — Macy's via Rakuten`,
-      priceCents: 4299,
-      url: 'https://www.macys.com/mock-product-rakuten',
-      imageUrl: null as string | null,
+      retailer: "Macy's (Rakuten)",
+      productName: label,
+      url: `https://www.macys.com/shop/search?keyword=${searchQuery}`,
     },
     {
-      productName: `${label} — Nordstrom via Rakuten`,
-      priceCents: 6499,
-      url: 'https://www.nordstrom.com/mock-product-rakuten',
-      imageUrl: null as string | null,
+      retailer: 'Nordstrom (Rakuten)',
+      productName: label,
+      url: `https://www.nordstrom.com/sr?keyword=${searchQuery}`,
     },
   ]
 
   return mockProducts.map((p) => {
-    const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
+    const payout = calculatePayout(priceCents, affiliateRate, cashbackRate)
     return {
-      retailer: p.productName.includes("Macy") ? "Macy's (Rakuten)" : 'Nordstrom (Rakuten)',
+      retailer: p.retailer,
       productName: p.productName,
-      price: p.priceCents,
+      price: priceCents,
       affiliateRate,
       commissionCents: payout.commissionCents,
       userPayoutCents: payout.userPayoutCents,
@@ -137,7 +135,7 @@ export const searchRakuten: AffiliateSearchFn = async (
       totalReturnCents: payout.totalReturnCents,
       affiliateUrl: p.url,
       productUrl: p.url,
-      imageUrl: p.imageUrl,
+      imageUrl: null,
       inStock: true,
     } satisfies AffiliateResult
   })
@@ -154,31 +152,25 @@ export const searchAwin: AffiliateSearchFn = async (
 
   const label = searchTerms[0] ?? 'Product'
   const affiliateRate = 0.06
+  const priceCents = 0
+  const searchQuery = encodeURIComponent(searchTerms.join(' '))
 
-  const mockProducts = [
+  const payout = calculatePayout(priceCents, affiliateRate, cashbackRate)
+
+  return [
     {
-      productName: `${label} — ASOS via Awin`,
-      priceCents: 3899,
-      url: 'https://www.asos.com/mock-product-awin',
-      imageUrl: null as string | null,
-    },
-  ]
-
-  return mockProducts.map((p) => {
-    const payout = calculatePayout(p.priceCents, affiliateRate, cashbackRate)
-    return {
       retailer: 'ASOS (Awin)',
-      productName: p.productName,
-      price: p.priceCents,
+      productName: label,
+      price: priceCents,
       affiliateRate,
       commissionCents: payout.commissionCents,
       userPayoutCents: payout.userPayoutCents,
       estimatedCashbackCents: payout.estimatedCashbackCents,
       totalReturnCents: payout.totalReturnCents,
-      affiliateUrl: p.url,
-      productUrl: p.url,
-      imageUrl: p.imageUrl,
+      affiliateUrl: `https://www.asos.com/us/search/?q=${searchQuery}`,
+      productUrl: `https://www.asos.com/us/search/?q=${searchQuery}`,
+      imageUrl: null,
       inStock: true,
-    } satisfies AffiliateResult
-  })
+    } satisfies AffiliateResult,
+  ]
 }

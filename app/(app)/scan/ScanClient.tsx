@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import type { MatchResult } from '@/lib/affiliates/amazon'
+import type { AffiliateResult } from '@/lib/affiliates/types'
 import ResultSkeleton from '@/components/ResultSkeleton'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
@@ -14,10 +14,6 @@ interface ScanResult {
   confidence: number
   searchTerms: string[]
   error: string | null
-}
-
-function fmt(cents: number) {
-  return '$' + (cents / 100).toFixed(2)
 }
 
 async function compressImage(file: File): Promise<File> {
@@ -67,6 +63,13 @@ async function compressImage(file: File): Promise<File> {
   })
 }
 
+/** Determine the button label based on retailer */
+function buyButtonLabel(p: AffiliateResult, buyState: BuyState): string {
+  if (buyState === 'opening') return 'Opening...'
+  if (p.retailer === 'Amazon') return 'Search on Amazon'
+  return `Search on ${p.retailer.replace(/ \(.*\)$/, '')}`
+}
+
 export default function ScanClient() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [scanState, setScanState] = useState<ScanState>('idle')
@@ -75,7 +78,7 @@ export default function ScanClient() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [storeState, setStoreState] = useState<StoreState>('idle')
-  const [products, setProducts] = useState<MatchResult[]>([])
+  const [products, setProducts] = useState<AffiliateResult[]>([])
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [isOffline, setIsOffline] = useState(false)
 
@@ -199,33 +202,36 @@ export default function ScanClient() {
     }
   }
 
-  function handleBuy(p: MatchResult) {
+  function handleBuy(p: AffiliateResult) {
     window.open(p.affiliateUrl, '_blank', 'noopener,noreferrer')
     setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'opening' }))
     setTimeout(() => {
       setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'idle' }))
     }, 1500)
-    const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('keepr_anon_id') : null
-    fetch('/api/transaction', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
-      },
-      body: JSON.stringify({
-        productName: p.productName,
-        retailer: p.retailer,
-        priceCents: p.priceCents,
-        commissionRate: p.affiliateRate,
-        commissionCents: p.commissionCents,
-        processingFeeCents: 20,
-        userPayoutCents: p.userPayoutCents,
-        estimatedCashbackCents: p.estimatedCashbackCents,
-        totalReturnCents: p.totalReturnCents,
-        affiliateUrl: p.affiliateUrl,
-        productUrl: p.productUrl,
-      }),
-    }).catch(() => {})
+    // Only log transaction if price is known (not a search link)
+    if (p.price > 0) {
+      const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('keepr_anon_id') : null
+      fetch('/api/transaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
+        },
+        body: JSON.stringify({
+          productName: p.productName,
+          retailer: p.retailer,
+          priceCents: p.price,
+          commissionRate: p.affiliateRate,
+          commissionCents: p.commissionCents,
+          processingFeeCents: 20,
+          userPayoutCents: p.userPayoutCents,
+          estimatedCashbackCents: p.estimatedCashbackCents,
+          totalReturnCents: p.totalReturnCents,
+          affiliateUrl: p.affiliateUrl,
+          productUrl: p.productUrl,
+        }),
+      }).catch(() => {})
+    }
   }
 
   function handleReset() {
@@ -413,42 +419,52 @@ export default function ScanClient() {
 
           {storeState === 'done' && products.length > 0 && (
             <div className="space-y-3">
-              {products.map((p, i) => (
-                <div key={p.affiliateUrl} className="bg-surface border border-border rounded-2xl p-4 space-y-3">
-                  <div className="flex gap-3">
+              {products.map((p) => {
+                const priceKnown = p.price > 0
+                const buyState = buyStates[p.affiliateUrl] ?? 'idle'
+                return (
+                  <div key={p.affiliateUrl} className="bg-surface border border-border rounded-2xl p-4 space-y-3">
+                    {/* Retailer + product name */}
+                    <div>
+                      <p className="text-base font-bold text-white">{p.retailer}</p>
+                      <p className="text-sm text-foreground-secondary leading-snug mt-0.5">{p.productName}</p>
+                    </div>
+
+                    {/* Image if available */}
                     {p.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.productName} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                      <img src={p.imageUrl} alt={p.productName} className="w-16 h-16 rounded-xl object-cover" />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2 mb-1">
-                        <p className="text-sm font-semibold text-foreground leading-snug flex-1">{p.productName}</p>
-                        {i === 0 && (
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#FF6B35', color: '#fff' }}>
-                            Best Deal
-                          </span>
-                        )}
+
+                    {/* Price + earnings — only when price is known */}
+                    {priceKnown && (
+                      <div className="space-y-0.5">
+                        <p className="text-base font-bold text-white">${(p.price / 100).toFixed(2)}</p>
+                        <p className="text-xs" style={{ color: '#9ca3af' }}>Commission: ${(p.commissionCents / 100).toFixed(2)}</p>
+                        <p className="text-xs" style={{ color: '#9ca3af' }}>Fee: -$0.20</p>
+                        <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>You earn: ${(p.userPayoutCents / 100).toFixed(2)}</p>
+                        <p className="text-xs" style={{ color: '#9ca3af' }}>Cashback: ${(p.estimatedCashbackCents / 100).toFixed(2)}</p>
+                        <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>Total back: ${(p.totalReturnCents / 100).toFixed(2)}</p>
                       </div>
-                      <p className="text-base font-bold text-white">{fmt(p.priceCents)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-xs" style={{ color: '#9ca3af' }}>Commission: {fmt(p.commissionCents)}</p>
-                      <p className="text-xs" style={{ color: '#9ca3af' }}>Fee: -$0.20</p>
-                      <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>You earn: {fmt(p.userPayoutCents)}</p>
-                      <p className="text-xs" style={{ color: '#9ca3af' }}>Cashback: {fmt(p.estimatedCashbackCents)}</p>
-                      <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>Total back: {fmt(p.totalReturnCents)}</p>
-                    </div>
+                    )}
+
+                    {/* Search / Buy button */}
                     <button
                       onClick={() => handleBuy(p)}
-                      className="bg-primary rounded-xl px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition"
+                      className="w-full bg-primary rounded-xl py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition"
                     >
-                      {buyStates[p.affiliateUrl] === 'opening' ? 'Opening...' : 'Buy'}
+                      {buyButtonLabel(p, buyState)}
                     </button>
+
+                    {/* Helper text for search links */}
+                    {!priceKnown && (
+                      <p className="text-xs text-center" style={{ color: '#9ca3af' }}>
+                        Find this product on {p.retailer.replace(/ \(.*\)$/, '')}. Your purchase earns cashback through K33pr.
+                      </p>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 

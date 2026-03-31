@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
   }
 
-  if (typeof body.priceCents !== 'number' || body.priceCents <= 0) {
+  if (typeof body.priceCents !== 'number' || body.priceCents < 0) {
     return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
   }
 

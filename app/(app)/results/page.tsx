@@ -107,12 +107,23 @@ function ResultsContent() {
     }).catch(() => {})
   }
 
+  /** Whether this result has a known price (not a search link) */
+  function hasPrice(p: AffiliateResult) {
+    return p.price > 0
+  }
+
+  /** Determine the button label based on retailer */
+  function buyButtonLabel(p: AffiliateResult) {
+    if (p.retailer === 'Amazon') return 'Search on Amazon'
+    return `Search on ${p.retailer.replace(/ \(.*\)$/, '')}`
+  }
+
   return (
     <div className="min-h-screen bg-background px-5 pt-12 pb-36">
       {/* Header */}
       <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#9ca3af' }}>
-          {results.length > 1 ? 'Comparing prices for' : 'Results for'}
+          Results for
         </p>
         <h1 className="text-2xl font-bold text-white capitalize">{productName || 'Product'}</h1>
         {category && category !== 'General' && (
@@ -165,10 +176,10 @@ function ResultsContent() {
       {/* Results list */}
       {fetchState === 'done' && results.length > 0 && (
         <div className="space-y-3">
-          {results.map((p, i) => {
+          {results.map((p) => {
+            const priceKnown = hasPrice(p)
             const netCostCents = p.price - p.totalReturnCents
             const isOutOfStock = !p.inStock
-            const isBestDeal = i === 0 && results.length > 1
 
             return (
               <div
@@ -177,18 +188,8 @@ function ResultsContent() {
                   isOutOfStock ? 'border-border opacity-60' : 'border-border'
                 }`}
               >
-                {/* Best Deal badge */}
-                {isBestDeal && (
-                  <span
-                    className="absolute top-3 right-3 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide"
-                    style={{ backgroundColor: '#FF6B35', color: '#fff' }}
-                  >
-                    Best Deal
-                  </span>
-                )}
-
                 {/* Retailer + Product info */}
-                <div className="pr-20">
+                <div>
                   <p className="text-base font-bold text-white">{p.retailer}</p>
                   <p className="text-sm text-foreground-secondary leading-snug mt-0.5">
                     {p.productName}
@@ -207,25 +208,27 @@ function ResultsContent() {
                   </div>
                 )}
 
-                {/* Price + earnings breakdown */}
-                <div className="space-y-1.5">
-                  <p className="text-2xl font-bold text-white">{fmtPrice(p.price)}</p>
+                {/* Price + earnings breakdown — only when price is known */}
+                {priceKnown && (
+                  <div className="space-y-1.5">
+                    <p className="text-2xl font-bold text-white">{fmtPrice(p.price)}</p>
 
-                  <p className="text-sm font-semibold" style={{ color: '#4ade80' }}>
-                    You earn: {fmt(p.userPayoutCents)}
-                  </p>
-                  <p className="text-xs" style={{ color: '#9ca3af' }}>
-                    Est. cashback: {fmt(p.estimatedCashbackCents)}
-                  </p>
-                  <p className="text-sm font-bold" style={{ color: '#4ade80' }}>
-                    Total back: {fmt(p.totalReturnCents)}
-                  </p>
-                  <p className="text-xs" style={{ color: '#9ca3af' }}>
-                    Net cost: {fmt(Math.max(0, netCostCents))}
-                  </p>
-                </div>
+                    <p className="text-sm font-semibold" style={{ color: '#4ade80' }}>
+                      You earn: {fmt(p.userPayoutCents)}
+                    </p>
+                    <p className="text-xs" style={{ color: '#9ca3af' }}>
+                      Est. cashback: {fmt(p.estimatedCashbackCents)}
+                    </p>
+                    <p className="text-sm font-bold" style={{ color: '#4ade80' }}>
+                      Total back: {fmt(p.totalReturnCents)}
+                    </p>
+                    <p className="text-xs" style={{ color: '#9ca3af' }}>
+                      Net cost: {fmt(Math.max(0, netCostCents))}
+                    </p>
+                  </div>
+                )}
 
-                {/* Buy button */}
+                {/* Buy / Search button */}
                 {isOutOfStock ? (
                   <button
                     disabled
@@ -234,15 +237,22 @@ function ResultsContent() {
                     Out of Stock
                   </button>
                 ) : (
-                  <button
-                    onClick={() => handleBuy(p)}
-                    className="w-full rounded-xl py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition"
-                    style={{ backgroundColor: '#FF6B35' }}
-                  >
-                    {buyStates[p.affiliateUrl] === 'opening'
-                      ? 'Opening...'
-                      : `Buy at ${p.retailer}`}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleBuy(p)}
+                      className="w-full rounded-xl py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition"
+                      style={{ backgroundColor: '#FF6B35' }}
+                    >
+                      {buyStates[p.affiliateUrl] === 'opening'
+                        ? 'Opening...'
+                        : buyButtonLabel(p)}
+                    </button>
+                    {!priceKnown && (
+                      <p className="text-xs text-center" style={{ color: '#9ca3af' }}>
+                        Find this product on {p.retailer.replace(/ \(.*\)$/, '')}. Your purchase earns cashback through K33pr.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )
@@ -250,8 +260,8 @@ function ResultsContent() {
         </div>
       )}
 
-      {/* Cashback rate note */}
-      {fetchState === 'done' && results.length > 0 && !hasCustomRate && (
+      {/* Cashback rate note — only show when prices are known */}
+      {fetchState === 'done' && results.length > 0 && !hasCustomRate && results.some((r) => r.price > 0) && (
         <div className="bg-surface border border-border rounded-2xl p-4 mt-4">
           <p className="text-xs" style={{ color: '#9ca3af' }}>
             Cashback estimate based on {cashbackPct}% card rate.{' '}
