@@ -1,14 +1,8 @@
-'use client'
+X'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import Link from 'next/link'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import ResultSkeleton from '@/components/ResultSkeleton'
-import { getUserCardsWithRates } from '@/lib/cards/actions'
-import { getCardCategory } from '@/lib/cards/categoryMap'
-import { getBestCardRecommendation } from '@/lib/cards/recommender'
-import type { CardRecommendation } from '@/lib/cards/recommender'
-import { createClient } from '@/lib/supabase/client'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -88,48 +82,6 @@ export default function ScanClient() {
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [isOffline, setIsOffline] = useState(false)
 
-  // Card recommendation state
-  // null = not yet resolved, undefined = no recommendation (no cards / not logged in)
-  const [cardRecommendation, setCardRecommendation] = useState<CardRecommendation | null | undefined>(null)
-  const [userLoggedIn, setUserLoggedIn] = useState<boolean | null>(null)
-
-  // Fetch card recommendation after store results are loaded
-  useEffect(() => {
-    if (storeState !== 'done' || products.length === 0) return
-
-    async function fetchCardRecommendation() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-          setUserLoggedIn(false)
-          setCardRecommendation(undefined)
-          return
-        }
-
-        setUserLoggedIn(true)
-        const userCards = await getUserCardsWithRates(user.id)
-        console.log('[card-rec] getUserCardsWithRates result:', userCards)
-
-        if (!userCards || userCards.length === 0) {
-          setCardRecommendation(undefined)
-          return
-        }
-
-        const cardCategory = getCardCategory(scanResult?.category ?? 'General')
-        const recommendation = getBestCardRecommendation(userCards, cardCategory)
-        console.log('[card-rec] getBestCardRecommendation result:', recommendation)
-        setCardRecommendation(recommendation ?? undefined)
-      } catch {
-        // Silently fail — don't show the block if data isn't available
-        setCardRecommendation(undefined)
-      }
-    }
-
-    fetchCardRecommendation()
-  }, [storeState, products.length, scanResult?.category])
-
   useEffect(() => {
     function handleOnline() { setIsOffline(false) }
     function handleOffline() { setIsOffline(true) }
@@ -173,7 +125,6 @@ export default function ScanClient() {
   }
 
   async function handleProcess() {
-    console.log('scan submitted')
     if (!currentFile) return
     setScanState('processing')
 
@@ -196,7 +147,6 @@ export default function ScanClient() {
         method: 'POST',
         body: formData,
       })
-      console.log('vision response:', res.status)
 
       if (!res.ok) {
         const err = await res.json()
@@ -218,14 +168,12 @@ export default function ScanClient() {
       setProducts([])
       setScanState('result')
     } catch (err) {
-      console.log('scan error:', err)
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
       setScanState('error')
     }
   }
 
   async function handleFindBestPrice() {
-    console.log('handleFindBestPrice called')
     if (!scanResult) return
     setStoreState('loading')
     setProducts([])
@@ -235,25 +183,21 @@ export default function ScanClient() {
       return
     }
 
-    const matchBody = {
-      productName: scanResult.productName,
-      category: scanResult.category,
-      searchTerms: scanResult.searchTerms,
-    }
     try {
-      console.log('calling match with:', matchBody)
       const res = await fetch('/api/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(matchBody),
+        body: JSON.stringify({
+          productName: scanResult.productName,
+          category: scanResult.category,
+          searchTerms: scanResult.searchTerms,
+        }),
       })
-      console.log('match response:', res.status)
       if (!res.ok) throw new Error('store error')
       const data = await res.json()
       setProducts(data.results ?? [])
       setStoreState('done')
-    } catch (err) {
-      console.log('match fetch error:', err)
+    } catch {
       setStoreState('error')
     }
   }
@@ -299,8 +243,6 @@ export default function ScanClient() {
     setStoreState('idle')
     setProducts([])
     setBuyStates({})
-    setCardRecommendation(null)
-    setUserLoggedIn(null)
   }
 
   return (
@@ -497,7 +439,6 @@ export default function ScanClient() {
                   </div>
                 </div>
               )}
-
               {products.map((p) => {
                 const priceKnown = p.price > 0
                 const buyState = buyStates[p.affiliateUrl] ?? 'idle'
@@ -550,67 +491,6 @@ export default function ScanClient() {
                   </div>
                 )
               })}
-
-              {/* Card recommendation block */}
-              {cardRecommendation !== null && (
-                <>
-                  {/* No cards / not logged in: subtle prompt */}
-                  {(userLoggedIn === false || cardRecommendation === undefined) && (
-                    <p className="text-xs text-foreground-secondary mt-2">
-                      <Link href="/settings" className="text-primary hover:underline">
-                        Add your cards in Settings
-                      </Link>{' '}
-                      to see combined cashback recommendations.
-                    </p>
-                  )}
-
-                  {/* Card recommendation */}
-                  {cardRecommendation && (
-                    <div className="bg-surface border border-border rounded-2xl p-4 mt-2 space-y-2">
-                      <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
-                        Best card for this purchase
-                      </p>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-bold text-foreground">{cardRecommendation.cardName}</p>
-                          <p className="text-xs text-foreground-secondary">{cardRecommendation.issuer}</p>
-                        </div>
-                        <p className="text-sm font-bold text-primary whitespace-nowrap">
-                          {cardRecommendation.rate}% cashback
-                        </p>
-                      </div>
-
-                      {cardRecommendation.isRotating && (
-                        <p className="text-xs text-foreground-secondary">
-                          ⚠ Rotating category — verify your current quarter
-                        </p>
-                      )}
-
-                      {cardRecommendation.notes && (
-                        <p className="text-xs text-foreground-secondary">{cardRecommendation.notes}</p>
-                      )}
-
-                      {/* Combined total row */}
-                      {products.length > 0 && (() => {
-                        const topResult = products[0]
-                        const k33prRatePct = Math.round(topResult.affiliateRate * 100)
-                        const cardRatePct = cardRecommendation.rate
-                        const totalPct = k33prRatePct + cardRatePct
-                        return (
-                          <div className="pt-2 border-t border-border">
-                            <p className="text-xs text-foreground-secondary">
-                              K33pr cashback + {cardRecommendation.cardName}:{' '}
-                              <span className="font-semibold text-foreground">
-                                {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
-                              </span>
-                            </p>
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           )}
 
