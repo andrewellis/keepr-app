@@ -148,6 +148,7 @@ export default function ScanClient() {
         method: 'POST',
         body: formData,
       })
+      console.log('vision response:', res.status)
 
       if (!res.ok) {
         const err = await res.json()
@@ -195,6 +196,7 @@ export default function ScanClient() {
           searchTerms: scanResult.searchTerms,
         }),
       })
+      console.log('match response:', res.status)
       if (!res.ok) throw new Error('store error')
       const data = await res.json()
       setProducts(data.results ?? [])
