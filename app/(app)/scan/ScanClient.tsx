@@ -440,35 +440,37 @@ export default function ScanClient() {
 
       {scanState === 'result' && scanResult && (
         <div className="space-y-4">
-          <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Identified as</p>
-              <p className="text-xl font-bold text-foreground capitalize">{scanResult.productName}</p>
+          {storeState !== 'done' && (
+            <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Identified as</p>
+                <p className="text-xl font-bold text-foreground capitalize">{scanResult.productName}</p>
+              </div>
+
+              {scanResult.category && scanResult.category !== 'General' && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Category</p>
+                  <p className="text-sm text-foreground">{scanResult.category}</p>
+                </div>
+              )}
+
+              {scanResult.confidence > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Confidence</p>
+                  <p className="text-sm text-foreground">{Math.round(scanResult.confidence * 100)}%</p>
+                </div>
+              )}
+
+              {scanResult.searchTerms.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-1.5 text-foreground-secondary">Search Terms</p>
+                  <p className="text-xs text-foreground-secondary">
+                    {scanResult.searchTerms.join(', ')}
+                  </p>
+                </div>
+              )}
             </div>
-
-            {scanResult.category && scanResult.category !== 'General' && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Category</p>
-                <p className="text-sm text-foreground">{scanResult.category}</p>
-              </div>
-            )}
-
-            {scanResult.confidence > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Confidence</p>
-                <p className="text-sm text-foreground">{Math.round(scanResult.confidence * 100)}%</p>
-              </div>
-            )}
-
-            {scanResult.searchTerms.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5 text-foreground-secondary">Search Terms</p>
-                <p className="text-xs text-foreground-secondary">
-                  {scanResult.searchTerms.join(', ')}
-                </p>
-              </div>
-            )}
-          </div>
+          )}
 
           {storeState === 'idle' && (
             <button
