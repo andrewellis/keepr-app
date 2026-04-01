@@ -110,7 +110,6 @@ export default function ScanClient() {
 
         setUserLoggedIn(true)
         const userCards = await getUserCardsWithRates(user.id)
-        console.log('[card-rec] getUserCardsWithRates result:', userCards)
 
         if (!userCards || userCards.length === 0) {
           setCardRecommendation(undefined)
@@ -119,7 +118,6 @@ export default function ScanClient() {
 
         const cardCategory = getCardCategory(scanResult?.category ?? 'General')
         const recommendation = getBestCardRecommendation(userCards, cardCategory)
-        console.log('[card-rec] getBestCardRecommendation result:', recommendation)
         setCardRecommendation(recommendation ?? undefined)
       } catch {
         // Silently fail — don't show the block if data isn't available
@@ -173,7 +171,6 @@ export default function ScanClient() {
   }
 
   async function handleProcess() {
-    console.log('scan submitted')
     if (!currentFile) return
     setScanState('processing')
 
@@ -196,8 +193,6 @@ export default function ScanClient() {
         method: 'POST',
         body: formData,
       })
-      console.log('vision response:', res.status)
-
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error ?? 'Vision API error')
@@ -218,14 +213,12 @@ export default function ScanClient() {
       setProducts([])
       setScanState('result')
     } catch (err) {
-      console.log('scan error:', err)
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
       setScanState('error')
     }
   }
 
   async function handleFindBestPrice() {
-    console.log('handleFindBestPrice called')
     if (!scanResult) return
     setStoreState('loading')
     setProducts([])
@@ -241,19 +234,16 @@ export default function ScanClient() {
       searchTerms: scanResult.searchTerms,
     }
     try {
-      console.log('calling match with:', matchBody)
       const res = await fetch('/api/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(matchBody),
       })
-      console.log('match response:', res.status)
       if (!res.ok) throw new Error('store error')
       const data = await res.json()
       setProducts(data.results ?? [])
       setStoreState('done')
-    } catch (err) {
-      console.log('match fetch error:', err)
+    } catch {
       setStoreState('error')
     }
   }

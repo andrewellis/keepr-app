@@ -76,7 +76,6 @@ function ResultsContent() {
 
         setUserLoggedIn(true)
         const userCards = await getUserCardsWithRates(user.id)
-        console.log('[card-rec] getUserCardsWithRates result:', userCards)
 
         if (!userCards || userCards.length === 0) {
           setCardRecommendation(undefined)
@@ -85,7 +84,6 @@ function ResultsContent() {
 
         const cardCategory = getCardCategory(category)
         const recommendation = getBestCardRecommendation(userCards, cardCategory)
-        console.log('[card-rec] getBestCardRecommendation result:', recommendation)
         setCardRecommendation(recommendation ?? undefined)
       } catch {
         // Silently fail — don't show the block if data isn't available
