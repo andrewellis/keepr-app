@@ -109,13 +109,13 @@ If the image does not contain a product at all, respond:
     clearTimeout(claudeTimeout)
 
     if (!response.ok) {
-      console.error('Claude API error:', response.status, await response.text())
+      const errText = await response.text(); console.error("[scan] Claude API error:", response.status, errText); return null
       return null
     }
 
-    const data = await response.json()
+    const data = await response.json(); console.log("[scan] Claude raw response:", JSON.stringify(data.content?.[0]?.text?.slice(0,300)))
     const text = data.content?.[0]?.text?.trim()
-    if (!text) return null
+    if (!text) { console.log("[scan] Claude returned no text"); return null }
 
     // Parse JSON response, strip any markdown fences if present
     const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
@@ -240,14 +240,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
       : 0
 
     // Second pass: use Claude for specific product identification
-    const claudeResult = await identifyProductWithClaude(
+    console.log("[scan] Calling Claude for product identification..."); const claudeResult = await identifyProductWithClaude(
       imageBase64,
       file.type || 'image/jpeg',
       labels,
       bestGuess
     )
 
-    if (claudeResult) {
+    console.log("[scan] Claude result:", JSON.stringify(claudeResult)); if (claudeResult) {
       // Claude identified a specific product — use its output
       const claudeCategory = mapToCategory(claudeResult.searchTerms, labels)
       return NextResponse.json({

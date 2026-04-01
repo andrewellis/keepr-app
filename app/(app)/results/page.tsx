@@ -36,10 +36,25 @@ function ResultsContent() {
   const [results, setResults] = useState<AffiliateResult[]>([])
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [hasCustomRate, setHasCustomRate] = useState(true)
+  const [scannedImage, setScannedImage] = useState<string | null>(null)
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false)
 
   // Derive cashback rate for display
   const cashbackRate = cashbackRateParam ? Number(cashbackRateParam) : 0.05
   const cashbackPct = Math.round(cashbackRate * 100)
+
+  // Load scanned image from sessionStorage on mount
+  useEffect(() => {
+    const img = sessionStorage.getItem('k33pr_scanned_image')
+    if (img) setScannedImage(img)
+  }, [])
+
+  // Clean up sessionStorage on unmount
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem('k33pr_scanned_image')
+    }
+  }, [])
 
   useEffect(() => {
     if (!productName) {
@@ -120,15 +135,27 @@ function ResultsContent() {
 
   return (
     <div className="min-h-screen bg-background px-5 pt-12 pb-36">
-      {/* Header */}
-      <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">
-          Results for
-        </p>
-        <h1 className="text-2xl font-bold text-foreground capitalize">{productName || 'Product'}</h1>
-        {category && category !== 'General' && (
-          <p className="text-sm mt-1 text-foreground-secondary">{category}</p>
-        )}
+      {/* Product summary card with scanned image */}
+      <div className="bg-surface border border-border rounded-2xl p-4 mb-6">
+        <div className="flex items-center gap-4">
+          {scannedImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={scannedImage}
+              alt={productName || 'Scanned product'}
+              className="w-[120px] h-[120px] rounded-xl object-cover flex-shrink-0"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-foreground capitalize leading-snug">
+              {productName || 'Product'}
+            </h1>
+            {category && category !== 'General' && (
+              <p className="text-sm mt-1 text-foreground-secondary">{category}</p>
+            )}
+            <p className="text-xs text-foreground-secondary mt-2">Identified by K33pr</p>
+          </div>
+        </div>
       </div>
 
       {/* Loading */}
@@ -180,6 +207,7 @@ function ResultsContent() {
             const priceKnown = hasPrice(p)
             const netCostCents = p.price - p.totalReturnCents
             const isOutOfStock = !p.inStock
+            const affiliateRatePct = Math.round(p.affiliateRate * 100)
 
             return (
               <div
@@ -194,6 +222,25 @@ function ResultsContent() {
                   <p className="text-sm text-foreground-secondary leading-snug mt-0.5">
                     {p.productName}
                   </p>
+                </div>
+
+                {/* Commission rate display */}
+                <div className="space-y-0.5">
+                  <p className="text-xs text-foreground-secondary">
+                    Earn up to {affiliateRatePct}% cashback through K33pr
+                  </p>
+                  {hasCustomRate ? (
+                    <p className="text-xs text-foreground-secondary">
+                      + your {cashbackPct}% card cashback
+                    </p>
+                  ) : (
+                    <p className="text-xs text-foreground-secondary">
+                      + estimated {cashbackPct}% card cashback{' '}
+                      <Link href="/settings" className="text-primary hover:underline">
+                        (update your rate in Settings)
+                      </Link>
+                    </p>
+                  )}
                 </div>
 
                 {/* Image row if available */}
@@ -256,6 +303,45 @@ function ResultsContent() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* How cashback works — expandable section */}
+      {fetchState === 'done' && results.length > 0 && (
+        <div className="mt-4">
+          <button
+            onClick={() => setHowItWorksOpen(!howItWorksOpen)}
+            className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
+          >
+            <span>How does cashback work?</span>
+            <svg
+              className={`w-4 h-4 transition-transform duration-200 ${howItWorksOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {howItWorksOpen && (
+            <div className="bg-surface border border-border rounded-2xl p-4 mt-2 space-y-3">
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                When you buy through a K33pr link, the retailer pays us a commission. We keep $0.20
+                and send the rest to you via PayPal or Venmo. Commission rates vary by retailer and
+                product category — the percentages shown above are typical rates.
+              </p>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                Your total savings = K33pr cashback + your credit card&apos;s cashback rate.
+              </p>
+              <Link
+                href="/how-it-works"
+                className="text-sm text-primary font-medium hover:underline transition inline-block"
+              >
+                Learn more →
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

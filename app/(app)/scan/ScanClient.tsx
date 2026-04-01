@@ -163,6 +163,15 @@ export default function ScanClient() {
       if (!data.productName) {
         throw new Error("Couldn't identify that product. Try a different angle or better lighting.")
       }
+      // Store scanned image in sessionStorage for results page
+      if (currentFile) {
+        const reader = new FileReader()
+        reader.onload = () => {
+          sessionStorage.setItem('k33pr_scanned_image', reader.result as string)
+        }
+        reader.readAsDataURL(currentFile)
+      }
+
       setScanResult(data)
       setStoreState('idle')
       setProducts([])
@@ -422,6 +431,7 @@ export default function ScanClient() {
               {products.map((p) => {
                 const priceKnown = p.price > 0
                 const buyState = buyStates[p.affiliateUrl] ?? 'idle'
+                const affiliateRatePct = Math.round(p.affiliateRate * 100)
                 return (
                   <div key={p.affiliateUrl} className="bg-surface border border-border rounded-2xl p-4 space-y-3">
                     {/* Retailer + product name */}
@@ -429,6 +439,11 @@ export default function ScanClient() {
                       <p className="text-base font-bold text-foreground">{p.retailer}</p>
                       <p className="text-sm text-foreground-secondary leading-snug mt-0.5">{p.productName}</p>
                     </div>
+
+                    {/* Commission rate display */}
+                    <p className="text-xs text-foreground-secondary">
+                      Earn up to {affiliateRatePct}% cashback through K33pr
+                    </p>
 
                     {/* Image if available */}
                     {p.imageUrl && (
