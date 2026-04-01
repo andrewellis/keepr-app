@@ -125,6 +125,7 @@ export default function ScanClient() {
   }
 
   async function handleProcess() {
+    console.log('scan submitted')
     if (!currentFile) return
     setScanState('processing')
 
@@ -168,6 +169,7 @@ export default function ScanClient() {
       setProducts([])
       setScanState('result')
     } catch (err) {
+      console.log('scan error:', err)
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
       setScanState('error')
     }
