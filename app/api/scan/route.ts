@@ -190,9 +190,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
       imageBase64 = buffer.toString('base64')
     }
 
-    // 10-second timeout per spec §8.1
+    // 20-second timeout per spec §8.1
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10_000)
+    const timeout = setTimeout(() => controller.abort(), 20_000)
 
     const url = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`
     const res = await fetch(url, {
