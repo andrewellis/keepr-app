@@ -21,10 +21,19 @@ export default async function HomePage() {
             Find the best price.<br />
             Earn cashback.
           </h1>
-          <p className="text-base text-foreground-secondary leading-relaxed mb-8">
+          <p className="text-base text-foreground-secondary leading-relaxed mb-4">
             K33pr compares prices across retailers and shows you where to buy for the
             most money back. Visit k33pr.com, point your camera at any product, and
             get started.
+          </p>
+          <p className="mb-8">
+            <Link
+              href="/blog/how-to-stack-cashback"
+              className="text-sm font-medium hover:underline transition"
+              style={{ color: '#534AB7' }}
+            >
+              Learn how to stack cashback for maximum savings →
+            </Link>
           </p>
           <Link
             href="/scan"
@@ -124,17 +133,6 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
-        </section>
-
-        {/* Blog link */}
-        <section className="px-5 pb-6 text-center">
-          <Link
-            href="/blog/how-to-stack-cashback"
-            className="text-sm font-medium hover:underline transition"
-            style={{ color: '#534AB7' }}
-          >
-            Learn how to stack cashback for maximum savings →
-          </Link>
         </section>
 
         {/* Footer links */}
