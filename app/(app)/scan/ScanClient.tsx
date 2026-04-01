@@ -69,6 +69,28 @@ async function compressImage(file: File): Promise<File> {
   })
 }
 
+const PRICE_RANGES: Record<string, string> = {
+  'Electronics': '$29 – $299',
+  'Beauty': '$8 – $45',
+  'Groceries': '$3 – $25',
+  'Clothing & Apparel': '$15 – $120',
+  'Home & Garden': '$12 – $89',
+  'Sports & Outdoors': '$18 – $150',
+  'Toys & Games': '$10 – $80',
+  'Books': '$8 – $35',
+  'Automotive': '$15 – $120',
+  'Office Products': '$8 – $65',
+  'Pet Supplies': '$8 – $55',
+  'Health': '$8 – $45',
+  'Tools & Hardware': '$15 – $150',
+  'Other': '$10 – $100',
+}
+
+function getPriceRange(category: string | null): string {
+  if (!category) return PRICE_RANGES['Other']
+  return PRICE_RANGES[category] ?? PRICE_RANGES['Other']
+}
+
 /** Determine the button label based on retailer */
 function buyButtonLabel(p: AffiliateResult, buyState: BuyState): string {
   if (buyState === 'opening') return 'Opening...'
@@ -467,24 +489,99 @@ export default function ScanClient() {
 
           {storeState === 'done' && products.length > 0 && (
             <div className="space-y-3">
-              {/* Product summary card */}
+              {/* Product summary + card recommendation card */}
               {scanResult && (
-                <div className="bg-surface border border-border rounded-2xl p-4 flex items-center gap-4">
-                  {previewUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={previewUrl}
-                      alt={scanResult.productName || 'Product'}
-                      className="w-[120px] h-[120px] rounded-xl object-cover flex-shrink-0"
-                    />
-                  )}
-                  <div>
-                    <p className="text-base font-bold text-foreground">{scanResult.productName}</p>
-                    {scanResult.category && (
-                      <p className="text-sm text-foreground-secondary mt-1">{scanResult.category}</p>
+                <div className="bg-surface border border-border rounded-2xl p-4 space-y-3">
+                  {/* Top row: image + product info */}
+                  <div className="flex items-center gap-4">
+                    {previewUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={previewUrl}
+                        alt={scanResult.productName || 'Product'}
+                        className="w-[120px] h-[120px] rounded-xl object-cover flex-shrink-0"
+                      />
                     )}
-                    <p className="text-xs text-foreground-secondary mt-2">Identified by K33pr</p>
+                    <div>
+                      <p className="text-base font-bold text-foreground">{scanResult.productName}</p>
+                      {scanResult.category && (
+                        <p className="text-sm text-foreground-secondary mt-1">{scanResult.category}</p>
+                      )}
+                      <p className="text-xs text-foreground-secondary mt-2">Identified by K33pr</p>
+                      <p className="text-xs text-foreground-secondary mt-1">
+                        Typical price range: {getPriceRange(scanResult.category)}
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Card recommendation block */}
+                  {cardRecommendation !== null && (
+                    <>
+                      <div className="border-t border-border" />
+
+                      {/* No cards / not logged in: subtle prompt */}
+                      {userLoggedIn === false && (
+                        <p className="text-xs text-foreground-secondary">
+                          <Link href="/signup" style={{ color: '#534AB7' }} className="hover:underline">
+                            Sign up to see your best card for this purchase
+                          </Link>
+                        </p>
+                      )}
+                      {userLoggedIn === true && cardRecommendation === undefined && (
+                        <p className="text-xs text-foreground-secondary">
+                          <Link href="/settings" style={{ color: '#534AB7' }} className="hover:underline">
+                            Add your cards in Settings to get personalized recommendations
+                          </Link>
+                        </p>
+                      )}
+
+                      {/* Card recommendation */}
+                      {cardRecommendation && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
+                            Best card for this purchase
+                          </p>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-bold text-foreground">{cardRecommendation.cardName}</p>
+                              <p className="text-xs text-foreground-secondary">{cardRecommendation.issuer}</p>
+                            </div>
+                            <p className="text-sm font-bold text-primary whitespace-nowrap">
+                              {cardRecommendation.rate}% cashback
+                            </p>
+                          </div>
+
+                          {cardRecommendation.isRotating && (
+                            <p className="text-xs text-foreground-secondary">
+                              ⚠ Rotating category — verify your current quarter
+                            </p>
+                          )}
+
+                          {cardRecommendation.notes && (
+                            <p className="text-xs text-foreground-secondary">{cardRecommendation.notes}</p>
+                          )}
+
+                          {/* Combined total row */}
+                          {products.length > 0 && (() => {
+                            const topResult = products[0]
+                            const k33prRatePct = Math.round(topResult.affiliateRate * 100)
+                            const cardRatePct = cardRecommendation.rate
+                            const totalPct = k33prRatePct + cardRatePct
+                            return (
+                              <div className="pt-2 border-t border-border">
+                                <p className="text-xs text-foreground-secondary">
+                                  K33pr cashback + {cardRecommendation.cardName}:{' '}
+                                  <span className="font-semibold text-foreground">
+                                    {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
+                                  </span>
+                                </p>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -541,66 +638,6 @@ export default function ScanClient() {
                 )
               })}
 
-              {/* Card recommendation block */}
-              {cardRecommendation !== null && (
-                <>
-                  {/* No cards / not logged in: subtle prompt */}
-                  {(userLoggedIn === false || cardRecommendation === undefined) && (
-                    <p className="text-xs text-foreground-secondary mt-2">
-                      <Link href="/settings" className="text-primary hover:underline">
-                        Add your cards in Settings
-                      </Link>{' '}
-                      to see combined cashback recommendations.
-                    </p>
-                  )}
-
-                  {/* Card recommendation */}
-                  {cardRecommendation && (
-                    <div className="bg-surface border border-border rounded-2xl p-4 mt-2 space-y-2">
-                      <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
-                        Best card for this purchase
-                      </p>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-bold text-foreground">{cardRecommendation.cardName}</p>
-                          <p className="text-xs text-foreground-secondary">{cardRecommendation.issuer}</p>
-                        </div>
-                        <p className="text-sm font-bold text-primary whitespace-nowrap">
-                          {cardRecommendation.rate}% cashback
-                        </p>
-                      </div>
-
-                      {cardRecommendation.isRotating && (
-                        <p className="text-xs text-foreground-secondary">
-                          ⚠ Rotating category — verify your current quarter
-                        </p>
-                      )}
-
-                      {cardRecommendation.notes && (
-                        <p className="text-xs text-foreground-secondary">{cardRecommendation.notes}</p>
-                      )}
-
-                      {/* Combined total row */}
-                      {products.length > 0 && (() => {
-                        const topResult = products[0]
-                        const k33prRatePct = Math.round(topResult.affiliateRate * 100)
-                        const cardRatePct = cardRecommendation.rate
-                        const totalPct = k33prRatePct + cardRatePct
-                        return (
-                          <div className="pt-2 border-t border-border">
-                            <p className="text-xs text-foreground-secondary">
-                              K33pr cashback + {cardRecommendation.cardName}:{' '}
-                              <span className="font-semibold text-foreground">
-                                {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
-                              </span>
-                            </p>
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           )}
 
