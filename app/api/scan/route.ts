@@ -43,6 +43,97 @@ function errorResult(error: string): ScanResult {
   return { productName: null, category: null, confidence: 0, searchTerms: [], error }
 }
 
+async function identifyProductWithClaude(
+  imageBase64: string,
+  mimeType: string,
+  visionLabels: string[],
+  visionBestGuess: string | null
+): Promise<{ productName: string; searchTerms: string[] } | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return null
+
+  const claudeController = new AbortController()
+  const claudeTimeout = setTimeout(() => claudeController.abort(), 10_000)
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mimeType,
+                data: imageBase64,
+              },
+            },
+            {
+              type: 'text',
+              text: `You are a product identification assistant for a shopping comparison website. Identify the specific product in this image.
+
+Google Vision detected these labels: ${visionLabels.join(', ')}
+Google Vision best guess: ${visionBestGuess || 'none'}
+
+Your job: identify the SPECIFIC product — brand, model name, variant (color, size, generation) if visible. Be as specific as possible.
+
+Respond ONLY with a JSON object, no markdown, no backticks:
+{"productName": "Brand Model Variant", "searchTerms": ["most specific search term", "broader search term", "brand + category"]}
+
+Examples of good responses:
+{"productName": "Nike Air Max 90 White/Black", "searchTerms": ["Nike Air Max 90 White Black", "Nike Air Max 90", "Nike sneakers"]}
+{"productName": "Apple AirPods Pro 2nd Generation", "searchTerms": ["Apple AirPods Pro 2nd Generation", "AirPods Pro 2", "Apple earbuds"]}
+{"productName": "Stanley Quencher H2.0 Tumbler 40oz Cream", "searchTerms": ["Stanley Quencher H2.0 40oz Cream", "Stanley Quencher tumbler", "Stanley water bottle"]}
+
+If you cannot identify a specific product, still try to be as specific as possible with brand and type:
+{"productName": "Yeti Rambler Mug", "searchTerms": ["Yeti Rambler Mug", "Yeti coffee mug", "Yeti drinkware"]}
+
+If the image does not contain a product at all, respond:
+{"productName": null, "searchTerms": []}`,
+            },
+          ],
+        }],
+      }),
+      signal: claudeController.signal,
+    })
+
+    clearTimeout(claudeTimeout)
+
+    if (!response.ok) {
+      console.error('Claude API error:', response.status, await response.text())
+      return null
+    }
+
+    const data = await response.json()
+    const text = data.content?.[0]?.text?.trim()
+    if (!text) return null
+
+    // Parse JSON response, strip any markdown fences if present
+    const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const parsed = JSON.parse(clean)
+
+    if (!parsed.productName) return null
+
+    return {
+      productName: parsed.productName,
+      searchTerms: parsed.searchTerms || [parsed.productName],
+    }
+  } catch (err) {
+    clearTimeout(claudeTimeout)
+    console.error('Claude identification error:', err)
+    return null // Fall back to Vision results
+  }
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> {
   let formData: FormData
   try {
@@ -148,6 +239,27 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
       ? Math.max(...filteredEntities.map(e => e.score ?? 0))
       : 0
 
+    // Second pass: use Claude for specific product identification
+    const claudeResult = await identifyProductWithClaude(
+      imageBase64,
+      file.type || 'image/jpeg',
+      labels,
+      bestGuess
+    )
+
+    if (claudeResult) {
+      // Claude identified a specific product — use its output
+      const claudeCategory = mapToCategory(claudeResult.searchTerms, labels)
+      return NextResponse.json({
+        productName: claudeResult.productName,
+        category: claudeCategory,
+        confidence: Math.round(topScore * 100) / 100,
+        searchTerms: claudeResult.searchTerms,
+        error: null,
+      })
+    }
+
+    // If Claude fails or isn't configured, fall through to existing Vision-only logic below
     const category = mapToCategory(labels, webEntityNames)
     const searchTerms = bestGuess
       ? [bestGuess, ...webEntityNames.filter(n => n !== bestGuess)].slice(0, 5)
