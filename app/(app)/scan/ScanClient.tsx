@@ -177,6 +177,7 @@ export default function ScanClient() {
   }
 
   async function handleFindBestPrice() {
+    console.log('handleFindBestPrice called')
     if (!scanResult) return
     setStoreState('loading')
     setProducts([])
@@ -186,22 +187,25 @@ export default function ScanClient() {
       return
     }
 
+    const matchBody = {
+      productName: scanResult.productName,
+      category: scanResult.category,
+      searchTerms: scanResult.searchTerms,
+    }
     try {
+      console.log('calling match with:', matchBody)
       const res = await fetch('/api/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productName: scanResult.productName,
-          category: scanResult.category,
-          searchTerms: scanResult.searchTerms,
-        }),
+        body: JSON.stringify(matchBody),
       })
       console.log('match response:', res.status)
       if (!res.ok) throw new Error('store error')
       const data = await res.json()
       setProducts(data.results ?? [])
       setStoreState('done')
-    } catch {
+    } catch (err) {
+      console.log('match fetch error:', err)
       setStoreState('error')
     }
   }
