@@ -177,8 +177,14 @@ export default function ScanClient() {
     setScanState('preview')
   }
 
+  const libraryInputRef = useRef<HTMLInputElement>(null)
+
   function handleCameraCapture() {
     fileInputRef.current?.click()
+  }
+
+  function handleLibraryUpload() {
+    libraryInputRef.current?.click()
   }
 
   function handleUpload() {
@@ -379,6 +385,15 @@ export default function ScanClient() {
         onChange={handleFileChange}
       />
 
+      {/* Library input — no capture, opens photo library on mobile */}
+      <input
+        ref={libraryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       {scanState === 'idle' && (
         <div className="space-y-3">
           <button
@@ -397,20 +412,34 @@ export default function ScanClient() {
             </div>
           </button>
 
-          <button
-            onClick={handleUpload}
-            className="w-full bg-surface border border-border rounded-2xl p-6 flex flex-col items-center gap-3 hover:border-primary active:scale-[0.98] transition"
-          >
-            <div className="w-16 h-16 rounded-full bg-border flex items-center justify-center">
-              <svg className="w-8 h-8 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-            </div>
+          {isMobile && (
             <div className="text-center">
-              <p className="text-foreground font-semibold text-base">Upload Image</p>
-              <p className="text-foreground-secondary text-xs mt-0.5">Choose from photo library</p>
+              <button
+                onClick={handleLibraryUpload}
+                className="text-sm hover:underline transition"
+                style={{ color: '#534AB7' }}
+              >
+                Upload from Library
+              </button>
             </div>
-          </button>
+          )}
+
+          {!isMobile && (
+            <button
+              onClick={handleUpload}
+              className="w-full bg-surface border border-border rounded-2xl p-6 flex flex-col items-center gap-3 hover:border-primary active:scale-[0.98] transition"
+            >
+              <div className="w-16 h-16 rounded-full bg-border flex items-center justify-center">
+                <svg className="w-8 h-8 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-foreground font-semibold text-base">Upload Image</p>
+                <p className="text-foreground-secondary text-xs mt-0.5">Choose from photo library</p>
+              </div>
+            </button>
+          )}
 
           <div className="bg-surface border border-border rounded-2xl p-4 mt-2">
             <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2">Tips for best results</p>
