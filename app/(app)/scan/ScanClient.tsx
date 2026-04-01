@@ -187,21 +187,6 @@ export default function ScanClient() {
     libraryInputRef.current?.click()
   }
 
-  function handleUpload() {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/*'
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
-      setCurrentFile(file)
-      setScanState('preview')
-    }
-    input.click()
-  }
-
   async function handleProcess() {
     if (!currentFile) return
     setScanState('processing')
@@ -422,23 +407,6 @@ export default function ScanClient() {
                 Upload from Library
               </button>
             </div>
-          )}
-
-          {!isMobile && (
-            <button
-              onClick={handleUpload}
-              className="w-full bg-surface border border-border rounded-2xl p-6 flex flex-col items-center gap-3 hover:border-primary active:scale-[0.98] transition"
-            >
-              <div className="w-16 h-16 rounded-full bg-border flex items-center justify-center">
-                <svg className="w-8 h-8 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-              </div>
-              <div className="text-center">
-                <p className="text-foreground font-semibold text-base">Upload Image</p>
-                <p className="text-foreground-secondary text-xs mt-0.5">Choose from photo library</p>
-              </div>
-            </button>
           )}
 
           <div className="bg-surface border border-border rounded-2xl p-4 mt-2">
