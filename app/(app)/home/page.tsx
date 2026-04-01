@@ -153,6 +153,10 @@ export default async function HomePage() {
             <Link href="/terms" className="text-xs text-foreground-secondary hover:text-primary transition">
               Terms of Service
             </Link>
+            <span className="text-xs text-foreground-secondary">·</span>
+            <Link href="/about" className="text-xs text-foreground-secondary hover:text-primary transition">
+              About
+            </Link>
           </div>
         </section>
 

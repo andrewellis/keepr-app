@@ -100,6 +100,8 @@ function buyButtonLabel(p: AffiliateResult, buyState: BuyState): string {
 }
 
 export default function ScanClient() {
+  const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -390,7 +392,7 @@ export default function ScanClient() {
               </svg>
             </div>
             <div className="text-center">
-              <p className="text-white font-semibold text-base">Take Photo</p>
+              <p className="text-white font-semibold text-base">{isMobile ? 'Take a Photo' : 'Upload a Photo'}</p>
               <p className="text-white/70 text-xs mt-0.5">Photograph the item</p>
             </div>
           </button>
