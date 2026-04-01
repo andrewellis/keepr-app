@@ -126,6 +126,17 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Blog link */}
+        <section className="px-5 pb-6 text-center">
+          <Link
+            href="/blog/how-to-stack-cashback"
+            className="text-sm font-medium hover:underline transition"
+            style={{ color: '#534AB7' }}
+          >
+            Learn how to stack cashback for maximum savings →
+          </Link>
+        </section>
+
         {/* Footer links */}
         <section className="px-5 pb-4">
           <div className="flex items-center justify-center gap-4">

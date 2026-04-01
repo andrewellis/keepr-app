@@ -105,6 +105,17 @@ export default function HowItWorksPage() {
             Have more questions? Check our FAQ →
           </Link>
         </div>
+
+        {/* Blog link */}
+        <div>
+          <Link
+            href="/blog/how-to-stack-cashback"
+            className="text-sm font-medium hover:underline transition"
+            style={{ color: '#534AB7' }}
+          >
+            Learn how to stack cashback for maximum savings →
+          </Link>
+        </div>
       </div>
 
       {/* Affiliate disclosure */}
