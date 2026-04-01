@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
 import EditDisplayName from './EditDisplayName'
+import MyCardsSection from '@/components/cards/MyCardsSection'
+import { getAllCards, getUserCards } from '@/lib/cards/actions'
 
 export default async function SettingsPage() {
   const supabase = createClient()
@@ -19,6 +21,11 @@ export default async function SettingsPage() {
     .select('*')
     .eq('id', user.id)
     .single()
+
+  const [allCards, userCards] = await Promise.all([
+    getAllCards(),
+    getUserCards(user.id),
+  ])
 
   return (
     <div className="min-h-screen bg-background px-5 pt-12 pb-24">
@@ -42,6 +49,27 @@ export default async function SettingsPage() {
               {user.email}
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* My Cards section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          My Cards
+        </p>
+        <div className="bg-surface border border-border rounded-2xl p-4">
+          <p className="text-sm text-foreground font-semibold mb-1">My Cards</p>
+          <p className="text-xs text-foreground-secondary mb-4">
+            Add your credit and debit cards to get personalized cashback recommendations on every scan.
+          </p>
+          <MyCardsSection
+            userId={user.id}
+            allCards={allCards}
+            initialUserCards={userCards}
+          />
+          <p className="text-xs text-foreground-secondary mt-4 text-center">
+            We never ask for card numbers. You&rsquo;re just telling us which cards you have.
+          </p>
         </div>
       </div>
 

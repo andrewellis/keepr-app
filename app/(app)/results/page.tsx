@@ -5,6 +5,11 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import ResultSkeleton from '@/components/ResultSkeleton'
+import { getUserCardsWithRates } from '@/lib/cards/actions'
+import { getCardCategory } from '@/lib/cards/categoryMap'
+import { getBestCardRecommendation } from '@/lib/cards/recommender'
+import type { CardRecommendation } from '@/lib/cards/recommender'
+import { createClient } from '@/lib/supabase/client'
 
 type FetchState = 'loading' | 'done' | 'error'
 type BuyState = 'idle' | 'opening'
@@ -39,6 +44,11 @@ function ResultsContent() {
   const [scannedImage, setScannedImage] = useState<string | null>(null)
   const [howItWorksOpen, setHowItWorksOpen] = useState(false)
 
+  // Card recommendation state
+  // null = not yet resolved, undefined = no recommendation (no cards / not logged in)
+  const [cardRecommendation, setCardRecommendation] = useState<CardRecommendation | null | undefined>(null)
+  const [userLoggedIn, setUserLoggedIn] = useState<boolean | null>(null)
+
   // Derive cashback rate for display
   const cashbackRate = cashbackRateParam ? Number(cashbackRateParam) : 0.05
   const cashbackPct = Math.round(cashbackRate * 100)
@@ -48,6 +58,43 @@ function ResultsContent() {
     const img = sessionStorage.getItem('k33pr_scanned_image')
     if (img) setScannedImage(img)
   }, [])
+
+  // Fetch card recommendation after results are loaded
+  useEffect(() => {
+    if (fetchState !== 'done' || results.length === 0) return
+
+    async function fetchCardRecommendation() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+          setUserLoggedIn(false)
+          setCardRecommendation(undefined)
+          return
+        }
+
+        setUserLoggedIn(true)
+        const userCards = await getUserCardsWithRates(user.id)
+        console.log('[card-rec] getUserCardsWithRates result:', userCards)
+
+        if (!userCards || userCards.length === 0) {
+          setCardRecommendation(undefined)
+          return
+        }
+
+        const cardCategory = getCardCategory(category)
+        const recommendation = getBestCardRecommendation(userCards, cardCategory)
+        console.log('[card-rec] getBestCardRecommendation result:', recommendation)
+        setCardRecommendation(recommendation ?? undefined)
+      } catch {
+        // Silently fail — don't show the block if data isn't available
+        setCardRecommendation(undefined)
+      }
+    }
+
+    fetchCardRecommendation()
+  }, [fetchState, results.length, category])
 
   // Clean up sessionStorage on unmount
   useEffect(() => {
@@ -304,6 +351,67 @@ function ResultsContent() {
             )
           })}
         </div>
+      )}
+
+      {/* Card recommendation block */}
+      {fetchState === 'done' && results.length > 0 && cardRecommendation !== null && (
+        <>
+          {/* No cards / not logged in: subtle prompt */}
+          {(userLoggedIn === false || cardRecommendation === undefined) && (
+            <p className="text-xs text-foreground-secondary mt-4">
+              <Link href="/settings" className="text-primary hover:underline">
+                Add your cards in Settings
+              </Link>{' '}
+              to see combined cashback recommendations.
+            </p>
+          )}
+
+          {/* Card recommendation */}
+          {cardRecommendation && (
+            <div className="bg-surface border border-border rounded-2xl p-4 mt-4 space-y-2">
+              <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
+                Best card for this purchase
+              </p>
+              <div className="flex items-baseline justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-foreground">{cardRecommendation.cardName}</p>
+                  <p className="text-xs text-foreground-secondary">{cardRecommendation.issuer}</p>
+                </div>
+                <p className="text-sm font-bold text-primary whitespace-nowrap">
+                  {cardRecommendation.rate}% cashback
+                </p>
+              </div>
+
+              {cardRecommendation.isRotating && (
+                <p className="text-xs text-foreground-secondary">
+                  ⚠ Rotating category — verify your current quarter
+                </p>
+              )}
+
+              {cardRecommendation.notes && (
+                <p className="text-xs text-foreground-secondary">{cardRecommendation.notes}</p>
+              )}
+
+              {/* Combined total row */}
+              {results.length > 0 && (() => {
+                const topResult = results[0]
+                const k33prRatePct = Math.round(topResult.affiliateRate * 100)
+                const cardRatePct = cardRecommendation.rate
+                const totalPct = k33prRatePct + cardRatePct
+                return (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-foreground-secondary">
+                      K33pr cashback + {cardRecommendation.cardName}:{' '}
+                      <span className="font-semibold text-foreground">
+                        {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
+                      </span>
+                    </p>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+        </>
       )}
 
       {/* How cashback works — expandable section */}

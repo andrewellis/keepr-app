@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:cards": "npx tsx scripts/seed-cards.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.81.0",
@@ -19,7 +20,7 @@
     "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^20.19.37",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/sharp": "^0.31.1",
@@ -27,6 +28,8 @@
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.2"
   }
