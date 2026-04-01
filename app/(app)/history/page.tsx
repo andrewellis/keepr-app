@@ -36,18 +36,32 @@ export default async function HistoryPage() {
     }).format(amount)
   }
 
-  function statusColor(status: string) {
+  function statusBadge(status: string): { text: string; textColor: string; bgColor: string } {
     switch (status) {
-      case 'confirmed':
-      case 'paid':
-        return 'text-green-600'
+      case 'clicked':
+        return { text: 'Clicked through', textColor: '#534AB7', bgColor: '#EEEDFE' }
       case 'pending':
-        return 'text-primary'
-      case 'failed':
-        return 'text-red-500'
+        return { text: 'Pending', textColor: '#92400E', bgColor: '#FEF3C7' }
+      case 'confirmed':
+        return { text: 'Confirmed', textColor: '#065F46', bgColor: '#D1FAE5' }
+      case 'paid':
+        return { text: 'Paid', textColor: '#065F46', bgColor: '#D1FAE5' }
+      case 'scanned':
       default:
-        return 'text-foreground-secondary'
+        return { text: 'Scanned', textColor: '#666666', bgColor: '#F8F8F6' }
     }
+  }
+
+  function showEarnings(status: string, userPayoutCents: number | null): boolean {
+    if (status === 'scanned' || status === 'clicked') {
+      return !!userPayoutCents && userPayoutCents > 0
+    }
+    return true
+  }
+
+  function retailerLabel(status: string, retailer: string | null): string {
+    if (status === 'scanned' && !retailer) return 'Product identified'
+    return retailer ?? ''
   }
 
   return (
@@ -122,17 +136,29 @@ export default async function HistoryPage() {
                     {tx.product_name}
                   </p>
                   <p className="text-xs text-foreground-secondary mt-0.5">
-                    {formatDate(tx.created_at)}
+                    {retailerLabel(tx.status, tx.retailer)
+                      ? `${retailerLabel(tx.status, tx.retailer)} · `
+                      : ''}{formatDate(tx.created_at)}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0 ml-3">
                 <p className="text-sm font-semibold text-foreground">
-                  {formatAmount(tx.user_payout_cents / 100)}
+                  {showEarnings(tx.status, tx.user_payout_cents)
+                    ? formatAmount(tx.user_payout_cents / 100)
+                    : '—'}
                 </p>
-                <p className={`text-xs mt-0.5 capitalize ${statusColor(tx.status)}`}>
-                  {tx.status}
-                </p>
+                {(() => {
+                  const badge = statusBadge(tx.status)
+                  return (
+                    <span
+                      className="inline-block text-xs mt-0.5 px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ color: badge.textColor, backgroundColor: badge.bgColor }}
+                    >
+                      {badge.text}
+                    </span>
+                  )
+                })()}
               </div>
             </div>
           ))}
