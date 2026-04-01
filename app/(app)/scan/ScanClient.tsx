@@ -163,15 +163,6 @@ export default function ScanClient() {
       if (!data.productName) {
         throw new Error("Couldn't identify that product. Try a different angle or better lighting.")
       }
-      // Store scanned image in sessionStorage for results page
-      if (currentFile) {
-        const reader = new FileReader()
-        reader.onload = () => {
-          sessionStorage.setItem('k33pr_scanned_image', reader.result as string)
-        }
-        reader.readAsDataURL(currentFile)
-      }
-
       setScanResult(data)
       setStoreState('idle')
       setProducts([])
@@ -428,6 +419,27 @@ export default function ScanClient() {
 
           {storeState === 'done' && products.length > 0 && (
             <div className="space-y-3">
+              {/* Product summary card */}
+              {scanResult && (
+                <div className="bg-surface border border-border rounded-2xl p-4 flex items-center gap-4">
+                  {previewUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={previewUrl}
+                      alt={scanResult.productName || 'Product'}
+                      className="w-[120px] h-[120px] rounded-xl object-cover flex-shrink-0"
+                    />
+                  )}
+                  <div>
+                    <p className="text-base font-bold text-foreground">{scanResult.productName}</p>
+                    {scanResult.category && (
+                      <p className="text-sm text-foreground-secondary mt-1">{scanResult.category}</p>
+                    )}
+                    <p className="text-xs text-foreground-secondary mt-2">Identified by K33pr</p>
+                  </div>
+                </div>
+              )}
+
               {products.map((p) => {
                 const priceKnown = p.price > 0
                 const buyState = buyStates[p.affiliateUrl] ?? 'idle'
