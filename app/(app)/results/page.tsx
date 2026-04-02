@@ -11,6 +11,8 @@ import { getBestCardRecommendation } from '@/lib/cards/recommender'
 import type { CardRecommendation } from '@/lib/cards/recommender'
 import { createClient } from '@/lib/supabase/client'
 
+type AffiliateResultWithClickId = AffiliateResult & { clickId?: string }
+
 type FetchState = 'loading' | 'done' | 'error'
 type BuyState = 'idle' | 'opening'
 
@@ -38,7 +40,7 @@ function ResultsContent() {
   const cashbackRateParam = searchParams.get('cashbackRate')
 
   const [fetchState, setFetchState] = useState<FetchState>('loading')
-  const [results, setResults] = useState<AffiliateResult[]>([])
+  const [results, setResults] = useState<AffiliateResultWithClickId[]>([])
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [hasCustomRate, setHasCustomRate] = useState(true)
   const [scannedImage, setScannedImage] = useState<string | null>(null)
@@ -135,45 +137,35 @@ function ResultsContent() {
     fetchResults()
   }, [productName, category, searchTermsRaw, cashbackRateParam])
 
-  function handleBuy(p: AffiliateResult) {
-    window.open(p.affiliateUrl, '_blank', 'noopener,noreferrer')
+  async function handleBuy(p: AffiliateResultWithClickId) {
     setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'opening' }))
+
+    if (p.clickId) {
+      try {
+        await fetch('/api/transaction/click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clickId: p.clickId }),
+        })
+      } catch {
+        // Non-blocking — open the URL regardless
+      }
+    }
+
+    window.open(p.affiliateUrl, '_blank', 'noopener,noreferrer')
+
     setTimeout(() => {
       setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'idle' }))
     }, 1500)
-
-    // Log transaction
-    const sessionToken =
-      typeof window !== 'undefined' ? localStorage.getItem('keepr_anon_id') : null
-    fetch('/api/transaction', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
-      },
-      body: JSON.stringify({
-        productName: p.productName,
-        retailer: p.retailer,
-        priceCents: p.price,
-        commissionRate: p.affiliateRate,
-        commissionCents: p.commissionCents,
-        processingFeeCents: 20,
-        userPayoutCents: p.userPayoutCents,
-        estimatedCashbackCents: p.estimatedCashbackCents,
-        totalReturnCents: p.totalReturnCents,
-        affiliateUrl: p.affiliateUrl,
-        productUrl: p.productUrl,
-      }),
-    }).catch(() => {})
   }
 
   /** Whether this result has a known price (not a search link) */
-  function hasPrice(p: AffiliateResult) {
+  function hasPrice(p: AffiliateResultWithClickId) {
     return p.price > 0
   }
 
   /** Determine the button label based on retailer */
-  function buyButtonLabel(p: AffiliateResult) {
+  function buyButtonLabel(p: AffiliateResultWithClickId) {
     if (p.retailer === 'Amazon') return 'Search on Amazon'
     return `Search on ${p.retailer.replace(/ \(.*\)$/, '')}`
   }
@@ -248,7 +240,7 @@ function ResultsContent() {
       {/* Results list */}
       {fetchState === 'done' && results.length > 0 && (
         <div className="space-y-3">
-          {results.map((p) => {
+          {(results as AffiliateResultWithClickId[]).map((p) => {
             const priceKnown = hasPrice(p)
             const netCostCents = p.price - p.totalReturnCents
             const isOutOfStock = !p.inStock
