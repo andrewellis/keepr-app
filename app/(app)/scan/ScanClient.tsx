@@ -9,7 +9,7 @@ import { getCardCategory } from '@/lib/cards/categoryMap'
 import { getBestCardRecommendation } from '@/lib/cards/recommender'
 import type { CardRecommendation } from '@/lib/cards/recommender'
 import { createClient } from '@/lib/supabase/client'
-import { recordScan, recordClick } from '@/lib/transactions/actions'
+import { recordClick } from '@/lib/transactions/actions'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -261,22 +261,6 @@ export default function ScanClient() {
       setProducts(data.results ?? [])
       setStoreState('done')
 
-      // Record scan for logged-in users (silent fail)
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const newTxId = await recordScan(
-            user.id,
-            scanResult.productName,
-            scanResult.category,
-            previewUrl ?? null
-          )
-          setTransactionId(newTxId)
-        }
-      } catch {
-        // Silently fail
-      }
     } catch {
       setStoreState('error')
     }
