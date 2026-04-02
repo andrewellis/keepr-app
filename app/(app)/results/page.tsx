@@ -137,22 +137,20 @@ function ResultsContent() {
     fetchResults()
   }, [productName, category, searchTermsRaw, cashbackRateParam])
 
-  async function handleBuy(p: AffiliateResultWithClickId) {
+  function handleBuy(p: AffiliateResultWithClickId) {
     setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'opening' }))
 
-    if (p.clickId) {
-      try {
-        await fetch('/api/transaction/click', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clickId: p.clickId }),
-        })
-      } catch {
-        // Non-blocking — open the URL regardless
-      }
-    }
-
+    // Open synchronously before any async work to avoid popup blockers
     window.open(p.affiliateUrl, '_blank', 'noopener,noreferrer')
+
+    // Fire-and-forget tracking call — no await needed
+    if (p.clickId) {
+      fetch('/api/transaction/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clickId: p.clickId }),
+      }).catch(() => {})
+    }
 
     setTimeout(() => {
       setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'idle' }))
