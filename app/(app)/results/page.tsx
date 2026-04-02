@@ -269,10 +269,9 @@ function ResultsContent() {
                   </p>
                 </div>
 
-                {/* Commission rate display */}
                 <div className="space-y-0.5">
                   <p className="text-xs text-foreground-secondary">
-                    Earn up to {affiliateRatePct}% cashback through K33pr
+                    K33pr commission: up to {affiliateRatePct}%
                   </p>
                   {hasCustomRate ? (
                     <p className="text-xs text-foreground-secondary">
@@ -352,7 +351,7 @@ function ResultsContent() {
                     </button>
                     {!priceKnown && (
                       <p className="text-xs text-center text-foreground-secondary">
-                        Find this product on {p.retailer.replace(/ \(.*\)$/, '')}. Your purchase earns cashback through K33pr.
+                        Find this product on {p.retailer.replace(/ \(.*\)$/, '')}.
                       </p>
                     )}
                   </>
@@ -411,7 +410,7 @@ function ResultsContent() {
                 return (
                   <div className="pt-2 border-t border-border">
                     <p className="text-xs text-foreground-secondary">
-                      K33pr cashback + {cardRecommendation.cardName}:{' '}
+                      K33pr commission + {cardRecommendation.cardName}:{' '}
                       <span className="font-semibold text-foreground">
                         {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
                       </span>

@@ -611,7 +611,7 @@ export default function ScanClient() {
                             return (
                               <div className="pt-2 border-t border-border">
                                 <p className="text-xs text-foreground-secondary">
-                                  K33pr cashback + {cardRecommendation.cardName}:{' '}
+                                  K33pr commission + {cardRecommendation.cardName}:{' '}
                                   <span className="font-semibold text-foreground">
                                     {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
                                   </span>
@@ -638,9 +638,8 @@ export default function ScanClient() {
                       <p className="text-sm text-foreground-secondary leading-snug mt-0.5">{p.productName}</p>
                     </div>
 
-                    {/* Commission rate display */}
                     <p className="text-xs text-foreground-secondary">
-                      Earn up to {affiliateRatePct}% cashback through K33pr
+                      K33pr commission: up to {affiliateRatePct}%
                     </p>
 
                     {/* Image if available */}
@@ -669,10 +668,9 @@ export default function ScanClient() {
                       {buyButtonLabel(p, buyState)}
                     </button>
 
-                    {/* Helper text for search links */}
                     {!priceKnown && (
                       <p className="text-xs text-center text-foreground-secondary">
-                        Find this product on {p.retailer.replace(/ \(.*\)$/, '')}. Your purchase earns cashback through K33pr.
+                        Find this product on {p.retailer.replace(/ \(.*\)$/, '')}.
                       </p>
                     )}
                   </div>
