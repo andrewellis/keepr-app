@@ -1,6 +1,6 @@
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import { appendClickIdToUrl } from '@/lib/clicks/network-params'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // ─── Affiliate Network Map ────────────────────────────────────────────────────
 // Maps retailer name (or parenthetical suffix) to affiliate_network value stored in DB.
@@ -108,7 +108,7 @@ export async function attachClickIds(
   requestIp: string,
   requestUserAgent: string
 ): Promise<AffiliateResultWithClickId[]> {
-  const supabase = createClient()
+  const supabase = createServiceClient()
   const output: AffiliateResultWithClickId[] = []
 
   for (const result of results) {
