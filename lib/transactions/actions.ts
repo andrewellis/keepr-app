@@ -2,12 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-export async function recordScan(
-  _userId: string,
-  _productName: string | null,
-  _category: string | null,
-  _scanImageUrl: string | null
-): Promise<string | null> {
+export async function recordScan(): Promise<null> {
   return null
 }
 
