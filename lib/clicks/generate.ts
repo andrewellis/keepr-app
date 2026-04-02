@@ -128,7 +128,7 @@ export async function attachClickIds(
       commission_cents: result.commissionCents ?? 0,
       price_cents: result.price ?? 0,
       user_payout_cents: result.userPayoutCents,
-      status: 'generated',
+      status: 'pending',
       affiliate_network: affiliateNetwork,
       link_url: modifiedUrl,
       created_ip: requestIp,
