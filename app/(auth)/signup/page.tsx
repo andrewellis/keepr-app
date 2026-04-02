@@ -123,6 +123,24 @@ export default function SignupPage() {
               />
             </div>
 
+            <div>
+              <label htmlFor="invite_code" className="block text-sm font-medium text-foreground mb-1.5">
+                Invite code
+              </label>
+              <input
+                id="invite_code"
+                name="invite_code"
+                type="text"
+                autoComplete="off"
+                required
+                className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition uppercase"
+                placeholder="Enter your beta invite code"
+              />
+              <p className="mt-1.5 text-xs text-foreground-secondary">
+                K33pr is currently invite-only. Enter your code to join.
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={loading}

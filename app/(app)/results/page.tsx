@@ -305,15 +305,27 @@ function ResultsContent() {
                   <div className="space-y-1.5">
                     <p className="text-2xl font-bold text-foreground">{fmtPrice(p.price)}</p>
 
-                    <p className="text-sm font-semibold text-primary">
-                      You earn: {fmt(p.userPayoutCents)}
-                    </p>
-                    <p className="text-xs text-foreground-secondary">
-                      Est. cashback: {fmt(p.estimatedCashbackCents)}
-                    </p>
-                    <p className="text-sm font-bold text-primary">
-                      Total back: {fmt(p.totalReturnCents)}
-                    </p>
+                    <div className="space-y-1 pt-1">
+                      <p className="text-sm font-semibold text-primary">
+                        Est. K33pr payout: {fmt(p.userPayoutCents)}
+                      </p>
+                      <p className="text-xs text-foreground-secondary">
+                        Est. card cashback: {fmt(p.estimatedCashbackCents)}{' '}
+                        <span className="text-foreground-secondary">
+                          (your {cashbackPct}% card rate
+                          {!hasCustomRate && (
+                            <span>
+                              {' '}—{' '}
+                              <a href="/settings" className="text-primary hover:underline">
+                                update in Settings
+                              </a>
+                            </span>
+                          )}
+                          )
+                        </span>
+                      </p>
+                    </div>
+
                     <p className="text-xs text-foreground-secondary">
                       Net cost: {fmt(Math.max(0, netCostCents))}
                     </p>

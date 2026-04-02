@@ -10,12 +10,15 @@ export const metadata = {
 export default function HowToStackCashbackPage() {
   return (
     <div className="min-h-screen bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
+      <div className="mb-6">
+        <Link href="/blog" className="text-sm hover:underline transition" style={{ color: '#534AB7' }}>
+          ← Back to Blog
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold text-foreground mb-2">
         How to Stack Cashback: Affiliate Commissions + Credit Card Rewards
       </h1>
-      <p className="text-sm text-foreground-secondary mb-10">
-        A practical guide to collecting both on the same purchase.
-      </p>
+      <p className="text-sm text-foreground-secondary mb-10">March 1, 2026</p>
 
       <div className="space-y-8 text-sm text-foreground-secondary leading-relaxed">
         <p>
@@ -24,6 +27,13 @@ export default function HowToStackCashbackPage() {
           different parties — the retailer on one side, your card issuer on the other.
           Because they don&apos;t know about each other, you can collect both on the same
           purchase.
+        </p>
+
+        <p>
+          Most people stumble onto this by accident — they notice their card statement
+          shows cashback on a purchase they also got affiliate credit for, and realize the
+          two never cancelled out. Once you know it works that way, it&apos;s hard to shop
+          any other way.
         </p>
 
         {/* Section 1 */}
@@ -127,7 +137,8 @@ export default function HowToStackCashbackPage() {
         <p>
           The math isn&apos;t complicated, but it does require knowing your cards and
           checking rates across retailers before you buy. That&apos;s what K33pr is built
-          to do automatically.
+          to do automatically — so you get the combined return without having to think
+          about it every time.
         </p>
 
         {/* CTA */}

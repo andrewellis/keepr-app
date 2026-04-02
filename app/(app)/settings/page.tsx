@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
 import EditDisplayName from './EditDisplayName'
+import CashbackRateForm from './CashbackRateForm'
 import MyCardsSection from '@/components/cards/MyCardsSection'
 import { getAllCards, getUserCards } from '@/lib/cards/actions'
 
@@ -52,6 +53,16 @@ export default async function SettingsPage() {
         </div>
       </div>
 
+      {/* Card Cashback Rate section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          Card Cashback Rate
+        </p>
+        <div className="bg-surface border border-border rounded-2xl p-4">
+          <CashbackRateForm currentRate={profile?.cashback_rate ?? 0.05} />
+        </div>
+      </div>
+
       {/* My Cards section */}
       <div className="mb-4">
         <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
@@ -82,7 +93,16 @@ export default async function SettingsPage() {
           <a href="/settings/payout" className="flex items-center justify-between px-4 py-4">
             <span className="text-sm text-foreground">Payout Method</span>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-foreground-secondary">Not configured</span>
+              {profile?.payout_destination ? (
+                <>
+                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-green-600 font-medium">Connected</span>
+                </>
+              ) : (
+                <span className="text-sm text-foreground-secondary">Not configured</span>
+              )}
               <svg
                 className="w-4 h-4 text-foreground-secondary"
                 fill="none"
