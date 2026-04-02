@@ -143,6 +143,16 @@ export async function attachClickIds(
         `[clicks] Failed to insert transaction for click_id=${clickId} retailer=${result.retailer}:`,
         error
       )
+      console.error('[clicks] Insert payload:', JSON.stringify({
+        click_id: clickId,
+        product_name: result.productName,
+        retailer: result.retailer,
+        product_url: result.productUrl,
+        commission_rate: result.affiliateRate,
+        commission_cents: result.commissionCents,
+        price_cents: result.price,
+        user_payout_cents: result.userPayoutCents,
+      }))
       // CRITICAL: Do not return this link — no DB record means no tracking
       continue
     }
