@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveNetworks } from '@/lib/affiliates/registry'
 import { rankResults } from '@/lib/affiliates/ranker'
 import type { AffiliateResult } from '@/lib/affiliates/types'
+import { attachClickIds } from '@/lib/clicks/generate'
 
 const NETWORK_TIMEOUT_MS = 5_000
 
@@ -22,12 +23,21 @@ export async function POST(req: NextRequest) {
   const category = body.category?.trim() ?? 'General'
   const searchTerms = body.searchTerms?.length ? body.searchTerms : [productName]
 
-  // Read cashback_rate from user profile if authenticated
+  // Extract request metadata for click tracking
+  const forwardedFor = req.headers.get('x-forwarded-for')
+  const requestIp = forwardedFor
+    ? forwardedFor.split(',')[0].trim()
+    : (req.headers.get('x-real-ip') ?? 'unknown')
+  const requestUserAgent = req.headers.get('user-agent') ?? 'unknown'
+
+  // Read cashback_rate from user profile if authenticated; capture userId for click tracking
   let cashbackRate = 0.05
+  let userId: string | null = null
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
+      userId = user.id
       const { data: profile } = await supabase
         .from('profiles')
         .select('cashback_rate')
@@ -78,7 +88,11 @@ export async function POST(req: NextRequest) {
     const allResults = settled.flat()
     const ranked = rankResults(allResults)
 
-    return NextResponse.json({ results: ranked })
+    // Attach Click IDs: appends tracking params to URLs and writes DB records
+    // CRITICAL: Only results with successful DB inserts are returned
+    const trackedResults = await attachClickIds(ranked, userId, requestIp, requestUserAgent)
+
+    return NextResponse.json({ results: trackedResults })
   } catch (err) {
     console.error('Match error:', err)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
