@@ -19,7 +19,7 @@ export async function recordScan(
     .insert({
       user_id: userId,
       product_name: productName,
-      category: category,
+      product_category: category,
       scan_image_url: scanImageUrl,
       status: 'scanned',
     })
