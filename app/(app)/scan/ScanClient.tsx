@@ -654,8 +654,8 @@ export default function ScanClient() {
                         <p className="text-base font-bold text-foreground">${(p.price / 100).toFixed(2)}</p>
                         <p className="text-xs text-foreground-secondary">Commission: ${(p.commissionCents / 100).toFixed(2)}</p>
                         <p className="text-xs text-foreground-secondary">Fee: -$0.20</p>
-                        <p className="text-xs font-semibold text-primary">You earn: ${(p.userPayoutCents / 100).toFixed(2)}</p>
-                        <p className="text-xs text-foreground-secondary">Cashback: ${(p.estimatedCashbackCents / 100).toFixed(2)}</p>
+                        <p className="text-xs font-semibold text-primary">Est. K33pr payout: ${(p.userPayoutCents / 100).toFixed(2)}</p>
+                        <p className="text-xs text-foreground-secondary">Est. card rate: ${(p.estimatedCashbackCents / 100).toFixed(2)}</p>
                         <p className="text-xs font-semibold text-primary">Total back: ${(p.totalReturnCents / 100).toFixed(2)}</p>
                       </div>
                     )}
