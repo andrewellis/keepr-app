@@ -309,10 +309,7 @@ export default function ScanClient() {
         </div>
       )}
 
-      <h1 className="text-2xl font-bold text-foreground mb-1">Scan Product</h1>
-      <p className="text-sm text-foreground-secondary mb-6">
-        Take a photo or upload an image of a clothing or product tag.
-      </p>
+      <h1 className="text-2xl font-bold text-foreground mb-6">K33pr Results</h1>
 
       <input
         ref={fileInputRef}
