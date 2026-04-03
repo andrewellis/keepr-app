@@ -309,7 +309,9 @@ export default function ScanClient() {
         </div>
       )}
 
-      <h1 className="text-2xl font-bold text-foreground mb-6">K33pr Results</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-6">
+        {scanState === 'processing' ? 'Identifying...' : scanState === 'result' ? 'K33pr Results' : 'Scan Product'}
+      </h1>
 
       <input
         ref={fileInputRef}
