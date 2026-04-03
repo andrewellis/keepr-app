@@ -91,6 +91,14 @@ export default async function PayoutSettingsPage() {
         </div>
       )}
 
+      {balanceCents > 0 && !payoutDestination && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 mb-4">
+          <p className="text-sm text-amber-800">
+            You have a balance of ${(balanceCents / 100).toFixed(2)} but no payout destination set. Add your PayPal email or Venmo phone number below to receive your earnings.
+          </p>
+        </div>
+      )}
+
       {/* Payout Summary */}
       <div className="mb-4">
         <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
@@ -178,7 +186,7 @@ export default async function PayoutSettingsPage() {
             </div>
           )}
 
-          <PayoutDestinationForm currentDestination={payoutDestination} />
+          <PayoutDestinationForm currentDestination={payoutDestination} balanceCents={balanceCents} />
         </div>
       </div>
 

@@ -5,16 +5,51 @@ import { updatePayoutDestination } from '@/app/auth/actions'
 
 interface Props {
   currentDestination: string | null
+  balanceCents?: number
 }
 
-export default function PayoutDestinationForm({ currentDestination }: Props) {
+export default function PayoutDestinationForm({ currentDestination, balanceCents = 0 }: Props) {
   const [value, setValue] = useState(currentDestination ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [validationError, setValidationError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  function validate(input: string): string | null {
+    if (!input.trim()) return null // empty is allowed (server validates)
+    if (input.includes('@')) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(input)) return 'Please enter a valid email address.'
+    } else {
+      const digits = input.replace(/\D/g, '')
+      if (digits.length > 0 && digits.length < 10) return 'Please enter a valid 10-digit phone number.'
+    }
+    return null
+  }
+
+  function handleChange(newValue: string) {
+    setValue(newValue)
+    setValidationError(validate(newValue))
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+
+    // Client-side validation check
+    const vError = validate(value)
+    if (vError) {
+      setValidationError(vError)
+      return
+    }
+
+    // Destination change confirmation when user has a balance
+    if (balanceCents > 0 && value.trim() !== (currentDestination ?? '')) {
+      const confirmed = window.confirm(
+        'Changing your payout destination will apply to your next payout. Continue?'
+      )
+      if (!confirmed) return
+    }
+
     setSaving(true)
     setError(null)
     setSuccess(false)
@@ -44,7 +79,7 @@ export default function PayoutDestinationForm({ currentDestination }: Props) {
           name="payout_destination"
           type="text"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => handleChange(e.target.value)}
           placeholder="you@example.com or (555) 867-5309"
           className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
         />
@@ -53,6 +88,10 @@ export default function PayoutDestinationForm({ currentDestination }: Props) {
           receive it there automatically.
         </p>
       </div>
+
+      {validationError && (
+        <p className="text-xs text-red-600">{validationError}</p>
+      )}
 
       {error && (
         <p className="text-xs text-red-600">{error}</p>
@@ -64,7 +103,7 @@ export default function PayoutDestinationForm({ currentDestination }: Props) {
 
       <button
         type="submit"
-        disabled={saving}
+        disabled={saving || !!validationError}
         className="rounded-lg bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-sm font-semibold text-white transition"
       >
         {saving ? 'Saving…' : 'Save'}

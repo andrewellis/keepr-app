@@ -14,14 +14,26 @@ create table if not exists transactions (
 
 alter table transactions enable row level security;
 
-create policy "transactions_select"
-  on transactions for select
-  using (user_id = auth.uid());
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'transactions_select' and tablename = 'transactions') then
+    create policy "transactions_select"
+      on transactions for select
+      using (user_id = auth.uid());
+  end if;
+end $$;
 
-create policy "transactions_insert"
-  on transactions for insert
-  with check (user_id = auth.uid());
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'transactions_insert' and tablename = 'transactions') then
+    create policy "transactions_insert"
+      on transactions for insert
+      with check (user_id = auth.uid());
+  end if;
+end $$;
 
-create policy "transactions_update"
-  on transactions for update
-  using (user_id = auth.uid());
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'transactions_update' and tablename = 'transactions') then
+    create policy "transactions_update"
+      on transactions for update
+      using (user_id = auth.uid());
+  end if;
+end $$;

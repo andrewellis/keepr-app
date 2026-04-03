@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient as createClient } from '@/lib/supabase/service'
 import { initiatePayPalPayout } from '@/lib/payouts/paypal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────

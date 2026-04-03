@@ -57,8 +57,14 @@ alter table public.transactions
   alter column user_agent set not null;
 
 -- Step 4: Add UNIQUE constraint on click_id
-alter table public.transactions
-  add constraint if not exists transactions_click_id_unique unique (click_id);
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'transactions_click_id_unique'
+  ) then
+    alter table public.transactions
+      add constraint transactions_click_id_unique unique (click_id);
+  end if;
+end $$;
 
 -- Step 5: Create index for fast click_id lookups
 create index if not exists idx_transactions_click_id on public.transactions(click_id);

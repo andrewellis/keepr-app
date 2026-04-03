@@ -4,8 +4,26 @@ import { getActiveNetworks } from '@/lib/affiliates/registry'
 import { rankResults } from '@/lib/affiliates/ranker'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import { attachClickIds } from '@/lib/clicks/generate'
+import { getShoppingResults } from '@/lib/shopping/serpapi'
 
 const NETWORK_TIMEOUT_MS = 5_000
+
+/**
+ * Strips the `tag` query parameter from Amazon URLs when AMAZON_ASSOCIATE_TAG
+ * is empty. This handles the case where the frozen amazon.ts file always appends
+ * a tag — we clean it up downstream before returning to the frontend.
+ */
+function stripEmptyAmazonTag(url: string): string {
+  if (process.env.AMAZON_ASSOCIATE_TAG) return url
+  try {
+    const u = new URL(url)
+    if (!u.hostname.includes('amazon.com')) return url
+    u.searchParams.delete('tag')
+    return u.toString()
+  } catch {
+    return url.replace(/[?&]tag=[^&]*/g, '')
+  }
+}
 
 export async function POST(req: NextRequest) {
   let body: { productName?: string; category?: string; searchTerms?: string[] }
@@ -88,11 +106,23 @@ export async function POST(req: NextRequest) {
     const allResults = settled.flat()
     const ranked = rankResults(allResults)
 
-    // Attach Click IDs: appends tracking params to URLs and writes DB records
-    // CRITICAL: Only results with successful DB inserts are returned
-    const trackedResults = await attachClickIds(ranked, userId, requestIp, requestUserAgent)
+    // Strip empty Amazon tags before click ID attachment (which stores URLs in DB)
+    const cleanedResults = ranked.map((r) => ({
+      ...r,
+      affiliateUrl: stripEmptyAmazonTag(r.affiliateUrl),
+      productUrl: r.productUrl ? stripEmptyAmazonTag(r.productUrl) : r.productUrl,
+    }))
 
-    return NextResponse.json({ results: trackedResults })
+    // Run affiliate click-ID attachment and Google Shopping lookup in parallel
+    const [trackedResults, shoppingResults] = await Promise.all([
+      // Attach Click IDs: appends tracking params to URLs and writes DB records
+      // CRITICAL: Only results with successful DB inserts are returned
+      attachClickIds(cleanedResults, userId, requestIp, requestUserAgent),
+      // Price check — informational only, no tracking
+      getShoppingResults(productName),
+    ])
+
+    return NextResponse.json({ results: trackedResults, shoppingResults })
   } catch (err) {
     console.error('Match error:', err)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
