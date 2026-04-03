@@ -42,7 +42,6 @@ function ResultsContent() {
   const [fetchState, setFetchState] = useState<FetchState>('loading')
   const [results, setResults] = useState<AffiliateResultWithClickId[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [shoppingResults, setShoppingResults] = useState<any[]>([])
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [hasCustomRate, setHasCustomRate] = useState(true)
   const [scannedImage, setScannedImage] = useState<string | null>(null)
@@ -130,7 +129,6 @@ function ResultsContent() {
         if (!res.ok) throw new Error('fetch error')
         const data = await res.json()
         setResults(data.results ?? [])
-        setShoppingResults(data.shoppingResults ?? [])
         setFetchState('done')
       } catch {
         setFetchState('error')
@@ -238,82 +236,6 @@ function ResultsContent() {
         </div>
       )}
 
-      {/* Price Check section — informational only, no affiliate links or Click IDs */}
-      {fetchState === 'done' && results.length > 0 && shoppingResults.length > 0 && (
-        <div className="mb-6">
-          {/* Section header */}
-          <p className="text-base font-semibold mb-0.5" style={{ color: '#1a1a1a' }}>Price Check</p>
-          <p className="text-[13px] mb-3" style={{ color: '#666666' }}>
-            Prices from Google Shopping. May not reflect current retailer pricing.
-          </p>
-
-          {/* Shopping result cards */}
-          <div className="space-y-2">
-            {shoppingResults.map((item, idx) => (
-              <a
-                key={idx}
-                href={item.productUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-2xl p-3 border no-underline"
-                style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
-              >
-                {/* Thumbnail */}
-                <div
-                  className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
-                  style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    style={{ width: 80, height: 80, objectFit: 'contain' }}
-                  />
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="text-[14px] leading-snug font-normal overflow-hidden"
-                    style={{
-                      color: '#1a1a1a',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {item.title}
-                  </p>
-                  <p className="text-[18px] font-semibold mt-1" style={{ color: '#1a1a1a' }}>
-                    {item.price}
-                  </p>
-                  {item.merchant && (
-                    <p className="text-[13px]" style={{ color: '#666666' }}>
-                      from {item.merchant}
-                    </p>
-                  )}
-                  {item.rating !== null && (
-                    <p className="text-[13px]" style={{ color: '#666666' }}>
-                      {item.rating} ★{item.reviews !== null ? ` (${item.reviews.toLocaleString()})` : ''}
-                    </p>
-                  )}
-                </div>
-              </a>
-            ))}
-          </div>
-
-          {/* Bridge disclaimer */}
-          <p className="text-[12px] mt-3" style={{ color: '#666666' }}>
-            Prices shown are from Google Shopping and may change. Tap a link below to earn cashback on your purchase.
-          </p>
-
-          {/* Divider before Earn Cashback section */}
-          <div className="mt-4 mb-4" style={{ height: 1, backgroundColor: '#E5E5E3' }} />
-
-          {/* Earn Cashback header */}
-          <p className="text-base font-semibold" style={{ color: '#1a1a1a' }}>Earn Cashback</p>
-        </div>
-      )}
 
       {/* Results list */}
       {fetchState === 'done' && results.length > 0 && (
