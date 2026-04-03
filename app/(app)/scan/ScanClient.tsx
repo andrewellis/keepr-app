@@ -650,13 +650,13 @@ export default function ScanClient() {
                 </div>
               )}
 
-              {/* Divider before Earn Cashback section */}
+              {/* Divider before Maximize My Earnings! section */}
               {shoppingResults.length > 0 && (
                 <div style={{ height: 1, backgroundColor: '#E5E5E3', marginTop: 16, marginBottom: 16 }} />
               )}
 
-              {/* Earn Cashback header */}
-              <p className="text-base font-semibold" style={{ color: '#1a1a1a' }}>Earn Cashback</p>
+              {/* Maximize My Earnings! header */}
+              <p className="text-base font-semibold" style={{ color: '#1a1a1a' }}>Maximize My Earnings!</p>
 
               {products.map((p) => {
                 const priceKnown = p.price > 0
