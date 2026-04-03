@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { AffiliateResult } from '@/lib/affiliates/types'
-import type { ShoppingResult } from '@/lib/shopping/types'
 import ResultSkeleton from '@/components/ResultSkeleton'
 import { getUserCardsWithRates } from '@/lib/cards/actions'
 import { getCardCategory } from '@/lib/cards/categoryMap'
@@ -42,7 +41,8 @@ function ResultsContent() {
 
   const [fetchState, setFetchState] = useState<FetchState>('loading')
   const [results, setResults] = useState<AffiliateResultWithClickId[]>([])
-  const [shoppingResults, setShoppingResults] = useState<ShoppingResult[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [shoppingResults, setShoppingResults] = useState<any[]>([])
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [hasCustomRate, setHasCustomRate] = useState(true)
   const [scannedImage, setScannedImage] = useState<string | null>(null)

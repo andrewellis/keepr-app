@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import type { AffiliateResult } from '@/lib/affiliates/types'
+import type { ShoppingResult } from '@/lib/shopping/types'
 import ResultSkeleton from '@/components/ResultSkeleton'
 import { getUserCardsWithRates } from '@/lib/cards/actions'
 import { getCardCategory } from '@/lib/cards/categoryMap'
@@ -109,6 +110,7 @@ export default function ScanClient() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [storeState, setStoreState] = useState<StoreState>('idle')
   const [products, setProducts] = useState<(AffiliateResult & { clickId?: string })[]>([])
+  const [shoppingResults, setShoppingResults] = useState<ShoppingResult[]>([])
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [isOffline, setIsOffline] = useState(false)
 
@@ -257,6 +259,7 @@ export default function ScanClient() {
       if (!res.ok) throw new Error('store error')
       const data = await res.json()
       setProducts(data.results ?? [])
+      setShoppingResults(data.shoppingResults ?? [])
       setStoreState('done')
 
     } catch {
@@ -292,6 +295,7 @@ export default function ScanClient() {
     setScanState('idle')
     setStoreState('idle')
     setProducts([])
+    setShoppingResults([])
     setBuyStates({})
     setCardRecommendation(null)
     setUserLoggedIn(null)
@@ -479,6 +483,84 @@ export default function ScanClient() {
 
           {storeState === 'done' && products.length > 0 && (
             <div className="space-y-3">
+
+              {/* Price Check section — informational only, no affiliate links or Click IDs */}
+              {shoppingResults.length > 0 && (
+                <div>
+                  {/* Section header */}
+                  <p className="text-base font-semibold mb-0.5" style={{ color: '#1a1a1a' }}>Price Check</p>
+                  <p className="text-[13px] mb-3" style={{ color: '#666666' }}>
+                    Prices from Google Shopping. May not reflect current retailer pricing.
+                  </p>
+
+                  {/* Shopping result cards */}
+                  <div className="space-y-2">
+                    {shoppingResults.map((item, idx) => (
+                      <a
+                        key={idx}
+                        href={item.productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 rounded-2xl p-3 border no-underline"
+                        style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
+                      >
+                        {/* Thumbnail */}
+                        <div
+                          className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+                          style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.imageUrl}
+                            alt={item.title}
+                            style={{ width: 80, height: 80, objectFit: 'contain' }}
+                          />
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-[14px] leading-snug font-normal overflow-hidden"
+                            style={{
+                              color: '#1a1a1a',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
+                            {item.title}
+                          </p>
+                          <p className="text-[18px] font-semibold mt-1" style={{ color: '#1a1a1a' }}>
+                            {item.price}
+                          </p>
+                          {item.merchant && (
+                            <p className="text-[13px]" style={{ color: '#666666' }}>
+                              from {item.merchant}
+                            </p>
+                          )}
+                          {item.rating !== null && (
+                            <p className="text-[13px]" style={{ color: '#666666' }}>
+                              {item.rating} ★{item.reviews !== null ? ` (${item.reviews.toLocaleString()})` : ''}
+                            </p>
+                          )}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+
+                  {/* Bridge disclaimer */}
+                  <p className="text-[12px] mt-3" style={{ color: '#666666' }}>
+                    Prices shown are from Google Shopping and may change. Tap a link below to earn cashback on your purchase.
+                  </p>
+
+                  {/* Divider before Earn Cashback section */}
+                  <div className="mt-4 mb-4" style={{ height: 1, backgroundColor: '#E5E5E3' }} />
+
+                  {/* Earn Cashback header */}
+                  <p className="text-base font-semibold" style={{ color: '#1a1a1a' }}>Earn Cashback</p>
+                </div>
+              )}
+
               {/* Product summary + card recommendation card */}
               {scanResult && (
                 <div className="bg-surface border border-border rounded-2xl p-4 space-y-3">
