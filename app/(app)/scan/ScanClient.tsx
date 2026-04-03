@@ -4,7 +4,6 @@ import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import type { ShoppingResult } from '@/lib/shopping/types'
-import ResultSkeleton from '@/components/ResultSkeleton'
 import { getUserCardsWithRates } from '@/lib/cards/actions'
 import { getCardCategory } from '@/lib/cards/categoryMap'
 import { getBestCardRecommendation } from '@/lib/cards/recommender'
@@ -229,14 +228,16 @@ export default function ScanClient() {
       setStoreState('idle')
       setProducts([])
       setScanState('result')
+      handleFindBestPrice(data)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
       setScanState('error')
     }
   }
 
-  async function handleFindBestPrice() {
-    if (!scanResult) return
+  async function handleFindBestPrice(data?: ScanResult) {
+    const result = data ?? scanResult
+    if (!result) return
     setStoreState('loading')
     setProducts([])
 
@@ -246,9 +247,9 @@ export default function ScanClient() {
     }
 
     const matchBody = {
-      productName: scanResult.productName,
-      category: scanResult.category,
-      searchTerms: scanResult.searchTerms,
+      productName: result.productName,
+      category: result.category,
+      searchTerms: result.searchTerms,
     }
     try {
       const res = await fetch('/api/match', {
@@ -257,9 +258,9 @@ export default function ScanClient() {
         body: JSON.stringify(matchBody),
       })
       if (!res.ok) throw new Error('store error')
-      const data = await res.json()
-      setProducts(data.results ?? [])
-      setShoppingResults(data.shoppingResults ?? [])
+      const matchData = await res.json()
+      setProducts(matchData.results ?? [])
+      setShoppingResults(matchData.shoppingResults ?? [])
       setStoreState('done')
 
     } catch {
@@ -431,48 +432,105 @@ export default function ScanClient() {
 
       {scanState === 'result' && scanResult && (
         <div className="space-y-4">
-          {storeState !== 'done' && (
-            <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+
+          {/* Product identification card — always visible */}
+          <div className="bg-surface border border-border rounded-2xl p-4 space-y-3">
+            {/* Top row: image + product info */}
+            <div className="flex items-center gap-4">
+              {previewUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewUrl}
+                  alt={scanResult.productName || 'Product'}
+                  className="w-[120px] h-[120px] rounded-xl object-cover flex-shrink-0"
+                />
+              )}
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Identified as</p>
-                <p className="text-xl font-bold text-foreground capitalize">{scanResult.productName}</p>
+                <p className="text-base font-bold text-foreground">{scanResult.productName}</p>
+                {scanResult.category && (
+                  <p className="text-sm text-foreground-secondary mt-1">{scanResult.category}</p>
+                )}
+                <p className="text-xs text-foreground-secondary mt-2">Identified by K33pr</p>
+                <p className="text-xs text-foreground-secondary mt-1">
+                  Typical price range: {getPriceRange(scanResult.category)}
+                </p>
               </div>
-
-              {scanResult.category && scanResult.category !== 'General' && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Category</p>
-                  <p className="text-sm text-foreground">{scanResult.category}</p>
-                </div>
-              )}
-
-              {scanResult.confidence > 0 && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-foreground-secondary">Confidence</p>
-                  <p className="text-sm text-foreground">{Math.round(scanResult.confidence * 100)}%</p>
-                </div>
-              )}
-
-              {scanResult.searchTerms.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-1.5 text-foreground-secondary">Search Terms</p>
-                  <p className="text-xs text-foreground-secondary">
-                    {scanResult.searchTerms.join(', ')}
-                  </p>
-                </div>
-              )}
             </div>
-          )}
 
-          {storeState === 'idle' && (
-            <button
-              onClick={handleFindBestPrice}
-              className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white hover:opacity-90 transition"
-            >
-              Find Best Price
-            </button>
-          )}
+            {/* Card recommendation block — only shown once store results are done */}
+            {storeState === 'done' && cardRecommendation !== null && (
+              <>
+                <div className="border-t border-border" />
 
-          {storeState === 'loading' && <ResultSkeleton />}
+                {/* No cards / not logged in: subtle prompt */}
+                {userLoggedIn === false && (
+                  <p className="text-xs text-foreground-secondary">
+                    <Link href="/signup" style={{ color: '#534AB7' }} className="hover:underline">
+                      Sign up to see your best card for this purchase
+                    </Link>
+                  </p>
+                )}
+                {userLoggedIn === true && cardRecommendation === undefined && (
+                  <p className="text-xs text-foreground-secondary">
+                    <Link href="/settings" style={{ color: '#534AB7' }} className="hover:underline">
+                      Add your cards in Settings to get personalized recommendations
+                    </Link>
+                  </p>
+                )}
+
+                {/* Card recommendation */}
+                {cardRecommendation && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
+                      Best card for this purchase
+                    </p>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-foreground">{cardRecommendation.cardName}</p>
+                        <p className="text-xs text-foreground-secondary">{cardRecommendation.issuer}</p>
+                      </div>
+                      <p className="text-sm font-bold text-primary whitespace-nowrap">
+                        {cardRecommendation.rate}% cashback
+                      </p>
+                    </div>
+
+                    {cardRecommendation.isRotating && (
+                      <p className="text-xs text-foreground-secondary">
+                        ⚠ Rotating category — verify your current quarter
+                      </p>
+                    )}
+
+                    {cardRecommendation.notes && (
+                      <p className="text-xs text-foreground-secondary">{cardRecommendation.notes}</p>
+                    )}
+
+                    {/* Combined total row */}
+                    {products.length > 0 && (() => {
+                      const topResult = products[0]
+                      const k33prRatePct = Math.round(topResult.affiliateRate * 100)
+                      const cardRatePct = cardRecommendation.rate
+                      const totalPct = k33prRatePct + cardRatePct
+                      return (
+                        <div className="pt-2 border-t border-border">
+                          <p className="text-xs text-foreground-secondary">
+                            K33pr commission + {cardRecommendation.cardName}:{' '}
+                            <span className="font-semibold text-foreground">
+                              {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
+                            </span>
+                          </p>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Loading indicator while fetching prices */}
+          {storeState === 'loading' && (
+            <p className="text-[14px] text-center" style={{ color: '#666666' }}>Finding best prices...</p>
+          )}
 
           {storeState === 'done' && products.length === 0 && (
             <p className="text-sm text-center text-foreground-secondary">
@@ -482,102 +540,6 @@ export default function ScanClient() {
 
           {storeState === 'done' && products.length > 0 && (
             <div className="space-y-3">
-
-              {/* Product summary + card recommendation card */}
-              {scanResult && (
-                <div className="bg-surface border border-border rounded-2xl p-4 space-y-3">
-                  {/* Top row: image + product info */}
-                  <div className="flex items-center gap-4">
-                    {previewUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={previewUrl}
-                        alt={scanResult.productName || 'Product'}
-                        className="w-[120px] h-[120px] rounded-xl object-cover flex-shrink-0"
-                      />
-                    )}
-                    <div>
-                      <p className="text-base font-bold text-foreground">{scanResult.productName}</p>
-                      {scanResult.category && (
-                        <p className="text-sm text-foreground-secondary mt-1">{scanResult.category}</p>
-                      )}
-                      <p className="text-xs text-foreground-secondary mt-2">Identified by K33pr</p>
-                      <p className="text-xs text-foreground-secondary mt-1">
-                        Typical price range: {getPriceRange(scanResult.category)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Card recommendation block */}
-                  {cardRecommendation !== null && (
-                    <>
-                      <div className="border-t border-border" />
-
-                      {/* No cards / not logged in: subtle prompt */}
-                      {userLoggedIn === false && (
-                        <p className="text-xs text-foreground-secondary">
-                          <Link href="/signup" style={{ color: '#534AB7' }} className="hover:underline">
-                            Sign up to see your best card for this purchase
-                          </Link>
-                        </p>
-                      )}
-                      {userLoggedIn === true && cardRecommendation === undefined && (
-                        <p className="text-xs text-foreground-secondary">
-                          <Link href="/settings" style={{ color: '#534AB7' }} className="hover:underline">
-                            Add your cards in Settings to get personalized recommendations
-                          </Link>
-                        </p>
-                      )}
-
-                      {/* Card recommendation */}
-                      {cardRecommendation && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
-                            Best card for this purchase
-                          </p>
-                          <div className="flex items-baseline justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-bold text-foreground">{cardRecommendation.cardName}</p>
-                              <p className="text-xs text-foreground-secondary">{cardRecommendation.issuer}</p>
-                            </div>
-                            <p className="text-sm font-bold text-primary whitespace-nowrap">
-                              {cardRecommendation.rate}% cashback
-                            </p>
-                          </div>
-
-                          {cardRecommendation.isRotating && (
-                            <p className="text-xs text-foreground-secondary">
-                              ⚠ Rotating category — verify your current quarter
-                            </p>
-                          )}
-
-                          {cardRecommendation.notes && (
-                            <p className="text-xs text-foreground-secondary">{cardRecommendation.notes}</p>
-                          )}
-
-                          {/* Combined total row */}
-                          {products.length > 0 && (() => {
-                            const topResult = products[0]
-                            const k33prRatePct = Math.round(topResult.affiliateRate * 100)
-                            const cardRatePct = cardRecommendation.rate
-                            const totalPct = k33prRatePct + cardRatePct
-                            return (
-                              <div className="pt-2 border-t border-border">
-                                <p className="text-xs text-foreground-secondary">
-                                  K33pr commission + {cardRecommendation.cardName}:{' '}
-                                  <span className="font-semibold text-foreground">
-                                    {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
-                                  </span>
-                                </p>
-                              </div>
-                            )
-                          })()}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
 
               {/* Price Check section — informational only, no affiliate links or Click IDs */}
               {shoppingResults.length > 0 && (
@@ -720,7 +682,7 @@ export default function ScanClient() {
                   : 'Couldn\'t load store results.'}
               </p>
               <button
-                onClick={handleFindBestPrice}
+                onClick={() => handleFindBestPrice()}
                 className="text-sm text-primary font-medium hover:opacity-80 transition"
               >
                 Try Again
