@@ -45,7 +45,7 @@ export async function getShoppingResults(query: string): Promise<ShoppingResult[
       priceValue: typeof r.extracted_price === 'number' ? r.extracted_price : 0,
       merchant: typeof r.source === 'string' ? r.source : '',
       imageUrl: typeof r.thumbnail === 'string' ? r.thumbnail : '',
-      productUrl: typeof r.link === 'string' ? r.link : '',
+      productUrl: typeof r.link === 'string' && r.link ? r.link : (typeof r.product_link === 'string' ? r.product_link : ''),
       rating: typeof r.rating === 'number' ? r.rating : null,
       reviews: typeof r.reviews === 'number' ? r.reviews : null,
     }))
