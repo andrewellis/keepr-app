@@ -442,7 +442,12 @@ export default function CardSettings() {
       <div className="mb-5">
         <button
           onClick={() => setYourCardsExpanded((v) => !v)}
-          className="flex items-center justify-between w-full mb-2 px-1"
+          className="flex items-center justify-between w-full mb-2 rounded-xl transition"
+          style={
+            !yourCardsExpanded && userSelectedCards.length > 0
+              ? { backgroundColor: '#EEEDFE', border: '1px solid #534AB7', padding: '8px 12px' }
+              : { padding: '0 4px' }
+          }
         >
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#666666' }}>
             Your Cards
