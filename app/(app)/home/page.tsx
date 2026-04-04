@@ -49,6 +49,20 @@ export default async function HomePage() {
           </p>
         </section>
 
+        {/* Product screenshot */}
+        <div className="px-5 py-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/results-example.png"
+            alt="K33pr results showing product identification, price comparison, and credit card recommendation"
+            className="w-full max-w-[700px] mx-auto rounded-lg shadow-sm"
+            style={{ border: '1px solid #E5E5E3' }}
+          />
+          <p className="text-center text-sm mt-3" style={{ color: '#666666' }}>
+            Scan any product. See prices, cashback, and your best card — all in one place.
+          </p>
+        </div>
+
         {/* How it works summary */}
         <section className="px-5 pb-12">
           <h2 className="text-xl font-bold text-foreground mb-6">How It Works</h2>
