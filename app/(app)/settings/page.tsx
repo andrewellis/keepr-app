@@ -5,6 +5,7 @@ import EditDisplayName from './EditDisplayName'
 import CashbackRateForm from './CashbackRateForm'
 import MyCardsSection from '@/components/cards/MyCardsSection'
 import { getAllCards, getUserCards } from '@/lib/cards/actions'
+import CardSettings from './CardSettings'
 
 export default async function SettingsPage() {
   const supabase = createClient()
@@ -81,6 +82,20 @@ export default async function SettingsPage() {
           <p className="text-xs text-foreground-secondary mt-4 text-center">
             We never ask for card numbers. You&rsquo;re just telling us which cards you have.
           </p>
+        </div>
+      </div>
+
+      {/* Credit Card Rewards section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          Credit Card Rewards
+        </p>
+        <div className="bg-surface border border-border rounded-2xl p-4">
+          <p className="text-sm text-foreground font-semibold mb-1">Your Credit Cards</p>
+          <p className="text-xs text-foreground-secondary mb-4">
+            Select your credit cards to get personalized rewards recommendations. Toggle cards on or off, and set one as your primary card.
+          </p>
+          <CardSettings />
         </div>
       </div>
 
