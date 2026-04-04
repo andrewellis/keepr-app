@@ -545,7 +545,7 @@ export default function ScanClient() {
 
                   {/* Shopping result cards */}
                   <div className="space-y-2">
-                    {[...shoppingResults].sort((a, b) => a.priceValue - b.priceValue).map((item, idx) => (
+                    {shoppingResults.slice().sort((a, b) => a.priceValue - b.priceValue).map((item, idx) => (
                       <a
                         key={idx}
                         href={item.productUrl}
