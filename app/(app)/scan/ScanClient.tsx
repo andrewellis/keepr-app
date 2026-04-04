@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { Camera } from 'lucide-react'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import type { ShoppingResult } from '@/lib/shopping/types'
 import { getUserCardsWithRates } from '@/lib/cards/actions'
@@ -20,6 +21,19 @@ interface ScanResult {
   confidence: number
   searchTerms: string[]
   error: string | null
+}
+
+interface MatchResults {
+  results: (AffiliateResult & { clickId?: string })[]
+  shoppingResults: ShoppingResult[]
+}
+
+interface SearchHistoryEntry {
+  id: string
+  product_name: string
+  product_category: string | null
+  results: MatchResults
+  created_at: string
 }
 
 async function compressImage(file: File): Promise<File> {
@@ -91,6 +105,22 @@ function getPriceRange(category: string | null): string {
   return PRICE_RANGES[category] ?? PRICE_RANGES['Other']
 }
 
+function formatRelativeTime(dateStr: string): string {
+  const now = Date.now()
+  const then = new Date(dateStr).getTime()
+  const diffMs = now - then
+  const diffMins = Math.floor(diffMs / 60_000)
+  const diffHours = Math.floor(diffMs / 3_600_000)
+  const diffDays = Math.floor(diffMs / 86_400_000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 7) return `${diffDays} days ago`
+  return new Date(dateStr).toLocaleDateString()
+}
+
 export default function ScanClient() {
   const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
@@ -110,6 +140,63 @@ export default function ScanClient() {
   // null = not yet resolved, undefined = no recommendation (no cards / not logged in)
   const [cardRecommendation, setCardRecommendation] = useState<CardRecommendation | null | undefined>(null)
   const [userLoggedIn, setUserLoggedIn] = useState<boolean | null>(null)
+
+  // Search history state
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+
+  // Load search history on mount (only for logged-in users)
+  const loadSearchHistory = useCallback(async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setHistoryLoaded(true); return }
+
+      const { data } = await supabase
+        .from('search_history')
+        .select('id, product_name, product_category, results, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (data) {
+        setSearchHistory(data as SearchHistoryEntry[])
+      }
+    } catch {
+      // Silently fail — history is non-critical
+    } finally {
+      setHistoryLoaded(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSearchHistory()
+  }, [loadSearchHistory])
+
+  // Save to search history after successful match results
+  const saveToHistory = useCallback(async (
+    scan: ScanResult,
+    matchResults: MatchResults
+  ) => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !scan.productName) return
+
+      await supabase.from('search_history').insert({
+        user_id: user.id,
+        product_name: scan.productName,
+        product_category: scan.category ?? null,
+        image_url: null,
+        results: matchResults as unknown as Record<string, unknown>,
+      })
+
+      // Refresh history list
+      loadSearchHistory()
+    } catch {
+      // Non-fatal
+    }
+  }, [loadSearchHistory])
 
   // Fetch card recommendation after store results are loaded
   useEffect(() => {
@@ -251,11 +338,13 @@ export default function ScanClient() {
         body: JSON.stringify(matchBody),
       })
       if (!res.ok) throw new Error('store error')
-      const matchData = await res.json()
+      const matchData: MatchResults = await res.json()
       setProducts(matchData.results ?? [])
       setShoppingResults(matchData.shoppingResults ?? [])
       setStoreState('done')
 
+      // Save to search history (fire-and-forget)
+      saveToHistory(result, matchData)
     } catch {
       setStoreState('error')
     }
@@ -293,6 +382,48 @@ export default function ScanClient() {
     setBuyStates({})
     setCardRecommendation(null)
     setUserLoggedIn(null)
+  }
+
+  function handleLoadHistoryEntry(entry: SearchHistoryEntry) {
+    const matchResults = entry.results as MatchResults
+    setScanResult({
+      productName: entry.product_name,
+      category: entry.product_category,
+      confidence: 1,
+      searchTerms: [],
+      error: null,
+    })
+    setPreviewUrl(null)
+    setProducts(matchResults.results ?? [])
+    setShoppingResults(matchResults.shoppingResults ?? [])
+    setStoreState('done')
+    setCardRecommendation(null)
+    setUserLoggedIn(null)
+    setScanState('result')
+  }
+
+  // Pill-shaped "Scan New Product" button used above results
+  function ScanNewProductButton() {
+    return (
+      <div className="flex justify-center mb-4">
+        <button
+          onClick={handleReset}
+          className="flex items-center gap-2 rounded-full text-white text-sm font-medium shadow-sm transition active:scale-95"
+          style={{
+            backgroundColor: '#534AB7',
+            paddingTop: 10,
+            paddingBottom: 10,
+            paddingLeft: 20,
+            paddingRight: 20,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#7F77DD' }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#534AB7' }}
+        >
+          <Camera size={16} />
+          Scan New Product
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -370,6 +501,45 @@ export default function ScanClient() {
               ))}
             </ul>
           </div>
+
+          {/* Recent Searches */}
+          {historyLoaded && searchHistory.length > 0 && (
+            <div className="mt-4">
+              <p className="text-base font-semibold mb-3" style={{ color: '#1a1a1a' }}>Recent Searches</p>
+              <div className="space-y-2">
+                {searchHistory.map((entry) => {
+                  const resultCount = (entry.results?.results ?? []).length
+                  return (
+                    <button
+                      key={entry.id}
+                      onClick={() => handleLoadHistoryEntry(entry)}
+                      className="w-full text-left rounded-lg px-4 py-3 border transition hover:border-primary"
+                      style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
+                    >
+                      <p className="text-sm font-medium" style={{ color: '#1a1a1a' }}>
+                        {entry.product_name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {entry.product_category && (
+                          <p className="text-xs" style={{ color: '#666666' }}>{entry.product_category}</p>
+                        )}
+                        {entry.product_category && (
+                          <span className="text-xs" style={{ color: '#E5E5E3' }}>·</span>
+                        )}
+                        <p className="text-xs" style={{ color: '#666666' }}>
+                          {resultCount} result{resultCount !== 1 ? 's' : ''}
+                        </p>
+                        <span className="text-xs" style={{ color: '#E5E5E3' }}>·</span>
+                        <p className="text-xs" style={{ color: '#666666' }}>
+                          {formatRelativeTime(entry.created_at)}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -425,6 +595,9 @@ export default function ScanClient() {
 
       {scanState === 'result' && scanResult && (
         <div className="space-y-4">
+
+          {/* Pill button at top of results */}
+          <ScanNewProductButton />
 
           {/* Product identification card — always visible */}
           <div className="bg-surface border border-border rounded-2xl p-4 space-y-3">
@@ -661,13 +834,6 @@ export default function ScanClient() {
               K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
             </p>
           )}
-
-          <button
-            onClick={handleReset}
-            className="w-full bg-surface border border-border rounded-xl py-3.5 text-sm font-semibold text-foreground hover:border-primary transition"
-          >
-            Scan Again
-          </button>
         </div>
       )}
     </div>
