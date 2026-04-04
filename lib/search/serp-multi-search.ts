@@ -207,6 +207,7 @@ export async function multiEngineSearch(
       enginesSucceeded.push(outcome.value.engine);
     }
   }
+  console.log("[multiEngineSearch] engines queried:", engines, "engines succeeded:", enginesSucceeded, "result count:", allResults.length);
 
   // Write to L1 cache
   await setCached('multi', cacheKey, allResults, L1_TTL_SECONDS);
