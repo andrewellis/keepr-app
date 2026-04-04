@@ -28,22 +28,8 @@ export async function signup(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const fullName = formData.get('display_name') as string
-  const inviteCode = (formData.get('invite_code') as string ?? '').trim()
 
-  // Validate invite code
-  const rawCodes = process.env.INVITE_CODES ?? ''
-  const validCodes = rawCodes
-    .split(',')
-    .map((c) => c.trim().toUpperCase())
-    .filter(Boolean)
-
-  if (validCodes.length > 0) {
-    if (!inviteCode || !validCodes.includes(inviteCode.toUpperCase())) {
-      return { error: 'K33pr is in beta. Enter your invite code to join.' }
-    }
-  }
-
-  const { data: authData, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -55,18 +41,6 @@ export async function signup(formData: FormData) {
 
   if (error) {
     return { error: error.message }
-  }
-
-  // Save invite code to profile (best-effort — profile row created by trigger)
-  if (authData.user && inviteCode) {
-    try {
-      await supabase
-        .from('profiles')
-        .update({ invite_code: inviteCode.toUpperCase() })
-        .eq('id', authData.user.id)
-    } catch {
-      // Non-fatal — profile trigger may not have fired yet; ignore
-    }
   }
 
   revalidatePath('/', 'layout')
