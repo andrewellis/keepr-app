@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 import './globals.css'
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration'
 import InstallBanner from '@/components/InstallBanner'
+import GoogleAnalytics from './GoogleAnalytics'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <GoogleAnalytics />
         {children}
         <ServiceWorkerRegistration />
         <InstallBanner />
