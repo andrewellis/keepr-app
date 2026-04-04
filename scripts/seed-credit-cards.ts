@@ -1,11 +1,23 @@
 /**
  * Seed script for credit_cards and merchant_categories tables.
- * Run with: npx tsx scripts/seed-credit-cards.ts
+ * Run with: npx tsx --env-file=.env.local scripts/seed-credit-cards.ts
+ *
+ * Requires environment variables (loaded from .env.local via --env-file flag):
+ *   NEXT_PUBLIC_SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
  */
+
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = 'https://yihydeqpetvcwcgdlobo.supabase.co'
-const SERVICE_ROLE_KEY = 'sb_secret_KgkzE6mhXP7CQKttHntH0g_JNMVaGwS'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!SUPABASE_URL) {
+  throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL')
+}
+if (!SERVICE_ROLE_KEY) {
+  throw new Error('Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY')
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },

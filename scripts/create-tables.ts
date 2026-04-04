@@ -1,84 +1,45 @@
 /**
- * Script to create credit_cards, user_cards (new), and merchant_categories tables
- * using the Supabase REST API with service role key.
- * 
- * The existing user_cards table references the old 'cards' table.
- * We need to create a NEW credit_cards table and a new user_cards table
- * that references it. But since user_cards already exists referencing 'cards',
- * we need to handle this carefully.
- * 
- * Strategy: Create credit_cards and merchant_categories as new tables.
- * For user_cards, we need to add is_primary column and card_id FK to credit_cards.
- * Actually, the task says to create a NEW user_cards table. But one already exists.
- * We'll add the new columns to the existing user_cards table and create credit_cards.
+ * Script to check which tables exist in the Supabase database.
+ * Usage: npx tsx --env-file=.env.local scripts/create-tables.ts
+ *
+ * Requires environment variables (loaded from .env.local via --env-file flag):
+ *   NEXT_PUBLIC_SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
  */
 
-import { createClient } from '@supabase/supabase-js'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const SUPABASE_URL = 'https://yihydeqpetvcwcgdlobo.supabase.co'
-const SERVICE_ROLE_KEY = 'sb_secret_KgkzE6mhXP7CQKttHntH0g_JNMVaGwS'
+if (!SUPABASE_URL) {
+  throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL')
+}
+if (!SERVICE_ROLE_KEY) {
+  throw new Error('Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY')
+}
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-})
-
-// Use the Supabase SQL endpoint via the pg REST API
-async function execSQL(sql: string, label: string): Promise<boolean> {
-  // Use the Supabase REST API to execute SQL via a stored procedure
-  // We'll use the pg_net or direct SQL approach
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec_sql`, {
-    method: 'POST',
+async function checkTable(tableName: string): Promise<void> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?select=id&limit=1`, {
     headers: {
-      'apikey': SERVICE_ROLE_KEY,
+      'apikey': SERVICE_ROLE_KEY!,
       'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ sql }),
   })
 
-  if (!res.ok) {
-    const text = await res.text()
-    console.error(`❌ ${label}: ${text}`)
-    return false
+  if (res.ok) {
+    console.log(`✅ ${tableName} table exists`)
+  } else {
+    const err = await res.json()
+    console.log(`❌ ${tableName} does not exist: ${err.message}`)
   }
-
-  console.log(`✅ ${label}`)
-  return true
 }
 
 async function main() {
-  console.log('Testing connection...')
-  
-  // Test: check if credit_cards exists
-  const testRes = await fetch(`${SUPABASE_URL}/rest/v1/credit_cards?select=id&limit=1`, {
-    headers: {
-      'apikey': SERVICE_ROLE_KEY,
-      'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-    },
-  })
-  
-  if (testRes.ok) {
-    console.log('✅ credit_cards table already exists')
-  } else {
-    const err = await testRes.json()
-    console.log('credit_cards does not exist:', err.message)
-    console.log('Need to create it via Supabase dashboard SQL editor')
-  }
-
-  // Test: check if merchant_categories exists
-  const testRes2 = await fetch(`${SUPABASE_URL}/rest/v1/merchant_categories?select=id&limit=1`, {
-    headers: {
-      'apikey': SERVICE_ROLE_KEY,
-      'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-    },
-  })
-  
-  if (testRes2.ok) {
-    console.log('✅ merchant_categories table already exists')
-  } else {
-    const err2 = await testRes2.json()
-    console.log('merchant_categories does not exist:', err2.message)
-  }
+  console.log('Checking tables...\n')
+  await checkTable('credit_cards')
+  await checkTable('credit_card_selections')
+  await checkTable('merchant_categories')
+  await checkTable('user_cards')
+  await checkTable('cards')
 }
 
 main().catch(console.error)

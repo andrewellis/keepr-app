@@ -1,47 +1,48 @@
 /**
  * Script to run SQL statements against Supabase using the service role key.
- * Usage: npx tsx scripts/run-sql.ts
+ * Usage: npx tsx --env-file=.env.local scripts/run-sql.ts
+ *
+ * Requires environment variables (loaded from .env.local via --env-file flag):
+ *   NEXT_PUBLIC_SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
  */
+
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://yihydeqpetvcwcgdlobo.supabase.co'
-const supabaseServiceRoleKey = 'sb_secret_KgkzE6mhXP7CQKttHntH0g_JNMVaGwS'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+if (!SUPABASE_URL) {
+  throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL')
+}
+if (!SERVICE_ROLE_KEY) {
+  throw new Error('Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY')
+}
+
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 })
-
-async function runSQL(sql: string, label: string): Promise<void> {
-  const { error } = await supabase.rpc('exec_sql', { sql })
-  if (error) {
-    console.error(`❌ ${label}:`, error.message)
-    throw error
-  }
-  console.log(`✅ ${label}`)
-}
 
 async function main() {
   // We'll use the Supabase Management API to run SQL
   const projectId = 'yihydeqpetvcwcgdlobo'
-  const managementToken = supabaseServiceRoleKey
 
   async function execSQL(sql: string, label: string) {
     const res = await fetch(`https://api.supabase.com/v1/projects/${projectId}/database/query`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${managementToken}`,
+        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ query: sql }),
     })
-    
+
     if (!res.ok) {
       const text = await res.text()
       console.error(`❌ ${label}: HTTP ${res.status} - ${text}`)
       return false
     }
-    
-    const data = await res.json()
+
     console.log(`✅ ${label}`)
     return true
   }
