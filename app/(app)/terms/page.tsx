@@ -92,10 +92,7 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-base font-semibold text-foreground mb-2">8. Affiliate Disclosure</h2>
           <p>
-            K33pr earns commissions from qualifying purchases made through affiliate links displayed
-            on the Site. As an Amazon Associate, GRMtek LLC earns from qualifying purchases. Affiliate
-            relationships exist with other retailers as well. The ranking of results is based on
-            estimated total return to the user, not on commission rates paid to GRMtek.
+            K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr. K33pr participates in affiliate programs with multiple retailers. The ranking of results is based on estimated total return to the user, not on commission rates paid to GRMtek.
           </p>
         </section>
 

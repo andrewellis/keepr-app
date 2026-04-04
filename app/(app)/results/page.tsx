@@ -470,7 +470,7 @@ function ResultsContent() {
       {/* Affiliate disclosure */}
       {fetchState === 'done' && results.length > 0 && (
         <p className="text-xs text-center mt-4 text-foreground-secondary">
-          As an Amazon Associate, GRMtek LLC earns from qualifying purchases.
+          K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
         </p>
       )}
 

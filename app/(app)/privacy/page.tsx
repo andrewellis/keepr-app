@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
           <h2 className="text-base font-semibold text-foreground mb-2">4. Third-Party Services</h2>
           <p className="mb-2">K33pr uses the following third-party services to operate:</p>
           <p className="mb-1">— <span className="text-foreground font-medium">Google Cloud Vision API:</span> Processes product images for identification. Google&apos;s privacy policy applies to image processing.</p>
-          <p className="mb-1">— <span className="text-foreground font-medium">Amazon Associates:</span> Affiliate links direct you to Amazon.com. Amazon&apos;s privacy policy governs your interactions with Amazon.</p>
+          <p className="mb-1">— <span className="text-foreground font-medium">Affiliate Networks:</span> K33pr participates in affiliate programs with various retailers. When you click an affiliate link, the retailer&apos;s privacy policy governs your interaction with them.</p>
           <p className="mb-1">— <span className="text-foreground font-medium">Supabase:</span> Hosts our database and authentication. Data is stored in the United States.</p>
           <p className="mb-1">— <span className="text-foreground font-medium">Vercel:</span> Hosts our website. Standard web hosting logs apply.</p>
           <p className="mt-2">When you click an affiliate link and visit a retailer&apos;s website, that retailer&apos;s privacy policy governs your interaction with them.</p>
