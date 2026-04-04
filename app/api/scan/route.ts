@@ -255,6 +255,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
         category: claudeCategory,
         confidence: Math.round(topScore * 100) / 100,
         searchTerms: claudeResult.searchTerms,
+        visionLabels: labels,
         error: null,
       })
     }
@@ -278,13 +279,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
       }
     }
 
-    return NextResponse.json({
-      productName: bestGuess,
-      category,
-      confidence: Math.round(topScore * 100) / 100,
-      searchTerms,
-      error: null,
-    })
+      return NextResponse.json({
+        productName: bestGuess,
+        category,
+        confidence: Math.round(topScore * 100) / 100,
+        searchTerms,
+        visionLabels: labels,
+        error: null,
+      })
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       return NextResponse.json(errorResult('recognition_timeout'))

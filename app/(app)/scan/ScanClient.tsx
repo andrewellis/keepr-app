@@ -21,6 +21,7 @@ interface ScanResult {
   category: string | null
   confidence: number
   searchTerms: string[]
+  visionLabels?: string[]
   error: string | null
 }
 
@@ -346,6 +347,7 @@ export default function ScanClient() {
       productName: result.productName,
       category: result.category,
       searchTerms: result.searchTerms,
+      visionLabels: result.visionLabels ?? [],
     }
     try {
       const res = await fetch('/api/match', {
