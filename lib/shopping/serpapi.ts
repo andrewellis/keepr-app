@@ -16,7 +16,7 @@ export async function getShoppingResults(query: string): Promise<ShoppingResult[
       engine: 'google_shopping',
       q: query,
       api_key: apiKey,
-      num: '5',
+      num: '8',
       gl: 'us',
       hl: 'en',
     })
@@ -39,7 +39,7 @@ export async function getShoppingResults(query: string): Promise<ShoppingResult[
       return typeof r.extracted_price === 'number' && r.extracted_price > 0 && typeof r.thumbnail === 'string' && r.thumbnail.length > 0
     })
 
-    return filtered.slice(0, 2).map((r) => ({
+    return filtered.slice(0, 8).map((r) => ({
       title: typeof r.title === 'string' ? r.title : '',
       price: typeof r.price === 'string' ? r.price : '',
       priceValue: typeof r.extracted_price === 'number' ? r.extracted_price : 0,

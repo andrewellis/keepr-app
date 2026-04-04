@@ -91,13 +91,6 @@ function getPriceRange(category: string | null): string {
   return PRICE_RANGES[category] ?? PRICE_RANGES['Other']
 }
 
-/** Determine the button label based on retailer */
-function buyButtonLabel(p: AffiliateResult, buyState: BuyState): string {
-  if (buyState === 'opening') return 'Opening...'
-  if (p.retailer === 'Amazon') return 'Search on Amazon'
-  return `Search on ${p.retailer.replace(/ \(.*\)$/, '')}`
-}
-
 export default function ScanClient() {
   const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
@@ -617,59 +610,32 @@ export default function ScanClient() {
                 <div style={{ height: 1, backgroundColor: '#E5E5E3', marginTop: 16, marginBottom: 16 }} />
               )}
 
-              {/* Maximize My Earnings! header */}
-              <p className="text-base font-semibold" style={{ color: '#1a1a1a' }}>Maximize My Earnings!</p>
+              {/* Buy links header */}
+              <p className="text-base font-semibold" style={{ color: '#1a1a1a' }}>Shop This Product</p>
 
-              {products.map((p) => {
-                const priceKnown = p.price > 0
-                const buyState = buyStates[p.affiliateUrl] ?? 'idle'
-                const affiliateRatePct = Math.round(p.affiliateRate * 100)
-                return (
-                  <div key={p.affiliateUrl} className="bg-surface border border-border rounded-2xl p-4 space-y-3">
-                    {/* Retailer + product name */}
-                    <div>
-                      <p className="text-base font-bold text-foreground">{p.retailer}</p>
-                      <p className="text-sm text-foreground-secondary leading-snug mt-0.5">{p.productName}</p>
-                    </div>
-
-                    <p className="text-xs text-foreground-secondary">
-                      K33pr commission: up to {affiliateRatePct}%
-                    </p>
-
-                    {/* Image if available */}
-                    {p.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.productName} className="w-16 h-16 rounded-xl object-cover" />
-                    )}
-
-                    {/* Price + earnings — only when price is known */}
-                    {priceKnown && (
-                      <div className="space-y-0.5">
-                        <p className="text-base font-bold text-foreground">${(p.price / 100).toFixed(2)}</p>
-                        <p className="text-xs text-foreground-secondary">Commission: ${(p.commissionCents / 100).toFixed(2)}</p>
-                        <p className="text-xs text-foreground-secondary">Fee: -$0.20</p>
-                        <p className="text-xs font-semibold text-primary">Est. K33pr payout: ${(p.userPayoutCents / 100).toFixed(2)}</p>
-                        <p className="text-xs text-foreground-secondary">Est. card rate: ${(p.estimatedCashbackCents / 100).toFixed(2)}</p>
-                        <p className="text-xs font-semibold text-primary">Total back: ${(p.totalReturnCents / 100).toFixed(2)}</p>
-                      </div>
-                    )}
-
-                    {/* Search / Buy button */}
+              <div className="space-y-2">
+                {products.map((p) => {
+                  const buyState = buyStates[p.affiliateUrl] ?? 'idle'
+                  return (
                     <button
+                      key={p.affiliateUrl}
                       onClick={() => handleBuy(p)}
-                      className="w-full bg-primary rounded-xl py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition"
+                      className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition"
+                      style={{
+                        backgroundColor: buyState === 'opening' ? '#EEEDFE' : '#F8F8F6',
+                        border: '1px solid #E5E5E3',
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#EEEDFE' }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = buyState === 'opening' ? '#EEEDFE' : '#F8F8F6' }}
                     >
-                      {buyButtonLabel(p, buyState)}
+                      <span className="text-sm font-medium" style={{ color: '#1a1a1a' }}>
+                        {buyState === 'opening' ? 'Opening...' : p.retailer.replace(/ \(.*\)$/, '')}
+                      </span>
+                      <span style={{ color: '#1a1a1a' }}>→</span>
                     </button>
-
-                    {!priceKnown && (
-                      <p className="text-xs text-center text-foreground-secondary">
-                        Find this product on {p.retailer.replace(/ \(.*\)$/, '')}.
-                      </p>
-                    )}
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
 
             </div>
           )}
