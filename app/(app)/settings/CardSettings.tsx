@@ -339,19 +339,16 @@ export default function CardSettings() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-foreground-secondary mt-0.5">
+                        <p className="text-xs mt-0.5" style={{ color: '#666666' }}>
                           {card.base_rate}x base
                           {bonusSummary && (
                             <span className="ml-1">· {bonusSummary}</span>
                           )}
                         </p>
-                        <p className="text-xs text-foreground-secondary mt-0.5">
-                          {card.reward_currency.replace(/_/g, ' ')}
-                          {card.annual_fee_cents > 0 && (
-                            <span className="ml-1">
-                              · ${(card.annual_fee_cents / 100).toFixed(0)}/yr
-                            </span>
-                          )}
+                        <p className="text-xs mt-0.5" style={{ color: '#666666' }}>
+                          {card.annual_fee_cents === 0
+                            ? '$0/yr'
+                            : `$${(card.annual_fee_cents / 100).toFixed(0)}/yr`}
                         </p>
                       </div>
 
