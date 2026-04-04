@@ -10,6 +10,7 @@ import { getCardCategory } from '@/lib/cards/categoryMap'
 import { getBestCardRecommendation } from '@/lib/cards/recommender'
 import type { CardRecommendation } from '@/lib/cards/recommender'
 import { createClient } from '@/lib/supabase/client'
+import { RetailerEngagementBanner } from '@/components/RetailerEngagementBanner'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -26,6 +27,20 @@ interface ScanResult {
 interface MatchResults {
   results: (AffiliateResult & { clickId?: string })[]
   shoppingResults: ShoppingResult[]
+  retailerContext?: {
+    detectedRetailer: string;
+    messageVariant: 'amazon_screenshot' | 'competitor_screenshot' | 'generic';
+  };
+  engagementMessage?: {
+    headline: string;
+    subtext: string;
+    priceComparisonIntro: string;
+  };
+  searchMetadata?: {
+    detectedRetailer: string;
+    enginesUsed: number;
+    resultsFound: number;
+  };
 }
 
 interface SearchHistoryEntry {
@@ -133,6 +148,7 @@ export default function ScanClient() {
   const [storeState, setStoreState] = useState<StoreState>('idle')
   const [products, setProducts] = useState<(AffiliateResult & { clickId?: string })[]>([])
   const [shoppingResults, setShoppingResults] = useState<ShoppingResult[]>([])
+  const [matchResult, setMatchResult] = useState<MatchResults | null>(null)
   const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [isOffline, setIsOffline] = useState(false)
 
@@ -341,6 +357,7 @@ export default function ScanClient() {
       const matchData: MatchResults = await res.json()
       setProducts(matchData.results ?? [])
       setShoppingResults(matchData.shoppingResults ?? [])
+      setMatchResult(matchData)
       setStoreState('done')
 
       // Save to search history (fire-and-forget)
@@ -379,6 +396,7 @@ export default function ScanClient() {
     setStoreState('idle')
     setProducts([])
     setShoppingResults([])
+    setMatchResult(null)
     setBuyStates({})
     setCardRecommendation(null)
     setUserLoggedIn(null)
@@ -692,6 +710,14 @@ export default function ScanClient() {
               </>
             )}
           </div>
+
+          {/* Retailer engagement banner */}
+          {matchResult?.retailerContext && matchResult?.engagementMessage && (
+            <RetailerEngagementBanner
+              retailerContext={matchResult.retailerContext}
+              engagementMessage={matchResult.engagementMessage}
+            />
+          )}
 
           {/* Loading indicator while fetching prices */}
           {storeState === 'loading' && (
