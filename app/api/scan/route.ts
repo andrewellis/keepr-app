@@ -222,6 +222,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
 
     const labels: string[] = (result.labelAnnotations ?? [])
       .map((l: { description: string }) => l.description)
+    console.log("[scan] Vision labels:", JSON.stringify(labels));
 
     const webEntitiesRaw: { description?: string; score?: number }[] =
       result.webDetection?.webEntities ?? []
