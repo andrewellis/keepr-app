@@ -158,6 +158,7 @@ export async function POST(req: NextRequest) {
     if (user) {
       userId = user.id
       userTier = 'free' // authenticated but not paid by default
+      console.log('[match] userTier resolved:', userTier, 'userId:', userId)
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -225,11 +226,12 @@ export async function POST(req: NextRequest) {
       // Price check — informational only, no tracking
       getShoppingResults(productName),
       // Multi-engine SERP search — runs in parallel with affiliate logic
+      (console.log('[match] calling multiEngineSearch with tier:', userTier, 'query:', productName),
       multiEngineSearch({
         query: productName,
         category,
         tier: userTier,
-      }),
+      })),
     ])
 
     const trackedResults =
