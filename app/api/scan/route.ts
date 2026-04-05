@@ -224,10 +224,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
     const labels: string[] = (result.labelAnnotations ?? [])
       .map((l: { description: string }) => l.description)
 
-    const detectedText: string[] = (result.textAnnotations ?? [])
-      .slice(0, 5)
-      .map((t: { description: string }) => t.description)
-      .filter((t: string) => t.length < 100)
+    const detectedText: string[] = result.textAnnotations?.[0]?.description
+      ? [result.textAnnotations[0].description]
+      : []
 
     const webEntitiesRaw: { description?: string; score?: number }[] =
       result.webDetection?.webEntities ?? []
