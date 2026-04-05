@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+function extractAsin(url: string): string | null {
+  const match = url.match(/\/dp\/([A-Z0-9]{10})/);
+  return match ? match[1] : null;
+}
+
 const AGGRESSIVE_ELIGIBLE_CATEGORIES = [
   'electronics',
   'appliances',
@@ -148,6 +153,7 @@ export async function POST(request: Request) {
         search_query: productName,
         category,
         aggressive,
+        asin: extractAsin(url) ?? null,
         is_active: true,
         updated_at: new Date().toISOString(),
       },

@@ -24,25 +24,6 @@ const tabs = [
     ),
   },
   {
-    label: 'Scan',
-    href: '/scan',
-    icon: (active: boolean) => (
-      <svg
-        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 8H3m18-8h-2M5 4H3m2 16H3m18-4h-2M19 4h-2"
-        />
-      </svg>
-    ),
-  },
-  {
     label: 'History',
     href: '/history',
     icon: (active: boolean) => (
