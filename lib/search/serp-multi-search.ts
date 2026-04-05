@@ -86,16 +86,22 @@ function parseWalmart(data: Record<string, unknown>): SerpResult[] {
 
 function parseBingShopping(data: Record<string, unknown>): SerpResult[] {
   const items = (data.shopping_results as Record<string, unknown>[]) ?? [];
-  if (items.length > 0) console.log('[BING_SHOPPING_RAW]', JSON.stringify(items[0], null, 2));
-  return items.map(item => ({
-    engine: 'bing_shopping' as SearchEngine,
-    title: String(item.title ?? ''),
-    price: parsePrice(item.price ?? null),
-    currency: 'USD',
-    url: String(item.link ?? ''),
-    thumbnail: String(item.thumbnail ?? THUMBNAIL_PLACEHOLDER),
-    retailerDomain: extractDomain(String(item.link ?? '')),
-  }));
+  return items
+    .filter(item => item.external_link)
+    .map(item => {
+      const thumbnails = item.thumbnails as string[] | undefined;
+      return {
+        engine: 'bing_shopping' as SearchEngine,
+        title: String(item.title ?? ''),
+        price: typeof item.extracted_price === 'number'
+          ? item.extracted_price
+          : parsePrice(item.price ?? null),
+        currency: 'USD',
+        url: String(item.external_link ?? ''),
+        thumbnail: thumbnails?.[0] ?? THUMBNAIL_PLACEHOLDER,
+        retailerDomain: String(item.seller ?? extractDomain(String(item.external_link ?? ''))),
+      };
+    });
 }
 
 function parseEbay(data: Record<string, unknown>): SerpResult[] {
