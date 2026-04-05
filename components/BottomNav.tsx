@@ -97,11 +97,10 @@ export default function SideDrawer() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed top-4 left-4 z-50 text-primary"
+        className="fixed top-4 left-4 z-50 bg-primary rounded-full p-3 text-white"
         aria-label="Open menu"
-        style={{ width: 24, height: 24 }}
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="3" y1="6" x2="21" y2="6" />
           <line x1="3" y1="12" x2="21" y2="12" />
           <line x1="3" y1="18" x2="21" y2="18" />
@@ -116,7 +115,8 @@ export default function SideDrawer() {
       )}
 
       <div
-        className={`fixed top-0 left-0 h-full w-60 z-50 bg-background border-r border-border transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed left-0 w-60 z-50 bg-background border-r border-border rounded-r-2xl shadow-xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ top: 80, bottom: 80 }}
       >
         <div className="px-6 py-6">
           <span className="font-bold text-primary text-xl">K33pr</span>
