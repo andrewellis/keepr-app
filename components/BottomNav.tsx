@@ -9,7 +9,7 @@ const tabs = [
     href: '/home',
     icon: (active: boolean) => (
       <svg
-        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
         fill={active ? 'currentColor' : 'none'}
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -28,7 +28,7 @@ const tabs = [
     href: '/history',
     icon: (active: boolean) => (
       <svg
-        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
         fill={active ? 'currentColor' : 'none'}
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -47,7 +47,7 @@ const tabs = [
     href: '/tracking',
     icon: (active: boolean) => (
       <svg
-        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
         fill={active ? 'currentColor' : 'none'}
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -66,7 +66,7 @@ const tabs = [
     href: '/settings',
     icon: (active: boolean) => (
       <svg
-        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
         fill={active ? 'currentColor' : 'none'}
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -97,10 +97,11 @@ export default function SideDrawer() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed top-4 left-4 z-50 bg-primary rounded-full p-3 text-white"
+        className="fixed top-4 left-4 z-50 text-primary"
         aria-label="Open menu"
+        style={{ width: 24, height: 24 }}
       >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="3" y1="6" x2="21" y2="6" />
           <line x1="3" y1="12" x2="21" y2="12" />
           <line x1="3" y1="18" x2="21" y2="18" />
@@ -115,20 +116,21 @@ export default function SideDrawer() {
       )}
 
       <div
-        className={`fixed left-0 w-60 z-50 bg-background border-r border-border rounded-r-2xl shadow-xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ top: 80, bottom: 80 }}
+        className={`fixed left-0 z-50 bg-background rounded-2xl shadow-xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ top: 80, minWidth: 180, maxWidth: 220, width: 'fit-content' }}
       >
-        <div className="px-6 py-6">
-          <span className="font-bold text-primary text-xl">K33pr</span>
+        <div className="px-4 pt-4 pb-3">
+          <span className="font-bold text-primary" style={{ fontSize: 16 }}>K33pr</span>
         </div>
-        <nav>
+        <nav className="pb-2">
           {tabs.map((tab) => {
             const isActive = pathname.startsWith(tab.href)
             return (
               <button
                 key={tab.href}
                 onClick={() => handleNavClick(tab.href)}
-                className={`flex items-center gap-3 w-full h-12 px-6 transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-foreground-secondary'}`}
+                className={`flex items-center gap-3 w-full px-4 transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-foreground-secondary'}`}
+                style={{ height: 40 }}
               >
                 {tab.icon(isActive)}
                 <span className="text-sm font-medium">{tab.label}</span>
