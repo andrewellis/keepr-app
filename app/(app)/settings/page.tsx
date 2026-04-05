@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
@@ -57,6 +58,24 @@ export default async function SettingsPage() {
             Select your credit cards to get personalized rewards recommendations. Toggle cards on or off, and set one as your primary card.
           </p>
           <CardSettings />
+        </div>
+      </div>
+
+      {/* Order History section */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2 px-1">
+          Order History
+        </p>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <Link href="/settings/import" className="flex items-center justify-between px-4 py-4">
+            <div>
+              <p className="text-sm text-foreground">Import Order History</p>
+              <p className="text-xs text-foreground-secondary">Track repeat purchases from Amazon</p>
+            </div>
+            <svg className="w-4 h-4 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>
       </div>
 
