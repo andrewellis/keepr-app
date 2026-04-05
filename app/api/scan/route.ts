@@ -204,6 +204,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
           features: [
             { type: 'LABEL_DETECTION', maxResults: 10 },
             { type: 'WEB_DETECTION', maxResults: 10 },
+            { type: 'TEXT_DETECTION' },
           ],
         }],
       }),
@@ -222,6 +223,11 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
 
     const labels: string[] = (result.labelAnnotations ?? [])
       .map((l: { description: string }) => l.description)
+
+    const detectedText: string[] = (result.textAnnotations ?? [])
+      .slice(0, 5)
+      .map((t: { description: string }) => t.description)
+      .filter((t: string) => t.length < 100)
 
     const webEntitiesRaw: { description?: string; score?: number }[] =
       result.webDetection?.webEntities ?? []
@@ -255,7 +261,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
         category: claudeCategory,
         confidence: Math.round(topScore * 100) / 100,
         searchTerms: claudeResult.searchTerms,
-        visionLabels: labels,
+        visionLabels: [...labels, ...webEntityNames, ...detectedText],
         error: null,
       })
     }
@@ -284,7 +290,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
         category,
         confidence: Math.round(topScore * 100) / 100,
         searchTerms,
-        visionLabels: labels,
+        visionLabels: [...labels, ...webEntityNames, ...detectedText],
         error: null,
       })
   } catch (err) {
