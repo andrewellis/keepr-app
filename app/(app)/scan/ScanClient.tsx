@@ -731,7 +731,7 @@ export default function ScanClient() {
           )}
 
           {/* Context query input — between product card and More Prices */}
-          {storeState === 'done' && products.length > 0 && (
+          {storeState === 'done' && displayedSerpResults.length > 0 && (
             <div className="space-y-2">
               {!showContextInput ? (
                 <button
