@@ -150,6 +150,26 @@ function parseHomeDepot(data: Record<string, unknown>): SerpResult[] {
   });
 }
 
+function parseBestBuy(data: Record<string, unknown>): SerpResult[] {
+  const items = (data.organic_results as Record<string, unknown>[]) ?? [];
+  return items
+    .filter(item => item.link)
+    .map(item => {
+      const priceObj = item.price as Record<string, unknown> | undefined;
+      return {
+        engine: 'bestbuy' as SearchEngine,
+        title: String(item.title ?? ''),
+        price: typeof priceObj?.value === 'number'
+          ? priceObj.value
+          : parsePrice(priceObj?.raw ?? null),
+        currency: 'USD',
+        url: String(item.link ?? ''),
+        thumbnail: String(item.thumbnail ?? THUMBNAIL_PLACEHOLDER),
+        retailerDomain: 'bestbuy.com',
+      };
+    });
+}
+
 function parseEngineResults(
   engine: SearchEngine,
   data: Record<string, unknown>
@@ -161,6 +181,7 @@ function parseEngineResults(
     case 'bing_shopping':         return parseBingShopping(data);
     case 'ebay':                  return parseEbay(data);
     case 'home_depot':            return parseHomeDepot(data);
+    case 'bestbuy':               return parseBestBuy(data);
     default:                      return [];
   }
 }

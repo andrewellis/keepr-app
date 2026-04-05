@@ -10,7 +10,8 @@ export type SearchEngine =
   | 'walmart'
   | 'bing_shopping'
   | 'ebay'
-  | 'home_depot';
+  | 'home_depot'
+  | 'bestbuy';
 
 export type ProductCategory =
   | 'electronics'
@@ -30,7 +31,7 @@ export type ProductCategory =
 const ENGINE_MAP: Record<ProductCategory, Record<'free' | 'paid', SearchEngine[]>> = {
   electronics: {
     free: ['google_shopping_light', 'amazon', 'ebay'],
-    paid: ['google_shopping_light', 'amazon', 'ebay', 'bing_shopping'],
+    paid: ['google_shopping_light', 'amazon', 'ebay', 'bing_shopping', 'bestbuy'],
   },
   home_improvement: {
     free: ['google_shopping_light', 'home_depot', 'amazon'],
