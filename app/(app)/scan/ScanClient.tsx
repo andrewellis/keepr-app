@@ -48,8 +48,8 @@ interface MatchResults {
 interface SearchHistoryEntry {
   id: string
   product_name: string
-  product_category: string | null
-  results: MatchResults
+  category: string | null
+  results_payload: MatchResults
   created_at: string
 }
 
@@ -191,8 +191,8 @@ export default function ScanClient() {
       if (!user) { setHistoryLoaded(true); return }
 
       const { data } = await supabase
-        .from('search_history')
-        .select('id, product_name, product_category, results, created_at')
+        .from('scan_history')
+        .select('id, product_name, category, results_payload, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
@@ -221,12 +221,11 @@ export default function ScanClient() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || !scan.productName) return
 
-      await supabase.from('search_history').insert({
+      await supabase.from('scan_history').insert({
         user_id: user.id,
         product_name: scan.productName,
-        product_category: scan.category ?? null,
-        image_url: null,
-        results: matchResults as unknown as Record<string, unknown>,
+        category: scan.category ?? null,
+        results_payload: matchResults as unknown as Record<string, unknown>,
       })
 
       // Refresh history list
@@ -517,10 +516,10 @@ export default function ScanClient() {
   }
 
   function handleLoadHistoryEntry(entry: SearchHistoryEntry) {
-    const matchResults = entry.results as MatchResults
+    const matchResults = entry.results_payload as MatchResults
     setScanResult({
       productName: entry.product_name,
-      category: entry.product_category,
+      category: entry.category,
       confidence: 1,
       searchTerms: [],
       error: null,
@@ -638,7 +637,7 @@ export default function ScanClient() {
               <p className="text-base font-semibold mb-3" style={{ color: '#1a1a1a' }}>Recent Searches</p>
               <div className="space-y-2">
                 {searchHistory.map((entry) => {
-                  const resultCount = (entry.results?.results ?? []).length
+                  const resultCount = (entry.results_payload?.results ?? []).length
                   return (
                     <button
                       key={entry.id}
@@ -650,10 +649,10 @@ export default function ScanClient() {
                         {entry.product_name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {entry.product_category && (
-                          <p className="text-xs" style={{ color: '#666666' }}>{entry.product_category}</p>
+                        {entry.category && (
+                          <p className="text-xs" style={{ color: '#666666' }}>{entry.category}</p>
                         )}
-                        {entry.product_category && (
+                        {entry.category && (
                           <span className="text-xs" style={{ color: '#E5E5E3' }}>·</span>
                         )}
                         <p className="text-xs" style={{ color: '#666666' }}>
