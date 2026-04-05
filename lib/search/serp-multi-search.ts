@@ -74,15 +74,23 @@ function parseAmazon(data: Record<string, unknown>): SerpResult[] {
 
 function parseWalmart(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
-  return items.map(item => ({
-    engine: 'walmart' as SearchEngine,
-    title: String(item.title ?? ''),
-    price: parsePrice(item.primary_price ?? item.price ?? null),
-    currency: 'USD',
-    url: String(item.product_page_url ?? item.link ?? ''),
-    thumbnail: String(item.thumbnail ?? THUMBNAIL_PLACEHOLDER),
-    retailerDomain: 'walmart.com',
-  }));
+  return items
+    .filter(item => {
+      const offer = item.primary_offer as Record<string, unknown> | undefined;
+      return item.product_page_url && offer?.offer_price && (offer.offer_price as number) > 0;
+    })
+    .map(item => {
+      const offer = item.primary_offer as Record<string, unknown>;
+      return {
+        engine: 'walmart' as SearchEngine,
+        title: String(item.title ?? ''),
+        price: offer.offer_price as number,
+        currency: 'USD',
+        url: String(item.product_page_url ?? ''),
+        thumbnail: String(item.thumbnail ?? THUMBNAIL_PLACEHOLDER),
+        retailerDomain: 'walmart.com',
+      };
+    });
 }
 
 function parseBingShopping(data: Record<string, unknown>): SerpResult[] {
