@@ -854,14 +854,31 @@ export default function ScanClient() {
                             >
                               {item.title}
                             </p>
-                            {item.price !== null && (
-                              <p className="text-[18px] font-semibold mt-1" style={{ color: '#1a1a1a' }}>
-                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}
-                              </p>
-                            )}
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {item.price !== null && (
+                                <p className="text-[18px] font-semibold" style={{ color: '#1a1a1a' }}>
+                                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}
+                                </p>
+                              )}
+                              {item.retailerDomain === 'amazon.com' && item.in_stock === true && (
+                                <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+                                  In Stock
+                                </span>
+                              )}
+                              {item.retailerDomain === 'amazon.com' && item.in_stock === false && (
+                                <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                  Out of Stock
+                                </span>
+                              )}
+                            </div>
                             {item.retailerDomain && (
                               <p className="text-[13px]" style={{ color: '#666666' }}>
                                 {item.retailerDomain}
+                              </p>
+                            )}
+                            {item.retailerDomain === 'amazon.com' && item.delivery && item.delivery.length > 0 && (
+                              <p className="text-xs mt-0.5" style={{ color: '#666666' }}>
+                                {item.delivery[0]}
                               </p>
                             )}
                           </div>
