@@ -1,143 +1,151 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
-const tabs = [
-  {
-    label: 'Home',
-    href: '/home',
-    icon: (active: boolean) => (
-      <svg
-        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
-        fill={active ? 'currentColor' : 'none'}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 0 : 1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-        />
-      </svg>
-    ),
-  },
-  {
-    label: 'History',
-    href: '/history',
-    icon: (active: boolean) => (
-      <svg
-        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
-        fill={active ? 'currentColor' : 'none'}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 0 : 1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-        />
-      </svg>
-    ),
-  },
-  {
-    label: 'Tracking',
-    href: '/tracking',
-    icon: (active: boolean) => (
-      <svg
-        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
-        fill={active ? 'currentColor' : 'none'}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 0 : 1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-        />
-      </svg>
-    ),
-  },
-  {
-    label: 'Settings',
-    href: '/settings',
-    icon: (active: boolean) => (
-      <svg
-        className={`w-5 h-5 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
-        fill={active ? 'currentColor' : 'none'}
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 0 : 1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-  },
+const navItems = [
+  { label: 'Home', href: '/home' },
+  { label: 'History', href: '/history' },
+  { label: 'Tracking', href: '/tracking' },
+  { label: 'Settings', href: '/settings' },
 ]
+
+interface Transaction {
+  id: string
+  product_name: string
+}
+
+interface TrackedItem {
+  id: string
+  title: string
+}
 
 export default function SideDrawer() {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [trackedItems, setTrackedItems] = useState<TrackedItem[]>([])
+  const [loadingTx, setLoadingTx] = useState(false)
+  const [loadingTracked, setLoadingTracked] = useState(false)
+  const fetchedRef = useRef(false)
 
-  function handleNavClick(href: string) {
+  useEffect(() => {
+    if (!open || fetchedRef.current) return
+    fetchedRef.current = true
+
+    setLoadingTx(true)
+    fetch('/api/transaction/history')
+      .then((r) => r.json())
+      .then((data) => {
+        const items: Transaction[] = Array.isArray(data) ? data.slice(0, 4) : []
+        setTransactions(items)
+      })
+      .catch(() => setTransactions([]))
+      .finally(() => setLoadingTx(false))
+
+    setLoadingTracked(true)
+    const supabase = createClient()
+    supabase
+      .from('tracked_items')
+      .select('id, title')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(4)
+      .then(({ data, error }: { data: TrackedItem[] | null; error: unknown }) => {
+        if (error) {
+          setTrackedItems([])
+        } else {
+          setTrackedItems(data ?? [])
+        }
+        setLoadingTracked(false)
+      })
+  }, [open])
+
+  function navigate(href: string) {
     setOpen(false)
     router.push(href)
   }
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed top-4 left-4 z-50 text-primary"
-        aria-label="Open menu"
-        style={{ width: 24, height: 24 }}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
+      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-border z-50 flex items-center px-4">
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          className="w-6 h-6 text-foreground flex items-center justify-center"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div className="flex-1 flex justify-center">
+          <span className="font-bold text-primary">K33pr</span>
+        </div>
+        <div className="w-6 h-6" />
+      </header>
 
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/40"
+          className="fixed inset-0 bg-black/40 z-40"
           onClick={() => setOpen(false)}
         />
       )}
 
       <div
-        className={`fixed left-0 z-50 bg-background rounded-2xl shadow-xl transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ top: 80, minWidth: 180, maxWidth: 220, width: 'fit-content' }}
+        className={`fixed top-0 left-0 bottom-0 w-[30vw] bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="px-4 pt-4 pb-3">
-          <span className="font-bold text-primary" style={{ fontSize: 16 }}>K33pr</span>
-        </div>
-        <nav className="pb-2">
-          {tabs.map((tab) => {
-            const isActive = pathname.startsWith(tab.href)
+        <div className="pt-4">
+          {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.href)
             return (
               <button
-                key={tab.href}
-                onClick={() => handleNavClick(tab.href)}
-                className={`flex items-center gap-3 w-full px-4 transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-foreground-secondary'}`}
-                style={{ height: 40 }}
+                key={item.href}
+                onClick={() => navigate(item.href)}
+                className={`flex items-center w-full h-12 pl-4 text-sm font-medium transition-colors ${isActive ? 'text-primary bg-primary/5' : 'text-foreground-secondary'}`}
               >
-                {tab.icon(isActive)}
-                <span className="text-sm font-medium">{tab.label}</span>
+                {item.label}
               </button>
             )
           })}
-        </nav>
+
+          <div className="border-t border-border my-4" />
+
+          <p className="text-xs text-foreground-secondary font-medium pl-4 mb-2">Recent</p>
+
+          {loadingTx ? (
+            <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
+          ) : (
+            transactions.map((tx) => (
+              <button
+                key={tx.id}
+                onClick={() => navigate('/history')}
+                className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
+              >
+                <span className="truncate">{tx.product_name}</span>
+              </button>
+            ))
+          )}
+
+          <p className="text-xs text-foreground-secondary font-medium pl-4 mt-2 mb-2">Tracking</p>
+
+          {loadingTracked ? (
+            <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
+          ) : (
+            trackedItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => navigate('/tracking')}
+                className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
+              >
+                <span className="truncate">{item.title}</span>
+              </button>
+            ))
+          )}
+        </div>
       </div>
     </>
   )
