@@ -27,9 +27,7 @@ interface UserCardSelection {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Map from title-cased key (after underscore→space conversion) to display label
 const CATEGORY_DISPLAY_MAP: Record<string, string> = {
-  // Issuer-prefixed portal/travel categories
   'Capital One Entertainment': 'Entertainment',
   'Capital One Travel': 'Travel',
   'Capital One Business Travel': 'Business Travel',
@@ -41,14 +39,12 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Us Bank Portal Hotels Cars': 'Portal Hotels/Cars',
   'Us Bank Portal Travel': 'Portal Travel',
   'Citi Travel Portal': 'Portal Travel',
-  // Rotating / choice categories
   'Rotating Quarterly': 'Rotating 5% Categories',
   'Top 2 Categories': 'Top 2 Spend Categories',
   'Top Spending Category': 'Top Spend Category',
   'Choice Category 1': 'Choice Cat. 1',
   'Choice Category 2': 'Choice Cat. 2',
   'Choice Category 3': 'Everyday Cat.',
-  // Airlines / hotels
   'Rapid Rewards Partners': 'RR Partners',
   'Southwest Airlines': 'Southwest',
   'United Airlines': 'United',
@@ -61,7 +57,6 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Hyatt Hotels': 'Hyatt',
   'Hilton Hotels': 'Hilton',
   'Marriott Hotels': 'Marriott',
-  // Misc
   'Internet Phone': 'Internet/Phone',
   'Office Supplies': 'Office',
   'Online Retail': 'Online Shopping',
@@ -71,7 +66,6 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
 }
 
 function formatCategoryName(key: string): string {
-  // Convert underscores to spaces and title-case
   const titled = key
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase())
@@ -103,11 +97,9 @@ function CardRow({ card, isSelected, isPrimary, isPending, onToggle, onSetPrimar
   const bonusSummary = buildBonusSummary(card.category_rates ?? {})
   return (
     <div className="flex items-start justify-between px-4 py-3 gap-3">
-      {/* Left border accent for primary */}
       {isPrimary && (
         <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ backgroundColor: '#534AB7' }} />
       )}
-      {/* Card info */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-medium" style={{ color: '#1a1a1a' }}>
@@ -138,7 +130,6 @@ function CardRow({ card, isSelected, isPrimary, isPending, onToggle, onSetPrimar
         </p>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">
         {isSelected && !isPrimary && (
           <button
@@ -245,7 +236,6 @@ export default function CardSettings() {
     [allCards, selectedCardIds]
   )
 
-  // Issuers derived from active cards
   const issuers = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const card of allCards) {
@@ -256,7 +246,6 @@ export default function CardSettings() {
       .map(([issuer, count]) => ({ issuer, count }))
   }, [allCards])
 
-  // Search mode: filter all cards
   const searchQuery = search.trim().toLowerCase()
   const isSearching = searchQuery.length > 0
 
@@ -269,7 +258,6 @@ export default function CardSettings() {
     )
   }, [allCards, searchQuery, isSearching])
 
-  // Cards for selected issuer
   const issuerCards = useMemo(() => {
     if (!selectedIssuer) return []
     return allCards.filter((c) => c.issuer === selectedIssuer)
@@ -361,7 +349,6 @@ export default function CardSettings() {
     )
   }
 
-  // Helper to render a list of cards (used in search results and issuer view)
   function renderCardList(cards: CreditCard[]) {
     if (cards.length === 0) {
       return (
@@ -392,7 +379,7 @@ export default function CardSettings() {
   return (
     <div>
       {/* Search input */}
-      <div className="relative mb-4">
+      <div className="relative mb-3">
         <svg
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
           style={{ color: '#666666' }}
@@ -408,10 +395,9 @@ export default function CardSettings() {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
-            // Clear issuer selection when searching
             if (e.target.value.trim()) setSelectedIssuer(null)
           }}
-          placeholder="Search by card name or issuer…"
+          placeholder="Search for a card..."
           className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none transition"
           style={{
             backgroundColor: '#F8F8F6',
@@ -430,55 +416,38 @@ export default function CardSettings() {
         )}
       </div>
 
-      {/* Status messages */}
-      {actionSuccess && (
-        <p className="text-xs font-medium mb-3 text-green-600">✓ {actionSuccess}</p>
-      )}
-      {actionError && (
-        <p className="text-xs mb-3 text-red-600">{actionError}</p>
-      )}
-
-      {/* ── Your Cards section ── */}
-      <div className="mb-5">
-        <button
-          onClick={() => setYourCardsExpanded((v) => !v)}
-          className="flex items-center justify-between w-full mb-2 rounded-xl transition"
-          style={
-            !yourCardsExpanded && userSelectedCards.length > 0
-              ? { backgroundColor: '#EEEDFE', border: '1px solid #534AB7', padding: '8px 12px' }
-              : { padding: '0 4px' }
-          }
-        >
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#666666' }}>
-            Your Cards
-            {userSelectedCards.length > 0 && (
-              <span className="ml-1.5 font-normal normal-case tracking-normal" style={{ color: '#534AB7' }}>
-                ({userSelectedCards.length})
-              </span>
-            )}
-          </span>
-          <svg
-            className="w-4 h-4 transition-transform"
+      {/* ── Your Cards accordion (only shown when user has cards and not searching) ── */}
+      {!isSearching && userSelectedCards.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setYourCardsExpanded((v) => !v)}
+            className="flex items-center justify-between w-full px-3 py-2 rounded-xl transition"
             style={{
-              color: '#666666',
-              transform: yourCardsExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+              backgroundColor: yourCardsExpanded ? '#EEEDFE' : '#F8F8F6',
+              border: yourCardsExpanded ? '1px solid #534AB7' : '1px solid #E5E5E3',
             }}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+            <span className="text-sm font-medium" style={{ color: '#534AB7' }}>
+              Your Cards ({userSelectedCards.length})
+            </span>
+            {/* Chevron rotates 180° when expanded */}
+            <svg
+              className="w-4 h-4 transition-transform duration-200"
+              style={{
+                color: '#534AB7',
+                transform: yourCardsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
-        {yourCardsExpanded && (
-          <div>
-            {userSelectedCards.length === 0 ? (
-              <p className="text-xs px-1" style={{ color: '#666666' }}>
-                No cards added yet. Select your credit cards below to get personalized rewards recommendations.
-              </p>
-            ) : (
+          {yourCardsExpanded && (
+            <div className="mt-2">
               <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#F8F8F6', border: '1px solid #E5E5E3' }}>
                 {userSelectedCards.map((card, idx) => {
                   const isPrimary = primaryCardId === card.id
@@ -503,17 +472,22 @@ export default function CardSettings() {
                   )
                 })}
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* ── Search results (fast path) ── */}
+      {/* Status messages */}
+      {actionSuccess && (
+        <p className="text-xs font-medium mb-3 text-green-600">✓ {actionSuccess}</p>
+      )}
+      {actionError && (
+        <p className="text-xs mb-3 text-red-600">{actionError}</p>
+      )}
+
+      {/* ── Search results ── */}
       {isSearching && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#666666' }}>
-            Search Results
-          </p>
           {searchResults.length === 0 ? (
             <p className="text-sm text-center py-6" style={{ color: '#666666' }}>
               No cards found for &ldquo;{search}&rdquo;
@@ -524,47 +498,50 @@ export default function CardSettings() {
         </div>
       )}
 
-      {/* ── Issuer grid (Step 1) ── */}
-      {!isSearching && !selectedIssuer && (
-        <div>
+      {/* ── Issuer grid (only shown when actively searching and an issuer is selected) ── */}
+      {isSearching && !selectedIssuer && searchResults.length > 0 && (
+        <div className="mt-3">
           <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#666666' }}>
             Browse by Issuer
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {issuers.map(({ issuer, count }) => (
-              <button
-                key={issuer}
-                onClick={() => setSelectedIssuer(issuer)}
-                className="flex flex-col items-start px-3 py-3 rounded-xl text-left transition"
-                style={{
-                  backgroundColor: '#F8F8F6',
-                  border: '1px solid #E5E5E3',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#EEEDFE'
-                  e.currentTarget.style.borderColor = '#534AB7'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F8F8F6'
-                  e.currentTarget.style.borderColor = '#E5E5E3'
-                }}
-              >
-                <span className="text-sm font-medium leading-tight" style={{ color: '#1a1a1a' }}>
-                  {issuer}
-                </span>
-                <span className="text-xs mt-0.5" style={{ color: '#666666' }}>
-                  {count} card{count !== 1 ? 's' : ''}
-                </span>
-              </button>
-            ))}
+            {issuers
+              .filter(({ issuer }) =>
+                issuer.toLowerCase().includes(searchQuery)
+              )
+              .map(({ issuer, count }) => (
+                <button
+                  key={issuer}
+                  onClick={() => setSelectedIssuer(issuer)}
+                  className="flex flex-col items-start px-3 py-3 rounded-xl text-left transition"
+                  style={{
+                    backgroundColor: '#F8F8F6',
+                    border: '1px solid #E5E5E3',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#EEEDFE'
+                    e.currentTarget.style.borderColor = '#534AB7'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F8F8F6'
+                    e.currentTarget.style.borderColor = '#E5E5E3'
+                  }}
+                >
+                  <span className="text-sm font-medium leading-tight" style={{ color: '#1a1a1a' }}>
+                    {issuer}
+                  </span>
+                  <span className="text-xs mt-0.5" style={{ color: '#666666' }}>
+                    {count} card{count !== 1 ? 's' : ''}
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
       )}
 
-      {/* ── Issuer card list (Step 2) ── */}
-      {!isSearching && selectedIssuer && (
+      {/* ── Issuer card list (when an issuer is selected from search) ── */}
+      {isSearching && selectedIssuer && (
         <div>
-          {/* Back button */}
           <button
             onClick={() => setSelectedIssuer(null)}
             className="flex items-center gap-1.5 mb-3 text-sm font-medium transition"
@@ -573,7 +550,7 @@ export default function CardSettings() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
-            All Issuers
+            Back to results
           </button>
 
           <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#666666' }}>
