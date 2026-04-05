@@ -15,6 +15,7 @@ const navItems = [
 interface ScanHistoryItem {
   id: string
   product_name: string
+  results_payload: unknown
 }
 
 interface TrackedItem {
@@ -77,7 +78,7 @@ export default function SideDrawer() {
       }
       supabase
         .from('scan_history')
-        .select('id, product_name')
+        .select('id, product_name, results_payload')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(4)
@@ -92,20 +93,20 @@ export default function SideDrawer() {
     })
 
     setLoadingTracked(true)
-    supabase
-      .from('tracked_items')
-      .select('id, title')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(5)
-      .then(({ data, error }: { data: TrackedItem[] | null; error: unknown }) => {
-        if (error) {
-          setTrackedItems([])
-        } else {
-          setTrackedItems(data ?? [])
-        }
-        setLoadingTracked(false)
-      })
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setLoadingTracked(false); return }
+      supabase
+        .from('tracked_items')
+        .select('id, title')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(5)
+        .then(({ data, error }: { data: TrackedItem[] | null; error: unknown }) => {
+          setTrackedItems(error ? [] : (data ?? []))
+          setLoadingTracked(false)
+        })
+    })
   }, [open])
 
   function navigate(href: string) {
@@ -186,7 +187,10 @@ export default function SideDrawer() {
             recentSearches.map((item) => (
               <button
                 key={item.id}
-                onClick={() => navigate(`/scan?resume=${item.id}`)}
+                onClick={() => item.results_payload
+                  ? navigate(`/scan?resume=${item.id}`)
+                  : navigate('/history')
+                }
                 className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
               >
                 <span className="truncate">{item.product_name}</span>
