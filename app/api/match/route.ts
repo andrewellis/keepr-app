@@ -138,6 +138,7 @@ export async function POST(req: NextRequest) {
   const searchTerms = body.searchTerms?.length ? body.searchTerms : [productName]
   // Vision labels may be passed from the scan pipeline for retailer detection
   const visionLabels: string[] = Array.isArray(body.visionLabels) ? body.visionLabels : []
+  console.log('[VISION_LABELS]', JSON.stringify(visionLabels))
 
   // Extract request metadata for click tracking
   const forwardedFor = req.headers.get('x-forwarded-for')
