@@ -30,6 +30,37 @@ export default function SideDrawer() {
   const [loadingTx, setLoadingTx] = useState(false)
   const [loadingTracked, setLoadingTracked] = useState(false)
   const fetchedRef = useRef(false)
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const openRef = useRef(open)
+
+  useEffect(() => {
+    openRef.current = open
+  }, [open])
+
+  useEffect(() => {
+    function onTouchStart(e: TouchEvent) {
+      touchStartX.current = e.touches[0].clientX
+      touchStartY.current = e.touches[0].clientY
+    }
+    function onTouchEnd(e: TouchEvent) {
+      const dx = e.changedTouches[0].clientX - touchStartX.current
+      const dy = e.changedTouches[0].clientY - touchStartY.current
+      const absDx = Math.abs(dx)
+      const absDy = Math.abs(dy)
+      if (!openRef.current && touchStartX.current <= 20 && dx >= 50 && absDx > absDy) {
+        setOpen(true)
+      } else if (openRef.current && dx <= -50 && absDx > absDy) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [])
 
   useEffect(() => {
     if (!open || fetchedRef.current) return
@@ -96,7 +127,7 @@ export default function SideDrawer() {
       )}
 
       <div
-        className={`fixed top-0 left-0 bottom-0 w-[30vw] bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed top-0 left-0 bottom-0 w-[80vw] bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="pt-4">
           {navItems.map((item) => {
