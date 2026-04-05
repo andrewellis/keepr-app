@@ -22,6 +22,7 @@ export async function GET(request: Request) {
 
   // Fetch from Keepa
   const data = await keepaFetchProduct(asin);
+  console.log('[KEEPA DEBUG] asin:', asin, 'data:', JSON.stringify(data));
 
   if (!data) {
     return NextResponse.json({ error: 'Product not found' }, { status: 404 });
