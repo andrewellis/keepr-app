@@ -29,7 +29,7 @@ export async function serpApiFetch(
 
   const params = new URLSearchParams({
     engine,
-    q: query,
+    ...(engine === 'amazon' ? { k: query } : { q: query }),
     api_key: SERPAPI_KEY,
     ...extraParams,
   });
