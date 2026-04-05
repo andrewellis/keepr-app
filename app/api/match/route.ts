@@ -8,7 +8,6 @@ import { getShoppingResults } from '@/lib/shopping/serpapi'
 import { multiEngineSearch } from '@/lib/search/serp-multi-search'
 import { dedupeResults } from '@/lib/search/dedupe-results'
 import { crossPollinate } from '@/lib/price-tracker/cross-pollinate'
-import { createServiceClient } from '@/lib/supabase/service'
 import type { MultiSearchOptions } from '@/lib/search/serp-multi-search'
 
 const NETWORK_TIMEOUT_MS = 5_000
@@ -266,20 +265,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Fire-and-forget cross-pollination — must never block the response
         crossPollinate(dedupedSerpResults, userId).catch(() => {})
-
-        if (userId) {
-          const serviceSupabase = createServiceClient()
-          const scanUserId = userId
-          serviceSupabase
-            .from('scan_history')
-            .insert({ user_id: scanUserId, product_name: productName, category })
-            .then(({ error }: { error: unknown }) => {
-              if (error) console.error('[scan_history] insert error:', error)
-              else console.log('[scan_history] inserted for user:', scanUserId, 'product:', productName)
-            }, (err: unknown) => console.error('[scan_history] unexpected error:', err))
-        }
 
         searchMetadata = {
           detectedRetailer: '',

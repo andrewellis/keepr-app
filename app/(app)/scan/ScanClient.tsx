@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Camera } from 'lucide-react'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import type { ShoppingResult } from '@/lib/shopping/types'
@@ -145,6 +146,7 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function ScanClient() {
   const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+  const searchParams = useSearchParams()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [scanState, setScanState] = useState<ScanState>('idle')
@@ -182,6 +184,7 @@ export default function ScanClient() {
   // Search history state
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
+  const resumeHandledRef = useRef(false)
 
   // Load search history on mount (only for logged-in users)
   const loadSearchHistory = useCallback(async () => {
@@ -210,6 +213,27 @@ export default function ScanClient() {
   useEffect(() => {
     loadSearchHistory()
   }, [loadSearchHistory])
+
+  useEffect(() => {
+    if (resumeHandledRef.current) return
+    const resumeId = searchParams.get('resume')
+    if (!resumeId) return
+    resumeHandledRef.current = true
+
+    const supabase = createClient()
+    supabase
+      .from('scan_history')
+      .select('id, product_name, category, results_payload, created_at')
+      .eq('id', resumeId)
+      .single()
+      .then(({ data }: { data: SearchHistoryEntry | null }) => {
+        if (data && data.results_payload) {
+          handleLoadHistoryEntry(data)
+        }
+        window.history.replaceState({}, '', '/scan')
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Save to search history after successful match results
   const saveToHistory = useCallback(async (

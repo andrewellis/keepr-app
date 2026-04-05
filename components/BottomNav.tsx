@@ -186,7 +186,7 @@ export default function SideDrawer() {
             recentSearches.map((item) => (
               <button
                 key={item.id}
-                onClick={() => navigate('/history')}
+                onClick={() => navigate(`/scan?resume=${item.id}`)}
                 className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
               >
                 <span className="truncate">{item.product_name}</span>
