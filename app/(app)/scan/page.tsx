@@ -1,5 +1,10 @@
+import { Suspense } from 'react'
 import ScanClient from './ScanClient'
 
 export default function ScanPage() {
-  return <ScanClient />
+  return (
+    <Suspense fallback={null}>
+      <ScanClient />
+    </Suspense>
+  )
 }
