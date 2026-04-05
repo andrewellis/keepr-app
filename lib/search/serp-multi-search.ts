@@ -57,19 +57,19 @@ function parseGoogleShoppingLight(data: Record<string, unknown>): SerpResult[] {
 
 function parseAmazon(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
-  if (items.length > 0) console.log('[AMAZON_RAW]', JSON.stringify(items[0], null, 2));
-  return items.map(item => {
-    const priceObj = item.price as Record<string, unknown> | undefined;
-    return {
+  return items
+    .filter(item => item.link_clean)
+    .map(item => ({
       engine: 'amazon' as SearchEngine,
       title: String(item.title ?? ''),
-      price: parsePrice(priceObj?.value ?? priceObj?.raw ?? null),
-      currency: String(priceObj?.currency ?? 'USD'),
-      url: String(item.link ?? ''),
+      price: typeof item.extracted_price === 'number'
+        ? item.extracted_price
+        : parsePrice(item.price ?? null),
+      currency: 'USD',
+      url: String(item.link_clean ?? ''),
       thumbnail: String(item.thumbnail ?? THUMBNAIL_PLACEHOLDER),
       retailerDomain: 'amazon.com',
-    };
-  });
+    }));
 }
 
 function parseWalmart(data: Record<string, unknown>): SerpResult[] {
@@ -107,18 +107,23 @@ function parseBingShopping(data: Record<string, unknown>): SerpResult[] {
 
 function parseEbay(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
-  return items.map(item => {
-    const priceObj = item.price as Record<string, unknown> | undefined;
-    return {
-      engine: 'ebay' as SearchEngine,
-      title: String(item.title ?? ''),
-      price: parsePrice(priceObj?.extracted ?? priceObj?.raw ?? null),
-      currency: 'USD',
-      url: String(item.link ?? ''),
-      thumbnail: String(item.thumbnail ?? THUMBNAIL_PLACEHOLDER),
-      retailerDomain: 'ebay.com',
-    };
-  });
+  return items
+    .filter(item => {
+      const condition = String(item.condition ?? '').toLowerCase();
+      return !['used', 'refurbished', 'pre-owned', 'parts'].some(c => condition.includes(c));
+    })
+    .map(item => {
+      const priceObj = item.price as Record<string, unknown> | undefined;
+      return {
+        engine: 'ebay' as SearchEngine,
+        title: String(item.title ?? ''),
+        price: parsePrice(priceObj?.extracted ?? priceObj?.raw ?? null),
+        currency: 'USD',
+        url: String(item.link ?? ''),
+        thumbnail: String(item.thumbnail ?? THUMBNAIL_PLACEHOLDER),
+        retailerDomain: 'ebay.com',
+      };
+    });
 }
 
 function parseHomeDepot(data: Record<string, unknown>): SerpResult[] {
