@@ -5,11 +5,13 @@ import { Camera } from 'lucide-react'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import type { ShoppingResult } from '@/lib/shopping/types'
 import type { SerpResult } from '@/lib/search/serp-multi-search'
+import type { KeepaProductData } from '@/lib/keepa/keepa-fetch'
 import { createClient } from '@/lib/supabase/client'
 import { RetailerEngagementBanner } from '@/components/RetailerEngagementBanner'
 import { getUserCardsWithRates } from '@/lib/cards/actions'
 import { getBestCardRecommendation } from '@/lib/cards/recommender'
 import { getCardCategory } from '@/lib/cards/categoryMap'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -120,6 +122,11 @@ function getPriceRange(category: string | null): string {
   return PRICE_RANGES[category] ?? PRICE_RANGES['Other']
 }
 
+function extractAsinFromUrl(url: string): string | null {
+  const match = url.match(/\/dp\/([A-Z0-9]{10})/)
+  return match ? match[1] : null
+}
+
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now()
   const then = new Date(dateStr).getTime()
@@ -166,6 +173,11 @@ export default function ScanClient() {
   // Best card state
   const [bestCardByResultId, setBestCardByResultId] = useState<Record<string, { cardName: string; issuer: string; rate: number } | null>>({})
   const [bestCardLoadingIds, setBestCardLoadingIds] = useState<Set<string>>(new Set())
+
+  // Keepa price history state
+  const [keepaDataByAsin, setKeepaDataByAsin] = useState<Record<string, KeepaProductData | null>>({})
+  const [keepaLoadingAsins, setKeepaLoadingAsins] = useState<Set<string>>(new Set())
+  const [keepaRequestedAsins, setKeepaRequestedAsins] = useState<Set<string>>(new Set())
 
   // Search history state
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([])
@@ -463,6 +475,27 @@ export default function ScanClient() {
     }
   }
 
+  async function fetchKeepaData(asin: string) {
+    if (Object.prototype.hasOwnProperty.call(keepaDataByAsin, asin) || keepaLoadingAsins.has(asin)) return
+
+    setKeepaLoadingAsins(prev => new Set(prev).add(asin))
+    setKeepaRequestedAsins(prev => new Set(prev).add(asin))
+
+    try {
+      const res = await fetch(`/api/keepa/product?asin=${asin}`)
+      const json = await res.json()
+      setKeepaDataByAsin(prev => ({ ...prev, [asin]: json.data ?? null }))
+    } catch {
+      setKeepaDataByAsin(prev => ({ ...prev, [asin]: null }))
+    } finally {
+      setKeepaLoadingAsins(prev => {
+        const next = new Set(prev)
+        next.delete(asin)
+        return next
+      })
+    }
+  }
+
   function handleReset() {
     setPreviewUrl(null)
     setCurrentFile(null)
@@ -478,6 +511,9 @@ export default function ScanClient() {
     setTrackedIds(new Set())
     setBestCardByResultId({})
     setBestCardLoadingIds(new Set())
+    setKeepaDataByAsin({})
+    setKeepaLoadingAsins(new Set())
+    setKeepaRequestedAsins(new Set())
   }
 
   function handleLoadHistoryEntry(entry: SearchHistoryEntry) {
@@ -975,6 +1011,117 @@ export default function ScanClient() {
                           {/* Expanded action panel */}
                           {isExpanded && (
                             <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
+                              {/* Keepa price history section */}
+                              {(() => {
+                                const asin = extractAsinFromUrl(item.url)
+                                if (!asin) return null
+                                if (item.engine !== 'amazon' && item.retailerDomain !== 'amazon.com') return null
+
+                                const isLoading = keepaLoadingAsins.has(asin)
+                                const isRequested = keepaRequestedAsins.has(asin)
+                                const kd = keepaDataByAsin[asin]
+
+                                return (
+                                  <div className="border-t border-gray-100 pt-3 pb-1">
+                                    {!isRequested && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); fetchKeepaData(asin) }}
+                                        className="w-full rounded-md border border-indigo-200 px-4 py-2 text-sm font-medium text-[#534AB7] hover:bg-indigo-50 transition-colors"
+                                      >
+                                        View Price History
+                                      </button>
+                                    )}
+
+                                    {isRequested && isLoading && (
+                                      <div className="py-3 text-center text-xs text-gray-400">Loading price history...</div>
+                                    )}
+
+                                    {isRequested && !isLoading && kd === null && (
+                                      <div className="py-2 text-center text-xs text-gray-400">Price history unavailable for this product.</div>
+                                    )}
+
+                                    {isRequested && !isLoading && kd !== null && (() => {
+                                      const chartData = kd.priceHistory90Days.map(p => ({
+                                        date: new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                                        price: p.price,
+                                      }))
+
+                                      return (
+                                        <div>
+                                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price History (90 days)</p>
+
+                                          {chartData.length > 1 && (
+                                            <ResponsiveContainer width="100%" height={120}>
+                                              <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                                                <XAxis
+                                                  dataKey="date"
+                                                  tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                                  tickLine={false}
+                                                  axisLine={false}
+                                                  interval="preserveStartEnd"
+                                                />
+                                                <YAxis
+                                                  tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                                  tickLine={false}
+                                                  axisLine={false}
+                                                  tickFormatter={(v) => `$${v}`}
+                                                  domain={['auto', 'auto']}
+                                                />
+                                                <Tooltip
+                                                  formatter={(value) => {
+                                                    const num = typeof value === 'number' ? value : Number(value)
+                                                    return [`$${num.toFixed(2)}`, 'Price']
+                                                  }}
+                                                  labelStyle={{ fontSize: 10 }}
+                                                  contentStyle={{ fontSize: 10, borderRadius: 6 }}
+                                                />
+                                                <Line
+                                                  type="monotone"
+                                                  dataKey="price"
+                                                  stroke="#534AB7"
+                                                  strokeWidth={2}
+                                                  dot={false}
+                                                  activeDot={{ r: 3 }}
+                                                />
+                                              </LineChart>
+                                            </ResponsiveContainer>
+                                          )}
+
+                                          <div className="flex gap-3 mt-2 flex-wrap">
+                                            {kd.currentBuyBox !== null && (
+                                              <div className="text-center">
+                                                <p className="text-xs text-gray-400">Current</p>
+                                                <p className="text-sm font-semibold text-gray-900">${kd.currentBuyBox.toFixed(2)}</p>
+                                              </div>
+                                            )}
+                                            {kd.avg90 !== null && (
+                                              <div className="text-center">
+                                                <p className="text-xs text-gray-400">90-day avg</p>
+                                                <p className="text-sm font-semibold text-gray-900">${kd.avg90.toFixed(2)}</p>
+                                              </div>
+                                            )}
+                                            {kd.allTimeLow !== null && (
+                                              <div className="text-center">
+                                                <p className="text-xs text-gray-400">All-time low</p>
+                                                <p className="text-sm font-semibold text-gray-900">${kd.allTimeLow.toFixed(2)}</p>
+                                              </div>
+                                            )}
+                                            {kd.percentVsAvg90 !== null && (
+                                              <div className="text-center">
+                                                <p className="text-xs text-gray-400">vs 90-day avg</p>
+                                                <p className={`text-sm font-semibold ${kd.percentVsAvg90 <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                  {kd.percentVsAvg90 <= 0 ? '↓' : '↑'} {Math.abs(kd.percentVsAvg90)}%
+                                                </p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )
+                                    })()}
+                                  </div>
+                                )
+                              })()}
+
                               {trackedIds.has(id) ? (
                                 <div className="text-center text-sm font-medium text-green-600">Tracked ✓</div>
                               ) : (
