@@ -1,9 +1,23 @@
 import type { SerpResult } from './serp-multi-search';
 
 function extractSize(text: string): { value: number; unit: string } | null {
-  const match = text.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(oz|fl oz|ml|l|lb|g|kg|ct|count|pack|pk)/);
+  const match = text.toLowerCase().match(
+    /(\d+(?:\.\d+)?)\s*(fl\.?\s*oz|ounces?|oz|milliliters?|ml|liters?|l|pounds?|lb|grams?|g|kg|kilograms?|counts?|ct|packs?|pk)/
+  );
   if (!match) return null;
-  return { value: parseFloat(match[1]), unit: match[2].replace('fl oz', 'oz') };
+  const unitRaw = match[2].replace(/\s+/g, '');
+  const unitMap: Record<string, string> = {
+    'floz': 'oz', 'fl.oz': 'oz', 'ounce': 'oz', 'ounces': 'oz',
+    'milliliter': 'ml', 'milliliters': 'ml',
+    'liter': 'l', 'liters': 'l',
+    'pound': 'lb', 'pounds': 'lb',
+    'gram': 'g', 'grams': 'g',
+    'kilogram': 'kg', 'kilograms': 'kg',
+    'count': 'ct', 'counts': 'ct',
+    'pack': 'pk', 'packs': 'pk',
+  };
+  const unit = unitMap[unitRaw] ?? unitRaw;
+  return { value: parseFloat(match[1]), unit };
 }
 
 /**
@@ -37,7 +51,7 @@ export function dedupeResults(results: SerpResult[], productName?: string): Serp
   if (productSize) {
     sizeFiltered = nameFiltered.filter(result => {
       const resultSize = extractSize(result.title ?? '');
-      if (!resultSize) return true; // no size in result title — keep it
+      if (!resultSize) return false; // no size in result title — drop it in strict mode
       if (resultSize.unit !== productSize.unit) return true; // different unit type — keep it
       return resultSize.value === productSize.value; // same unit — only keep if size matches
     });
