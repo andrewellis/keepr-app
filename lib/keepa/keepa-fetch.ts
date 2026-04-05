@@ -43,24 +43,19 @@ function keepaPrice(raw: number | undefined): number | null {
 }
 
 /**
- * Extract 90-day price history from a Keepa csv array.
+ * Extract price history from a Keepa csv array.
  * Keepa csv arrays are flat [time, value, time, value, ...] pairs.
- * Filter to last 90 days only. Skip entries where value === -1.
+ * Returns all data points regardless of age. Skip entries where value === -1.
  */
 function extractPriceHistory(csv: number[] | undefined): KeepaPrice[] {
   if (!csv || csv.length < 2) return [];
-
-  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
   const result: KeepaPrice[] = [];
-
   for (let i = 0; i + 1 < csv.length; i += 2) {
     const ts = keepaTimeToMs(csv[i]);
     const price = csv[i + 1];
     if (price === -1 || price < 0) continue;
-    if (ts < ninetyDaysAgo) continue;
     result.push({ timestamp: ts, price: price / 100 });
   }
-
   return result;
 }
 
@@ -101,8 +96,10 @@ export async function keepaFetchProduct(asin: string): Promise<KeepaProductData 
 
     // csv[0] = AMAZON price history
     // csv[1] = NEW (marketplace) price history
+    // csv[3] = MARKETPLACE NEW price history (updates more frequently)
     // csv[17] = BUY BOX price history
     const amazonCsv = csv?.[0] ?? undefined;
+    const marketplaceNewCsv = csv?.[3] ?? undefined;
 
     // stats.current is an array indexed by price type
     // Index 0 = AMAZON, Index 1 = NEW, Index 17 = BUY BOX
@@ -138,6 +135,10 @@ export async function keepaFetchProduct(asin: string): Promise<KeepaProductData 
       ? reviewCountRaw
       : null;
 
+    const amazonHistory = extractPriceHistory(amazonCsv as number[] | undefined);
+    const marketplaceHistory = extractPriceHistory(marketplaceNewCsv as number[] | undefined);
+    const priceHistory90Days = amazonHistory.length >= 3 ? amazonHistory : marketplaceHistory;
+
     return {
       asin,
       title: (product.title as string) ?? '',
@@ -147,7 +148,7 @@ export async function keepaFetchProduct(asin: string): Promise<KeepaProductData 
       avg90,
       allTimeLow,
       allTimeHigh,
-      priceHistory90Days: extractPriceHistory(amazonCsv as number[] | undefined),
+      priceHistory90Days,
       isAboveAverage,
       percentVsAvg90,
       rating,
