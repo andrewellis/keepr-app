@@ -62,6 +62,25 @@ const tabs = [
     ),
   },
   {
+    label: 'Tracking',
+    href: '/tracking',
+    icon: (active: boolean) => (
+      <svg
+        className={`w-6 h-6 ${active ? 'text-primary' : 'text-foreground-secondary'}`}
+        fill={active ? 'currentColor' : 'none'}
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.8}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+        />
+      </svg>
+    ),
+  },
+  {
     label: 'Settings',
     href: '/settings',
     icon: (active: boolean) => (

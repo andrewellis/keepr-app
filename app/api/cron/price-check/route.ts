@@ -7,12 +7,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const LOOKBACK_DAYS = 7;
 const BATCH_SIZE = 50;
 
 /**
- * Weekly cron: GET /api/cron/price-check
- * Checks prices for all active tracked items not checked in the last 7 days.
+ * Cron: GET /api/cron/price-check
+ * Checks prices for active tracked items based on their check frequency:
+ * - Aggressive items (aggressive=true): checked daily (1-day lookback)
+ * - Standard items (aggressive=false): checked weekly (7-day lookback)
  * Writes results to price_checks table and generates price_alerts when
  * a new price is below the item's historical minimum.
  * Protected by CRON_SECRET bearer token.
@@ -24,26 +25,45 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - LOOKBACK_DAYS);
+  const aggressiveCutoff = new Date();
+  aggressiveCutoff.setDate(aggressiveCutoff.getDate() - 1);
 
-  const { data: items, error: fetchError } = await supabase
+  const standardCutoff = new Date();
+  standardCutoff.setDate(standardCutoff.getDate() - 7);
+
+  const { data: aggressiveItems, error: aggressiveError } = await supabase
     .from('tracked_items')
     .select('id, user_id, search_query, category, min_observed_price')
     .eq('is_active', true)
-    .or(`last_checked_at.is.null,last_checked_at.lt.${cutoff.toISOString()}`)
+    .eq('aggressive', true)
+    .or(`last_checked_at.is.null,last_checked_at.lt.${aggressiveCutoff.toISOString()}`)
     .limit(BATCH_SIZE);
 
-  if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  const { data: standardItems, error: standardError } = await supabase
+    .from('tracked_items')
+    .select('id, user_id, search_query, category, min_observed_price')
+    .eq('is_active', true)
+    .eq('aggressive', false)
+    .or(`last_checked_at.is.null,last_checked_at.lt.${standardCutoff.toISOString()}`)
+    .limit(BATCH_SIZE);
+
+  if (aggressiveError && standardError) {
+    return NextResponse.json(
+      { error: aggressiveError.message },
+      { status: 500 }
+    );
   }
 
-  if (!items || items.length === 0) {
-    return NextResponse.json({ ok: true, checked: 0, alerts: 0 });
+  const items = [...(aggressiveItems ?? []), ...(standardItems ?? [])];
+
+  if (items.length === 0) {
+    return NextResponse.json({ ok: true, checked: 0, alerts: 0, standard: 0, aggressive: 0 });
   }
 
   let checked = 0;
   let alerts = 0;
+  let standardChecked = 0;
+  let aggressiveChecked = 0;
 
   for (const item of items) {
     try {
@@ -70,6 +90,12 @@ export async function GET(request: Request) {
       });
 
       checked++;
+
+      if ((item as { aggressive?: boolean }).aggressive) {
+        aggressiveChecked++;
+      } else {
+        standardChecked++;
+      }
 
       // Generate alert if price is below historical minimum
       const isNewMin =
@@ -103,5 +129,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, checked, alerts });
+  return NextResponse.json({ ok: true, checked, alerts, standard: standardChecked, aggressive: aggressiveChecked });
 }

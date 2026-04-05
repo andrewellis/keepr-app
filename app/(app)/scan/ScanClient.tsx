@@ -1,17 +1,15 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { Camera } from 'lucide-react'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import type { ShoppingResult } from '@/lib/shopping/types'
 import type { SerpResult } from '@/lib/search/serp-multi-search'
-import { getUserCardsWithRates } from '@/lib/cards/actions'
-import { getCardCategory } from '@/lib/cards/categoryMap'
-import { getBestCardRecommendation } from '@/lib/cards/recommender'
-import type { CardRecommendation } from '@/lib/cards/recommender'
 import { createClient } from '@/lib/supabase/client'
 import { RetailerEngagementBanner } from '@/components/RetailerEngagementBanner'
+import { getUserCardsWithRates } from '@/lib/cards/actions'
+import { getBestCardRecommendation } from '@/lib/cards/recommender'
+import { getCardCategory } from '@/lib/cards/categoryMap'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -154,16 +152,20 @@ export default function ScanClient() {
   const [displayedSerpResults, setDisplayedSerpResults] = useState<SerpResult[]>([])
   const [isOffline, setIsOffline] = useState(false)
 
-  // Card recommendation state
-  // null = not yet resolved, undefined = no recommendation (no cards / not logged in)
-  const [cardRecommendation, setCardRecommendation] = useState<CardRecommendation | null | undefined>(null)
-  const [userLoggedIn, setUserLoggedIn] = useState<boolean | null>(null)
-
   // Context query state
   const [contextQuery, setContextQuery] = useState('')
   const [showContextInput, setShowContextInput] = useState(false)
   const [contextAdvisory, setContextAdvisory] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  // Expanded result card state
+  const [expandedResultId, setExpandedResultId] = useState<string | null>(null)
+  const [trackedIds, setTrackedIds] = useState<Set<string>>(new Set())
+  const [trackingInProgress, setTrackingInProgress] = useState<Set<string>>(new Set())
+
+  // Best card state
+  const [bestCardByResultId, setBestCardByResultId] = useState<Record<string, { cardName: string; issuer: string; rate: number } | null>>({})
+  const [bestCardLoadingIds, setBestCardLoadingIds] = useState<Set<string>>(new Set())
 
   // Search history state
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([])
@@ -221,41 +223,6 @@ export default function ScanClient() {
       // Non-fatal
     }
   }, [loadSearchHistory])
-
-  // Fetch card recommendation after store results are loaded
-  useEffect(() => {
-    if (storeState !== 'done' || products.length === 0) return
-
-    async function fetchCardRecommendation() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-          setUserLoggedIn(false)
-          setCardRecommendation(undefined)
-          return
-        }
-
-        setUserLoggedIn(true)
-        const userCards = await getUserCardsWithRates(user.id)
-
-        if (!userCards || userCards.length === 0) {
-          setCardRecommendation(undefined)
-          return
-        }
-
-        const cardCategory = getCardCategory(scanResult?.category ?? 'General')
-        const recommendation = getBestCardRecommendation(userCards, cardCategory)
-        setCardRecommendation(recommendation ?? undefined)
-      } catch {
-        // Silently fail — don't show the block if data isn't available
-        setCardRecommendation(undefined)
-      }
-    }
-
-    fetchCardRecommendation()
-  }, [storeState, products.length, scanResult?.category])
 
   useEffect(() => {
     function handleOnline() { setIsOffline(false) }
@@ -398,6 +365,104 @@ export default function ScanClient() {
     }
   }
 
+  async function handleTrack(result: SerpResult, aggressive: boolean) {
+    const id = `${result.engine}-${result.url}`
+    if (trackingInProgress.has(id)) return
+
+    setTrackingInProgress(prev => new Set(prev).add(id))
+
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/tracker/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          productName: matchResult?.engagementMessage ? (scanResult?.productName ?? result.title) : (matchResult?.results?.[0] ? (scanResult?.productName ?? result.title) : result.title),
+          price: result.price ?? 0,
+          category: scanResult?.category ?? 'general',
+          retailerDomain: result.retailerDomain ?? '',
+          url: result.url,
+          aggressive,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setTrackedIds(prev => new Set(prev).add(id))
+      } else {
+        alert(data.message ?? 'Could not track this item.')
+      }
+    } catch {
+      alert('Something went wrong. Please try again.')
+    } finally {
+      setTrackingInProgress(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
+  function isAggressiveEligible(result: SerpResult): boolean {
+    const highVolatilityCategories = ['electronics', 'appliances', 'gaming', 'furniture']
+    const category = (scanResult?.category ?? '').toLowerCase()
+    return (result.price ?? 0) >= 100 || highVolatilityCategories.includes(category)
+  }
+
+  async function handleBestCard(result: SerpResult, id: string) {
+    // Already loaded — do nothing
+    if (id in bestCardByResultId) return
+    // Already loading
+    if (bestCardLoadingIds.has(id)) return
+
+    setBestCardLoadingIds(prev => new Set(prev).add(id))
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setBestCardByResultId(prev => ({ ...prev, [id]: null }))
+        return
+      }
+
+      const userCards = await getUserCardsWithRates(user.id)
+      if (!userCards || userCards.length === 0) {
+        setBestCardByResultId(prev => ({ ...prev, [id]: null }))
+        return
+      }
+
+      // Derive card category from retailer domain using getCardCategory
+      const retailerDomain = result.retailerDomain ?? ''
+      const cardCategory = getCardCategory(retailerDomain)
+
+      const recommendation = getBestCardRecommendation(userCards, cardCategory)
+      if (!recommendation) {
+        setBestCardByResultId(prev => ({ ...prev, [id]: null }))
+        return
+      }
+
+      setBestCardByResultId(prev => ({
+        ...prev,
+        [id]: {
+          cardName: recommendation.cardName,
+          issuer: recommendation.issuer,
+          rate: recommendation.rate,
+        },
+      }))
+    } catch {
+      setBestCardByResultId(prev => ({ ...prev, [id]: null }))
+    } finally {
+      setBestCardLoadingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
   function handleReset() {
     setPreviewUrl(null)
     setCurrentFile(null)
@@ -409,8 +474,10 @@ export default function ScanClient() {
     setShoppingResults([])
     setDisplayedSerpResults([])
     setMatchResult(null)
-    setCardRecommendation(null)
-    setUserLoggedIn(null)
+    setExpandedResultId(null)
+    setTrackedIds(new Set())
+    setBestCardByResultId({})
+    setBestCardLoadingIds(new Set())
   }
 
   function handleLoadHistoryEntry(entry: SearchHistoryEntry) {
@@ -426,8 +493,6 @@ export default function ScanClient() {
     setProducts(matchResults.results ?? [])
     setShoppingResults(matchResults.shoppingResults ?? [])
     setStoreState('done')
-    setCardRecommendation(null)
-    setUserLoggedIn(null)
     setScanState('result')
   }
 
@@ -652,74 +717,6 @@ export default function ScanClient() {
               </div>
             </div>
 
-            {/* Card recommendation block — only shown once store results are done */}
-            {storeState === 'done' && cardRecommendation !== null && (
-              <>
-                <div className="border-t border-border" />
-
-                {/* No cards / not logged in: subtle prompt */}
-                {userLoggedIn === false && (
-                  <p className="text-xs text-foreground-secondary">
-                    <Link href="/signup" style={{ color: '#534AB7' }} className="hover:underline">
-                      Sign up to see your best card for this purchase
-                    </Link>
-                  </p>
-                )}
-                {userLoggedIn === true && cardRecommendation === undefined && (
-                  <p className="text-xs text-foreground-secondary">
-                    <Link href="/settings" style={{ color: '#534AB7' }} className="hover:underline">
-                      Add your cards in Settings to get personalized recommendations
-                    </Link>
-                  </p>
-                )}
-
-                {/* Card recommendation */}
-                {cardRecommendation && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
-                      Best card for this purchase
-                    </p>
-                    <div className="flex items-baseline justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-bold text-foreground">{cardRecommendation.cardName}</p>
-                        <p className="text-xs text-foreground-secondary">{cardRecommendation.issuer}</p>
-                      </div>
-                      <p className="text-sm font-bold text-primary whitespace-nowrap">
-                        {cardRecommendation.rate}% cashback
-                      </p>
-                    </div>
-
-                    {cardRecommendation.isRotating && (
-                      <p className="text-xs text-foreground-secondary">
-                        ⚠ Rotating category — verify your current quarter
-                      </p>
-                    )}
-
-                    {cardRecommendation.notes && (
-                      <p className="text-xs text-foreground-secondary">{cardRecommendation.notes}</p>
-                    )}
-
-                    {/* Combined total row */}
-                    {products.length > 0 && (() => {
-                      const topResult = products[0]
-                      const k33prRatePct = Math.round(topResult.affiliateRate * 100)
-                      const cardRatePct = cardRecommendation.rate
-                      const totalPct = k33prRatePct + cardRatePct
-                      return (
-                        <div className="pt-2 border-t border-border">
-                          <p className="text-xs text-foreground-secondary">
-                            K33pr commission + {cardRecommendation.cardName}:{' '}
-                            <span className="font-semibold text-foreground">
-                              {k33prRatePct}% + {cardRatePct}% = {totalPct}% total return
-                            </span>
-                          </p>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                )}
-              </>
-            )}
           </div>
 
           {/* Retailer engagement banner */}
@@ -906,89 +903,161 @@ export default function ScanClient() {
                     Prices from across the web. May not reflect current retailer pricing.
                   </p>
                   <div className="space-y-2">
-                    {displayedSerpResults.slice().sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="relative"
-                      >
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 rounded-2xl p-3 border no-underline"
+                    {displayedSerpResults.slice().sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).map((item, idx) => {
+                      const id = `${item.engine}-${item.url}`
+                      const isExpanded = expandedResultId === id
+                      return (
+                        <div
+                          key={idx}
+                          className="relative rounded-2xl border overflow-hidden"
                           style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
                         >
-                          {/* Thumbnail */}
+                          {/* Tappable card content */}
                           <div
-                            className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
-                            style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
+                            className="flex items-center gap-3 p-3 cursor-pointer"
+                            onClick={() => setExpandedResultId(isExpanded ? null : id)}
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={item.thumbnail}
-                              alt={item.title}
-                              style={{ width: 80, height: 80, objectFit: 'contain' }}
-                            />
-                          </div>
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className="text-[14px] leading-snug font-normal overflow-hidden"
-                              style={{
-                                color: '#1a1a1a',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                              }}
+                            {/* Thumbnail */}
+                            <div
+                              className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+                              style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
                             >
-                              {item.title}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              {item.price !== null && (
-                                <p className="text-[18px] font-semibold" style={{ color: '#1a1a1a' }}>
-                                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={item.thumbnail}
+                                alt={item.title}
+                                style={{ width: 80, height: 80, objectFit: 'contain' }}
+                              />
+                            </div>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className="text-[14px] leading-snug font-normal overflow-hidden"
+                                style={{
+                                  color: '#1a1a1a',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                }}
+                              >
+                                {item.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {item.price !== null && (
+                                  <p className="text-[18px] font-semibold" style={{ color: '#1a1a1a' }}>
+                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}
+                                  </p>
+                                )}
+                                {item.retailerDomain === 'amazon.com' && item.in_stock === true && (
+                                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+                                    In Stock
+                                  </span>
+                                )}
+                                {item.retailerDomain === 'amazon.com' && item.in_stock === false && (
+                                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                    Out of Stock
+                                  </span>
+                                )}
+                              </div>
+                              {item.retailerDomain && (
+                                <p className="text-[13px]" style={{ color: '#666666' }}>
+                                  {item.retailerDomain}
                                 </p>
                               )}
-                              {item.retailerDomain === 'amazon.com' && item.in_stock === true && (
-                                <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
-                                  In Stock
-                                </span>
-                              )}
-                              {item.retailerDomain === 'amazon.com' && item.in_stock === false && (
-                                <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                                  Out of Stock
-                                </span>
+                              {item.retailerDomain === 'amazon.com' && item.delivery && item.delivery.length > 0 && (
+                                <p className="text-xs mt-0.5" style={{ color: '#666666' }}>
+                                  {item.delivery[0]}
+                                </p>
                               )}
                             </div>
-                            {item.retailerDomain && (
-                              <p className="text-[13px]" style={{ color: '#666666' }}>
-                                {item.retailerDomain}
-                              </p>
-                            )}
-                            {item.retailerDomain === 'amazon.com' && item.delivery && item.delivery.length > 0 && (
-                              <p className="text-xs mt-0.5" style={{ color: '#666666' }}>
-                                {item.delivery[0]}
-                              </p>
-                            )}
                           </div>
-                        </a>
-                        {/* Dismiss button */}
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            handleDismissSerpResult(item)
-                          }}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: '#D1D1CF' }}
-                          aria-label="Dismiss result"
-                        >
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M1 1L9 9M9 1L1 9" stroke="#555" strokeWidth="1.5" strokeLinecap="round"/>
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+
+                          {/* Expanded action panel */}
+                          {isExpanded && (
+                            <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
+                              {trackedIds.has(id) ? (
+                                <div className="text-center text-sm font-medium text-green-600">Tracked ✓</div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleTrack(item, false) }}
+                                    disabled={trackingInProgress.has(id)}
+                                    className="w-full rounded-md bg-[#534AB7] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                                  >
+                                    {trackingInProgress.has(id) ? 'Adding...' : 'Track Price'}
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); if (isAggressiveEligible(item)) { handleTrack(item, true) } }}
+                                    disabled={!isAggressiveEligible(item) || trackingInProgress.has(id)}
+                                    className={`w-full rounded-md px-4 py-2 text-sm font-medium ${
+                                      isAggressiveEligible(item)
+                                        ? 'bg-indigo-100 text-[#534AB7]'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    {isAggressiveEligible(item)
+                                      ? 'Aggressively Track'
+                                      : 'Available for items over $100 or electronics, appliances, gaming, or furniture'}
+                                  </button>
+
+                                  {bestCardLoadingIds.has(id) ? (
+                                    <div className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 text-center">
+                                      Finding best card...
+                                    </div>
+                                  ) : id in bestCardByResultId ? (
+                                    bestCardByResultId[id] ? (
+                                      <div className="rounded-md border border-indigo-100 bg-indigo-50 px-4 py-3">
+                                        <p className="text-xs text-gray-500">Best card for {item.retailerDomain}</p>
+                                        <p className="text-sm font-semibold text-gray-900">{bestCardByResultId[id]!.cardName}</p>
+                                        <p className="text-xs text-[#534AB7]">{bestCardByResultId[id]!.rate}% cashback</p>
+                                      </div>
+                                    ) : (
+                                      <div className="rounded-md border border-gray-200 px-4 py-3 text-sm text-gray-500">
+                                        No cards saved — add cards in Settings
+                                      </div>
+                                    )
+                                  ) : (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleBestCard(item, id) }}
+                                      className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700"
+                                    >
+                                      Best Card
+                                    </button>
+                                  )}
+
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="block w-full rounded-md border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700"
+                                  >
+                                    Buy ↗
+                                  </a>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Dismiss button */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleDismissSerpResult(item)
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: '#D1D1CF' }}
+                            aria-label="Dismiss result"
+                          >
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M1 1L9 9M9 1L1 9" stroke="#555" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
