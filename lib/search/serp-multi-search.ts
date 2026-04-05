@@ -57,6 +57,7 @@ function parseGoogleShoppingLight(data: Record<string, unknown>): SerpResult[] {
 
 function parseAmazon(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
+  if (items.length > 0) console.log('[AMAZON_RAW]', JSON.stringify(items[0], null, 2));
   return items.map(item => {
     const priceObj = item.price as Record<string, unknown> | undefined;
     return {
