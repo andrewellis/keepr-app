@@ -159,6 +159,12 @@ export default function ScanClient() {
   const [cardRecommendation, setCardRecommendation] = useState<CardRecommendation | null | undefined>(null)
   const [userLoggedIn, setUserLoggedIn] = useState<boolean | null>(null)
 
+  // Context query state
+  const [contextQuery, setContextQuery] = useState('')
+  const [showContextInput, setShowContextInput] = useState(false)
+  const [contextAdvisory, setContextAdvisory] = useState<string | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+
   // Search history state
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
@@ -722,6 +728,89 @@ export default function ScanClient() {
               retailerContext={matchResult.retailerContext}
               engagementMessage={matchResult.engagementMessage}
             />
+          )}
+
+          {/* Context query input — between product card and More Prices */}
+          {storeState === 'done' && products.length > 0 && (
+            <div className="space-y-2">
+              {!showContextInput ? (
+                <button
+                  onClick={() => setShowContextInput(true)}
+                  className="flex items-center gap-1.5 w-full text-left"
+                >
+                  <span className="text-sm text-foreground-secondary">Ask about these results...</span>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+                    <path d="M5 3L9 7L5 11" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={contextQuery}
+                      onChange={(e) => setContextQuery(e.target.value)}
+                      placeholder="e.g. need this by Friday, gift under $30"
+                      className="flex-1 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!contextQuery.trim() || isAnalyzing) return
+                        setIsAnalyzing(true)
+                        setContextAdvisory(null)
+                        try {
+                          const response = await fetch('/api/match/context', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              contextQuery: contextQuery.trim(),
+                              serpResults: displayedSerpResults,
+                              productName: scanResult?.productName ?? '',
+                            }),
+                          })
+                          const json = await response.json()
+                          if (json.advisory) {
+                            setContextAdvisory(json.advisory)
+                          }
+                        } catch {
+                          setContextAdvisory('Unable to analyze. Please try again.')
+                        } finally {
+                          setIsAnalyzing(false)
+                        }
+                      }}
+                      disabled={!contextQuery.trim() || isAnalyzing}
+                      className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition"
+                      style={{
+                        backgroundColor: !contextQuery.trim() || isAnalyzing ? '#A9A4D8' : '#534AB7',
+                        cursor: !contextQuery.trim() || isAnalyzing ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {isAnalyzing ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                          </svg>
+                          Analyzing...
+                        </span>
+                      ) : 'Analyze'}
+                    </button>
+                  </div>
+
+                  {contextAdvisory && (
+                    <div className="mx-4 mb-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                      <div className="mb-1 flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#534AB7]" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-[#534AB7]">K33pr Advisory</span>
+                      </div>
+                      <p className="text-sm leading-relaxed text-gray-800">{contextAdvisory}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Loading indicator while fetching prices */}
