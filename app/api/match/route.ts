@@ -271,9 +271,14 @@ export async function POST(req: NextRequest) {
 
         if (userId) {
           const serviceSupabase = createServiceClient()
-          void serviceSupabase
+          const scanUserId = userId
+          serviceSupabase
             .from('scan_history')
-            .insert({ user_id: userId, product_name: productName, category })
+            .insert({ user_id: scanUserId, product_name: productName, category })
+            .then(({ error }: { error: unknown }) => {
+              if (error) console.error('[scan_history] insert error:', error)
+              else console.log('[scan_history] inserted for user:', scanUserId, 'product:', productName)
+            }, (err: unknown) => console.error('[scan_history] unexpected error:', err))
         }
 
         searchMetadata = {
