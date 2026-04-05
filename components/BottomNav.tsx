@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -48,7 +49,7 @@ export default function SideDrawer() {
       const dy = e.changedTouches[0].clientY - touchStartY.current
       const absDx = Math.abs(dx)
       const absDy = Math.abs(dy)
-      if (!openRef.current && touchStartX.current <= 20 && dx >= 50 && absDx > absDy) {
+      if (!openRef.current && touchStartX.current <= 40 && dx >= 50 && absDx > absDy) {
         setOpen(true)
       } else if (openRef.current && dx <= -50 && absDx > absDy) {
         setOpen(false)
@@ -83,7 +84,7 @@ export default function SideDrawer() {
       .select('id, title')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(4)
+      .limit(5)
       .then(({ data, error }: { data: TrackedItem[] | null; error: unknown }) => {
         if (error) {
           setTrackedItems([])
@@ -127,7 +128,7 @@ export default function SideDrawer() {
       )}
 
       <div
-        className={`fixed top-0 left-0 bottom-0 w-[80vw] bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed top-0 left-0 bottom-0 w-[60vw] bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="pt-4">
           {navItems.map((item) => {
@@ -136,7 +137,7 @@ export default function SideDrawer() {
               <button
                 key={item.href}
                 onClick={() => navigate(item.href)}
-                className={`flex items-center w-full h-12 pl-4 text-sm font-medium transition-colors ${isActive ? 'text-primary bg-primary/5' : 'text-foreground-secondary'}`}
+                className={`flex items-center w-full h-12 pl-4 text-sm font-bold transition-colors ${isActive ? 'text-primary bg-primary/5' : 'text-foreground-secondary'}`}
               >
                 {item.label}
               </button>
@@ -145,7 +146,26 @@ export default function SideDrawer() {
 
           <div className="border-t border-border my-4" />
 
-          <p className="text-xs text-foreground-secondary font-medium pl-4 mb-2">Recent</p>
+          <p className="text-xs text-foreground-secondary font-medium pl-4 mb-2">Tracked Items</p>
+
+          {loadingTracked ? (
+            <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
+          ) : (
+            trackedItems.map((item) => (
+              <Link
+                key={item.id}
+                href="/tracking"
+                onClick={() => setOpen(false)}
+                className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
+              >
+                <span className="truncate">{item.title}</span>
+              </Link>
+            ))
+          )}
+
+          <div className="border-t border-border mt-4" />
+
+          <p className="text-xs text-foreground-secondary font-medium pl-4 mt-2 mb-2">Recent</p>
 
           {loadingTx ? (
             <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
@@ -157,22 +177,6 @@ export default function SideDrawer() {
                 className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
               >
                 <span className="truncate">{tx.product_name}</span>
-              </button>
-            ))
-          )}
-
-          <p className="text-xs text-foreground-secondary font-medium pl-4 mt-2 mb-2">Tracking</p>
-
-          {loadingTracked ? (
-            <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
-          ) : (
-            trackedItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => navigate('/tracking')}
-                className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
-              >
-                <span className="truncate">{item.title}</span>
               </button>
             ))
           )}
