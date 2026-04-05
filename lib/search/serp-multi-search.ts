@@ -197,7 +197,6 @@ export async function multiEngineSearch(
   const settled = await Promise.allSettled(
     engines.map(async engine => {
       const extraParams: Record<string, string> = {};
-      if (engine === 'amazon') extraParams['sort'] = 'price-asc-rank';
 
       const data = await serpApiFetch({ engine, query, extraParams, timeoutMs });
       if (!data) throw new Error(`${engine} returned null`);
