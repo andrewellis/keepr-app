@@ -150,8 +150,8 @@ export default function ScanClient() {
   const [storeState, setStoreState] = useState<StoreState>('idle')
   const [products, setProducts] = useState<(AffiliateResult & { clickId?: string })[]>([])
   const [shoppingResults, setShoppingResults] = useState<ShoppingResult[]>([])
-  const [serpResults, setSerpResults] = useState<SerpResult[]>([])
   const [matchResult, setMatchResult] = useState<MatchResults | null>(null)
+  const [displayedSerpResults, setDisplayedSerpResults] = useState<SerpResult[]>([])
   const [isOffline, setIsOffline] = useState(false)
 
   // Card recommendation state
@@ -360,7 +360,8 @@ export default function ScanClient() {
       const matchData: MatchResults = await res.json()
       setProducts(matchData.results ?? [])
       setShoppingResults(matchData.shoppingResults ?? [])
-      setSerpResults(matchData.serpResults ?? [])
+      const newSerpResults = matchData.serpResults ?? []
+      setDisplayedSerpResults(newSerpResults)
       setMatchResult(matchData)
       setStoreState('done')
 
@@ -368,6 +369,26 @@ export default function ScanClient() {
       saveToHistory(result, matchData)
     } catch {
       setStoreState('error')
+    }
+  }
+
+  async function handleDismissSerpResult(item: SerpResult) {
+    // Optimistic update
+    setDisplayedSerpResults(prev => prev.filter(r => r.url !== item.url))
+
+    // Fire-and-forget persist
+    try {
+      await fetch('/api/results/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: scanResult?.productName ?? '',
+          resultUrl: item.url,
+          resultTitle: item.title,
+        }),
+      })
+    } catch {
+      // Non-fatal
     }
   }
 
@@ -380,7 +401,7 @@ export default function ScanClient() {
     setStoreState('idle')
     setProducts([])
     setShoppingResults([])
-    setSerpResults([])
+    setDisplayedSerpResults([])
     setMatchResult(null)
     setCardRecommendation(null)
     setUserLoggedIn(null)
@@ -789,59 +810,78 @@ export default function ScanClient() {
               )}
 
               {/* SERP Results section */}
-              {serpResults.length > 0 && (
+              {displayedSerpResults.length > 0 && (
                 <div>
                   <p className="text-base font-semibold mb-0.5" style={{ color: '#1a1a1a' }}>More Prices</p>
                   <p className="text-[13px] mb-3" style={{ color: '#666666' }}>
                     Prices from across the web. May not reflect current retailer pricing.
                   </p>
                   <div className="space-y-2">
-                    {serpResults.slice().sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).map((item, idx) => (
-                      <a
+                    {displayedSerpResults.slice().sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).map((item, idx) => (
+                      <div
                         key={idx}
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 rounded-2xl p-3 border no-underline"
-                        style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
+                        className="relative"
                       >
-                        {/* Thumbnail */}
-                        <div
-                          className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
-                          style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-2xl p-3 border no-underline"
+                          style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={item.thumbnail}
-                            alt={item.title}
-                            style={{ width: 80, height: 80, objectFit: 'contain' }}
-                          />
-                        </div>
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className="text-[14px] leading-snug font-normal overflow-hidden"
-                            style={{
-                              color: '#1a1a1a',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                            }}
+                          {/* Thumbnail */}
+                          <div
+                            className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+                            style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
                           >
-                            {item.title}
-                          </p>
-                          {item.price !== null && (
-                            <p className="text-[18px] font-semibold mt-1" style={{ color: '#1a1a1a' }}>
-                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.thumbnail}
+                              alt={item.title}
+                              style={{ width: 80, height: 80, objectFit: 'contain' }}
+                            />
+                          </div>
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="text-[14px] leading-snug font-normal overflow-hidden"
+                              style={{
+                                color: '#1a1a1a',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                              }}
+                            >
+                              {item.title}
                             </p>
-                          )}
-                          {item.retailerDomain && (
-                            <p className="text-[13px]" style={{ color: '#666666' }}>
-                              {item.retailerDomain}
-                            </p>
-                          )}
-                        </div>
-                      </a>
+                            {item.price !== null && (
+                              <p className="text-[18px] font-semibold mt-1" style={{ color: '#1a1a1a' }}>
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}
+                              </p>
+                            )}
+                            {item.retailerDomain && (
+                              <p className="text-[13px]" style={{ color: '#666666' }}>
+                                {item.retailerDomain}
+                              </p>
+                            )}
+                          </div>
+                        </a>
+                        {/* Dismiss button */}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleDismissSerpResult(item)
+                          }}
+                          className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: '#D1D1CF' }}
+                          aria-label="Dismiss result"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 1L9 9M9 1L1 9" stroke="#555" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>

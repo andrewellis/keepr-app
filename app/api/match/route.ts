@@ -245,7 +245,26 @@ export async function POST(req: NextRequest) {
     try {
       // Deduplicate SERP results
       if (serpSearchResult) {
-        dedupedSerpResults = dedupeResults(serpSearchResult.results)
+        dedupedSerpResults = dedupeResults(serpSearchResult.results, productName)
+
+        // Filter out dismissed results for this user and product
+        if (userId) {
+          try {
+            const supabase = createClient()
+            const { data: dismissed } = await supabase
+              .from('dismissed_results')
+              .select('result_url')
+              .eq('user_id', userId)
+              .eq('product_name', productName)
+
+            if (dismissed && dismissed.length > 0) {
+              const dismissedUrls = new Set(dismissed.map(d => d.result_url))
+              dedupedSerpResults = dedupedSerpResults.filter(r => !dismissedUrls.has(r.url))
+            }
+          } catch {
+            // Non-fatal: if dismissed results fetch fails, show all results
+          }
+        }
 
         // Fire-and-forget cross-pollination — must never block the response
         crossPollinate(dedupedSerpResults, userId).catch(() => {})
