@@ -170,6 +170,7 @@ export async function multiEngineSearch(
   const category = options.category ?? inferCategory(query);
   const engines = selectEngines(category, tier);
 
+  console.log('[multiEngineSearch] engines selected:', engines, 'tier:', tier, 'category:', category);
   if (engines.length === 0) {
     return { results: [], enginesQueried: [], enginesSucceeded: [], cacheHit: false };
   }
@@ -177,6 +178,7 @@ export async function multiEngineSearch(
   // L1 cache check — keyed on query + engines joined
   const cacheKey = `multi::${engines.join(',')}::${query.toLowerCase().trim()}`;
   const cached = await getCached('multi', cacheKey);
+  console.log('[multiEngineSearch] cache check for key:', cacheKey, 'hit:', !!cached);
   if (cached) {
     return {
       results: cached as SerpResult[],
