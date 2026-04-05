@@ -8,6 +8,7 @@ import { getShoppingResults } from '@/lib/shopping/serpapi'
 import { multiEngineSearch } from '@/lib/search/serp-multi-search'
 import { dedupeResults } from '@/lib/search/dedupe-results'
 import { crossPollinate } from '@/lib/price-tracker/cross-pollinate'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { MultiSearchOptions } from '@/lib/search/serp-multi-search'
 
 const NETWORK_TIMEOUT_MS = 5_000
@@ -267,6 +268,13 @@ export async function POST(req: NextRequest) {
 
         // Fire-and-forget cross-pollination — must never block the response
         crossPollinate(dedupedSerpResults, userId).catch(() => {})
+
+        if (userId) {
+          const serviceSupabase = createServiceClient()
+          void serviceSupabase
+            .from('scan_history')
+            .insert({ user_id: userId, product_name: productName, category })
+        }
 
         searchMetadata = {
           detectedRetailer: '',

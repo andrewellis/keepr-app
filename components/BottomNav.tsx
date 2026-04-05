@@ -12,7 +12,7 @@ const navItems = [
   { label: 'Settings', href: '/settings' },
 ]
 
-interface Transaction {
+interface ScanHistoryItem {
   id: string
   product_name: string
 }
@@ -26,9 +26,9 @@ export default function SideDrawer() {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [recentSearches, setRecentSearches] = useState<ScanHistoryItem[]>([])
   const [trackedItems, setTrackedItems] = useState<TrackedItem[]>([])
-  const [loadingTx, setLoadingTx] = useState(false)
+  const [loadingRecent, setLoadingRecent] = useState(false)
   const [loadingTracked, setLoadingTracked] = useState(false)
   const fetchedRef = useRef(false)
   const touchStartX = useRef(0)
@@ -67,18 +67,31 @@ export default function SideDrawer() {
     if (!open || fetchedRef.current) return
     fetchedRef.current = true
 
-    setLoadingTx(true)
-    fetch('/api/transaction/history')
-      .then((r) => r.json())
-      .then((data) => {
-        const items: Transaction[] = Array.isArray(data) ? data.slice(0, 4) : []
-        setTransactions(items)
-      })
-      .catch(() => setTransactions([]))
-      .finally(() => setLoadingTx(false))
+    const supabase = createClient()
+
+    setLoadingRecent(true)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        setLoadingRecent(false)
+        return
+      }
+      supabase
+        .from('scan_history')
+        .select('id, product_name')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(4)
+        .then(({ data, error }: { data: ScanHistoryItem[] | null; error: unknown }) => {
+          if (error) {
+            setRecentSearches([])
+          } else {
+            setRecentSearches(data ?? [])
+          }
+          setLoadingRecent(false)
+        })
+    })
 
     setLoadingTracked(true)
-    const supabase = createClient()
     supabase
       .from('tracked_items')
       .select('id, title')
@@ -167,16 +180,16 @@ export default function SideDrawer() {
 
           <p className="text-xs text-foreground-secondary font-medium pl-4 mt-2 mb-2">Recent</p>
 
-          {loadingTx ? (
+          {loadingRecent ? (
             <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
           ) : (
-            transactions.map((tx) => (
+            recentSearches.map((item) => (
               <button
-                key={tx.id}
+                key={item.id}
                 onClick={() => navigate('/history')}
                 className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
               >
-                <span className="truncate">{tx.product_name}</span>
+                <span className="truncate">{item.product_name}</span>
               </button>
             ))
           )}
