@@ -289,6 +289,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       results: trackedResults,
       shoppingResults,
+      serpResults: dedupedSerpResults,
       retailerContext,
       engagementMessage,
       searchMetadata,
