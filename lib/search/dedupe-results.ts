@@ -1,5 +1,11 @@
 import type { SerpResult } from './serp-multi-search';
 
+function extractSize(text: string): { value: number; unit: string } | null {
+  const match = text.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(oz|fl oz|ml|l|lb|g|kg|ct|count|pack|pk)/);
+  if (!match) return null;
+  return { value: parseFloat(match[1]), unit: match[2].replace('fl oz', 'oz') };
+}
+
 /**
  * Deduplicate SerpResults across engines.
  * Two results are considered duplicates if their normalized titles share
@@ -24,8 +30,21 @@ export function dedupeResults(results: SerpResult[], productName?: string): Serp
     return true
   })
 
+  // Stage: strict size filter
+  // If the product name contains a size, drop results with a different size of the same unit type
+  const productSize = productName ? extractSize(productName) : null;
+  let sizeFiltered = nameFiltered;
+  if (productSize) {
+    sizeFiltered = nameFiltered.filter(result => {
+      const resultSize = extractSize(result.title ?? '');
+      if (!resultSize) return true; // no size in result title — keep it
+      if (resultSize.unit !== productSize.unit) return true; // different unit type — keep it
+      return resultSize.value === productSize.value; // same unit — only keep if size matches
+    });
+  }
+
   // Step 2: Price floor filter — remove items below 15% of median price of name-filtered set
-  const prices = nameFiltered
+  const prices = sizeFiltered
     .map(r => r.price)
     .filter((p): p is number => p !== null && p > 0)
   prices.sort((a, b) => a - b)
@@ -33,8 +52,8 @@ export function dedupeResults(results: SerpResult[], productName?: string): Serp
   const priceFloor = medianPrice > 0 ? medianPrice * 0.15 : 0
 
   const valid = priceFloor > 0
-    ? nameFiltered.filter(r => r.price === null || r.price >= priceFloor)
-    : nameFiltered
+    ? sizeFiltered.filter(r => r.price === null || r.price >= priceFloor)
+    : sizeFiltered
 
   // Existing dedup logic continues unchanged below using valid instead of the old valid
   const kept: SerpResult[] = []
