@@ -150,14 +150,14 @@ export async function POST(req: NextRequest) {
   // Also determine user tier for multiEngineSearch
   let cashbackRate = 0.05
   let userId: string | null = null
-  let userTier: MultiSearchOptions['tier'] = 'unregistered'
+  let userTier: MultiSearchOptions['tier'] = 'paid'
 
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       userId = user.id
-      userTier = 'free' // authenticated but not paid by default
+      userTier = 'paid'
       console.log('[match] userTier resolved:', userTier, 'userId:', userId)
 
       const { data: profile } = await supabase
