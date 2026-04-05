@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 const tabs = [
   {
@@ -83,36 +83,60 @@ const tabs = [
   },
 ]
 
-export default function BottomNav() {
+export default function SideDrawer() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+
+  function handleNavClick(href: string) {
+    setOpen(false)
+    router.push(href)
+  }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
-      <div className="max-w-lg mx-auto flex items-center justify-around h-16 px-2">
-        {tabs.map((tab) => {
-          const isActive =
-            tab.href === '/'
-              ? pathname === '/'
-              : pathname.startsWith(tab.href)
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed top-4 left-4 z-50 text-primary"
+        aria-label="Open menu"
+        style={{ width: 24, height: 24 }}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
 
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className="flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-opacity hover:opacity-80"
-            >
-              {tab.icon(isActive)}
-              <span
-                className={`text-[10px] font-medium ${
-                  isActive ? 'text-primary' : 'text-foreground-secondary'
-                }`}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      <div
+        className={`fixed top-0 left-0 h-full w-60 z-50 bg-background border-r border-border transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+      >
+        <div className="px-6 py-6">
+          <span className="font-bold text-primary text-xl">K33pr</span>
+        </div>
+        <nav>
+          {tabs.map((tab) => {
+            const isActive = pathname.startsWith(tab.href)
+            return (
+              <button
+                key={tab.href}
+                onClick={() => handleNavClick(tab.href)}
+                className={`flex items-center gap-3 w-full h-12 px-6 transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-foreground-secondary'}`}
               >
-                {tab.label}
-              </span>
-            </Link>
-          )
-        })}
+                {tab.icon(isActive)}
+                <span className="text-sm font-medium">{tab.label}</span>
+              </button>
+            )
+          })}
+        </nav>
       </div>
-    </nav>
+    </>
   )
 }
