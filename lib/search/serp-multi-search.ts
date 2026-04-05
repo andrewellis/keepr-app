@@ -14,7 +14,7 @@ export interface SerpResult {
   confidence?: number;
 }
 
-const THUMBNAIL_PLACEHOLDER = 'https://via.placeholder.com/150x150/1a1a1a/FF6B35?text=No+Image';
+const THUMBNAIL_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='75' font-family='sans-serif' font-size='11' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
 const L1_TTL_SECONDS = 6 * 60 * 60; // 6 hours
 
 /**
@@ -170,7 +170,6 @@ export async function multiEngineSearch(
   const category = options.category ?? inferCategory(query);
   const engines = selectEngines(category, tier);
 
-  console.log('[multiEngineSearch] engines selected:', engines, 'tier:', tier, 'category:', category);
   if (engines.length === 0) {
     return { results: [], enginesQueried: [], enginesSucceeded: [], cacheHit: false };
   }
@@ -178,7 +177,6 @@ export async function multiEngineSearch(
   // L1 cache check — keyed on query + engines joined
   const cacheKey = `multi::${engines.join(',')}::${query.toLowerCase().trim()}`;
   const cached = await getCached('multi', cacheKey);
-  console.log('[multiEngineSearch] cache check for key:', cacheKey, 'hit:', !!cached);
   if (cached) {
     return {
       results: cached as SerpResult[],
@@ -209,7 +207,6 @@ export async function multiEngineSearch(
       enginesSucceeded.push(outcome.value.engine);
     }
   }
-  console.log("[multiEngineSearch] engines queried:", engines, "engines succeeded:", enginesSucceeded, "result count:", allResults.length);
 
   // Write to L1 cache
   await setCached('multi', cacheKey, allResults, L1_TTL_SECONDS);

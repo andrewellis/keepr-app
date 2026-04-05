@@ -113,9 +113,9 @@ If the image does not contain a product at all, respond:
       return null
     }
 
-    const data = await response.json(); console.log("[scan] Claude raw response:", JSON.stringify(data.content?.[0]?.text?.slice(0,300)))
+    const data = await response.json()
     const text = data.content?.[0]?.text?.trim()
-    if (!text) { console.log("[scan] Claude returned no text"); return null }
+    if (!text) { return null }
 
     // Parse JSON response, strip any markdown fences if present
     const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
@@ -222,7 +222,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
 
     const labels: string[] = (result.labelAnnotations ?? [])
       .map((l: { description: string }) => l.description)
-    console.log("[scan] Vision labels:", JSON.stringify(labels));
 
     const webEntitiesRaw: { description?: string; score?: number }[] =
       result.webDetection?.webEntities ?? []
@@ -241,14 +240,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
       : 0
 
     // Second pass: use Claude for specific product identification
-    console.log("[scan] Calling Claude for product identification..."); const claudeResult = await identifyProductWithClaude(
+    const claudeResult = await identifyProductWithClaude(
       imageBase64,
       file.type || 'image/jpeg',
       labels,
       bestGuess
     )
 
-    console.log("[scan] Claude result:", JSON.stringify(claudeResult)); if (claudeResult) {
+    if (claudeResult) {
       // Claude identified a specific product — use its output
       const claudeCategory = mapToCategory(claudeResult.searchTerms, labels)
       return NextResponse.json({

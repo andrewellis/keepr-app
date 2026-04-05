@@ -15,7 +15,6 @@ import { RetailerEngagementBanner } from '@/components/RetailerEngagementBanner'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
-type BuyState = 'idle' | 'opening'
 
 interface ScanResult {
   productName: string | null
@@ -153,7 +152,6 @@ export default function ScanClient() {
   const [shoppingResults, setShoppingResults] = useState<ShoppingResult[]>([])
   const [serpResults, setSerpResults] = useState<SerpResult[]>([])
   const [matchResult, setMatchResult] = useState<MatchResults | null>(null)
-  const [buyStates, setBuyStates] = useState<Record<string, BuyState>>({})
   const [isOffline, setIsOffline] = useState(false)
 
   // Card recommendation state
@@ -373,26 +371,6 @@ export default function ScanClient() {
     }
   }
 
-  function handleBuy(p: AffiliateResult & { clickId?: string }) {
-    setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'opening' }))
-
-    // Open synchronously before any async work to avoid popup blockers
-    window.open(p.affiliateUrl, '_blank', 'noopener,noreferrer')
-
-    // Fire-and-forget tracking call — no await needed
-    if (p.clickId) {
-      fetch('/api/transaction/click', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clickId: p.clickId }),
-      }).catch(() => {})
-    }
-
-    setTimeout(() => {
-      setBuyStates((prev) => ({ ...prev, [p.affiliateUrl]: 'idle' }))
-    }, 1500)
-  }
-
   function handleReset() {
     setPreviewUrl(null)
     setCurrentFile(null)
@@ -404,7 +382,6 @@ export default function ScanClient() {
     setShoppingResults([])
     setSerpResults([])
     setMatchResult(null)
-    setBuyStates({})
     setCardRecommendation(null)
     setUserLoggedIn(null)
   }
@@ -870,37 +847,6 @@ export default function ScanClient() {
                 </div>
               )}
 
-              {/* Divider before Maximize My Earnings! section */}
-              {shoppingResults.length > 0 && (
-                <div style={{ height: 1, backgroundColor: '#E5E5E3', marginTop: 16, marginBottom: 16 }} />
-              )}
-
-              {/* Buy links header */}
-              <p className="text-base font-semibold" style={{ color: '#1a1a1a' }}>Shop This Product</p>
-
-              <div className="space-y-2">
-                {products.map((p) => {
-                  const buyState = buyStates[p.affiliateUrl] ?? 'idle'
-                  return (
-                    <button
-                      key={p.affiliateUrl}
-                      onClick={() => handleBuy(p)}
-                      className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition"
-                      style={{
-                        backgroundColor: buyState === 'opening' ? '#EEEDFE' : '#F8F8F6',
-                        border: '1px solid #E5E5E3',
-                      }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#EEEDFE' }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = buyState === 'opening' ? '#EEEDFE' : '#F8F8F6' }}
-                    >
-                      <span className="text-sm font-medium" style={{ color: '#1a1a1a' }}>
-                        {buyState === 'opening' ? 'Opening...' : p.retailer.replace(/ \(.*\)$/, '')}
-                      </span>
-                      <span style={{ color: '#1a1a1a' }}>→</span>
-                    </button>
-                  )
-                })}
-              </div>
 
             </div>
           )}

@@ -158,7 +158,6 @@ export async function POST(req: NextRequest) {
     if (user) {
       userId = user.id
       userTier = 'paid'
-      console.log('[match] userTier resolved:', userTier, 'userId:', userId)
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -179,28 +178,16 @@ export async function POST(req: NextRequest) {
     // Call all networks in parallel with per-network timeout
     const settled = await Promise.all(
       networks.map(async (searchFn) => {
-        const networkName = searchFn.name || 'unknown'
-        const start = Date.now()
-
-        console.log(`[match] Calling ${networkName}...`)
-
         try {
           const result = await Promise.race<AffiliateResult[]>([
             searchFn(searchTerms, category, cashbackRate),
             new Promise<AffiliateResult[]>((resolve) =>
-              setTimeout(() => {
-                console.log(`[match] ${networkName} timed out after ${NETWORK_TIMEOUT_MS}ms`)
-                resolve([])
-              }, NETWORK_TIMEOUT_MS)
+              setTimeout(() => resolve([]), NETWORK_TIMEOUT_MS)
             ),
           ])
 
-          const elapsed = Date.now() - start
-          console.log(`[match] ${networkName} returned ${result.length} results in ${elapsed}ms`)
           return result
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err)
-          console.log(`[match] ${networkName} error: ${message}`)
+        } catch {
           return [] as AffiliateResult[]
         }
       })
@@ -226,12 +213,11 @@ export async function POST(req: NextRequest) {
       // Price check — informational only, no tracking
       getShoppingResults(productName),
       // Multi-engine SERP search — runs in parallel with affiliate logic
-      (console.log('[match] calling multiEngineSearch with tier:', userTier, 'query:', productName),
       multiEngineSearch({
         query: productName,
         category,
         tier: userTier,
-      })),
+      }),
     ])
 
     const trackedResults =
