@@ -4,9 +4,9 @@ import { ScanSavedProvider } from '@/lib/scan-saved-context'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ScanSavedProvider>
-      <div className="min-h-screen bg-background overflow-hidden">
+      <div className="h-screen bg-background overflow-hidden flex flex-col">
         <SideDrawer />
-        <main className="pt-14 min-h-screen overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto pt-14">{children}</main>
       </div>
     </ScanSavedProvider>
   )
