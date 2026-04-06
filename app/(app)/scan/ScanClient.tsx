@@ -600,7 +600,7 @@ export default function ScanClient() {
   }, [storeState, displayedSerpResults])
 
   return (
-    <div className="bg-background px-5 pt-12 pb-24">
+    <div className="bg-background px-5 pt-4 pb-24">
       {isOffline && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
           <p className="text-sm text-red-600 text-center">No internet connection.</p>
@@ -774,260 +774,285 @@ export default function ScanClient() {
         </div>
       )}
 
-      {scanState === 'result' && scanResult && !isResuming && (
-        <div className="space-y-3">
+      {scanState === 'result' && scanResult && !isResuming && (() => {
+        const allPriced: { price: number; priceFormatted: string; domain: string; url: string; isShopping: boolean; item: ShoppingResult | SerpResult }[] = []
 
-          {/* Product header row with scan-new button */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', lineHeight: 1.3 }}>{scanResult.productName}</p>
-              <p style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
-                {scanResult.category ?? 'Product'} · typical {getPriceRange(scanResult.category)}
-              </p>
-            </div>
-            <button
-              onClick={handleReset}
-              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: '#534AB7' }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4" fill="white"/></svg>
-            </button>
-          </div>
-
-          {/* 3. LOADING STATE */}
-          {storeState === 'loading' && (
-            <p className="text-[14px] text-center" style={{ color: '#666666' }}>Finding best prices...</p>
-          )}
-
-          {/* 4. NO RESULTS STATE */}
-          {storeState === 'done' && products.length === 0 && (
-            <p className="text-sm text-center text-foreground-secondary">
-              No matching products found{scanResult?.productName ? ` for ${scanResult.productName}` : ''}.
-            </p>
-          )}
-
-          {/* 5. RESULTS BODY */}
-          {storeState === 'done' && (shoppingResults.length > 0 || displayedSerpResults.length > 0) && (() => {
-            const allPriced: { price: number; priceFormatted: string; domain: string; url: string; isShopping: boolean; item: ShoppingResult | SerpResult }[] = []
-
-            for (const s of shoppingResults) {
+        if (storeState === 'done') {
+          for (const s of shoppingResults) {
+            allPriced.push({
+              price: s.priceValue,
+              priceFormatted: s.price,
+              domain: s.merchant,
+              url: s.productUrl,
+              isShopping: true,
+              item: s,
+            })
+          }
+          for (const s of displayedSerpResults) {
+            if (s.price !== null) {
               allPriced.push({
-                price: s.priceValue,
-                priceFormatted: s.price,
-                domain: s.merchant,
-                url: s.productUrl,
-                isShopping: true,
+                price: s.price,
+                priceFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(s.price),
+                domain: s.retailerDomain ?? '',
+                url: s.url,
+                isShopping: false,
                 item: s,
               })
             }
-            for (const s of displayedSerpResults) {
-              if (s.price !== null) {
-                allPriced.push({
-                  price: s.price,
-                  priceFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(s.price),
-                  domain: s.retailerDomain ?? '',
-                  url: s.url,
-                  isShopping: false,
-                  item: s,
-                })
-              }
-            }
-            allPriced.sort((a, b) => a.price - b.price)
+          }
+          allPriced.sort((a, b) => a.price - b.price)
+        }
 
-            if (allPriced.length === 0) return null
-            const totalSearched = shoppingResults.length + displayedSerpResults.length
+        const totalSearched = shoppingResults.length + displayedSerpResults.length
+        const hasResults = allPriced.length > 0
 
-            const selected = allPriced[selectedPriceIdx] ?? allPriced[0]
-            const selectedSerpItem = !selected.isShopping ? (selected.item as SerpResult) : null
-            const selectedId = selectedSerpItem ? `${selectedSerpItem.engine}-${selectedSerpItem.url}` : null
+        const selected = hasResults ? (allPriced[selectedPriceIdx] ?? allPriced[0]) : null
+        const selectedSerpItem = selected && !selected.isShopping ? (selected.item as SerpResult) : null
+        const selectedId = selectedSerpItem ? `${selectedSerpItem.engine}-${selectedSerpItem.url}` : null
 
-            const selectedCardKey = selectedId ?? `shopping-${selected.url}`
-            const selectedCardData = bestCardByResultId[selectedCardKey] ?? null
-            const cardRate = selectedCardData?.rate ?? 0
-            const cardSavings = selected.price * (cardRate / 100)
-            const netCost = selected.price - cardSavings
-            const netCostFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netCost)
-            const cardSavingsFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cardSavings)
+        const selectedCardKey = selected ? (selectedId ?? `shopping-${selected.url}`) : ''
+        const selectedCardData = selectedCardKey ? (bestCardByResultId[selectedCardKey] ?? null) : null
+        const cardRate = selectedCardData?.rate ?? 0
+        const cardSavings = selected ? selected.price * (cardRate / 100) : 0
+        const netCost = selected ? selected.price - cardSavings : 0
+        const netCostFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netCost)
+        const cardSavingsFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cardSavings)
 
-            const VISIBLE_COUNT = 4
-            const visiblePrices = showAllPrices ? allPriced : allPriced.slice(0, VISIBLE_COUNT)
-            const hiddenCount = allPriced.length - VISIBLE_COUNT
+        const VISIBLE_COUNT = 3
+        const visiblePrices = showAllPrices ? allPriced : allPriced.slice(0, VISIBLE_COUNT)
+        const hiddenCount = allPriced.length - VISIBLE_COUNT
 
-            return (
-              <>
-                {/* ─── BEST VERIFIED PRICE CARD ─── */}
-                <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
-                  <div style={{ padding: '14px 14px 10px' }}>
-                    <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
-                      <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
-                      </p>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
-                    </div>
-                    <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1 }}>{selected.priceFormatted}</p>
+        return (
+          <div className="flex flex-col" style={{ height: 'calc(100vh - 56px - 16px)' }}>
+            {/* ═══ PINNED SECTION ═══ */}
+            <div className="flex-shrink-0 space-y-3">
 
-                    {cardRate > 0 && (
-                      <div>
-                        <div className="flex items-center gap-1" style={{ marginTop: '4px', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: 500, color: '#1D9E75' }}>{netCostFormatted} net</span>
-                          <span style={{ fontSize: '9px', backgroundColor: '#E1F5EE', color: '#085041', borderRadius: '3px', padding: '1px 5px' }}>after card savings</span>
-                        </div>
-                        <div className="flex items-center justify-between" style={{ backgroundColor: '#f8f8f8', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '11px', color: '#888' }}>{selectedCardData!.cardName} ({cardRate}%)</span>
-                          <span style={{ fontSize: '11px', fontWeight: 500, color: '#1D9E75' }}>−{cardSavingsFormatted}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <p style={{ fontSize: '12px', color: '#aaa', marginTop: cardRate > 0 ? '0px' : '6px' }}>
-                      {cleanDomain(selected.domain)}
-                      {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 ? ` · ${selectedSerpItem.delivery[0]}` : ''}
-                    </p>
-                  </div>
-
-                  {/* Stat bar */}
-                  <div className="flex" style={{ borderTop: '0.5px solid #f0f0f0' }}>
-                    <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
-                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>90-day low</p>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
-                    </div>
-                    <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
-                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>vs low</p>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
-                    </div>
-                    <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
-                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>searched</p>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#534AB7' }}>{totalSearched}</p>
-                    </div>
-                    <div className="flex-1" style={{ padding: '8px 6px' }}>
-                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>net cost</p>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{cardRate > 0 ? netCostFormatted : selected.priceFormatted}</p>
-                    </div>
-                  </div>
+              {/* Product header row */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', lineHeight: 1.3 }}>{scanResult.productName}</p>
+                  <p style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
+                    {scanResult.category ?? 'Product'} · typical {getPriceRange(scanResult.category)}
+                  </p>
                 </div>
+                <button
+                  onClick={handleReset}
+                  className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: '#534AB7' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4" fill="white"/></svg>
+                </button>
+              </div>
 
-                {/* ─── ACTION BUTTONS ─── */}
-                <div>
-                  {selectedSerpItem && selectedId && !trackedIds.has(selectedId) && (
-                    <>
-                      <button
-                        onClick={() => handleTrack(selectedSerpItem, false)}
-                        disabled={trackingInProgress.has(selectedId)}
-                        className="w-full rounded-xl py-3 text-sm font-medium text-white"
+              {/* Loading state */}
+              {storeState === 'loading' && (
+                <p className="text-[14px] text-center" style={{ color: '#666666' }}>Finding best prices...</p>
+              )}
+
+              {/* No results state */}
+              {storeState === 'done' && !hasResults && (
+                <p className="text-sm text-center text-foreground-secondary">
+                  No matching products found{scanResult?.productName ? ` for ${scanResult.productName}` : ''}.
+                </p>
+              )}
+
+              {/* Hero card */}
+              {hasResults && selected && (
+                <>
+                  <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
+                    <div style={{ padding: '14px 14px 10px' }}>
+                      <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
+                        <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
+                        </p>
+                        <button
+                          onClick={async () => {
+                            const shareData = {
+                              title: scanResult.productName ?? 'K33pr Price Check',
+                              text: `${scanResult.productName} — ${selected.priceFormatted} at ${cleanDomain(selected.domain)}`,
+                              url: window.location.href,
+                            }
+                            try {
+                              if (navigator.share) {
+                                await navigator.share(shareData)
+                              } else {
+                                await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`)
+                              }
+                            } catch {}
+                          }}
+                          className="flex-shrink-0"
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1 }}>{selected.priceFormatted}</p>
+
+                      {cardRate > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1" style={{ marginTop: '4px', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '15px', fontWeight: 500, color: '#1D9E75' }}>{netCostFormatted} net</span>
+                            <span style={{ fontSize: '9px', backgroundColor: '#E1F5EE', color: '#085041', borderRadius: '3px', padding: '1px 5px' }}>after card savings</span>
+                          </div>
+                          <div className="flex items-center justify-between" style={{ backgroundColor: '#f8f8f8', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '11px', color: '#888' }}>{selectedCardData!.cardName} ({cardRate}%)</span>
+                            <span style={{ fontSize: '11px', fontWeight: 500, color: '#1D9E75' }}>−{cardSavingsFormatted}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <p style={{ fontSize: '12px', color: '#aaa', marginTop: cardRate > 0 ? '0px' : '6px' }}>
+                        {cleanDomain(selected.domain)}
+                        {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 ? ` · ${selectedSerpItem.delivery[0]}` : ''}
+                      </p>
+                    </div>
+
+                    {/* Stat bar */}
+                    <div className="flex" style={{ borderTop: '0.5px solid #f0f0f0' }}>
+                      <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>90-day low</p>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
+                      </div>
+                      <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>vs low</p>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
+                      </div>
+                      <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>searched</p>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#534AB7' }}>{totalSearched}</p>
+                      </div>
+                      <div className="flex-1" style={{ padding: '8px 6px' }}>
+                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>net cost</p>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{cardRate > 0 ? netCostFormatted : selected.priceFormatted}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div>
+                    {selectedSerpItem && selectedId && !trackedIds.has(selectedId) && (
+                      <>
+                        <button
+                          onClick={() => handleTrack(selectedSerpItem, false)}
+                          disabled={trackingInProgress.has(selectedId)}
+                          className="w-full rounded-xl py-3 text-sm font-medium text-white"
+                          style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
+                        >
+                          {trackingInProgress.has(selectedId) ? 'Adding...' : 'Track price'}
+                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { if (isAggressiveEligible(selectedSerpItem)) handleTrack(selectedSerpItem, true) }}
+                            disabled={!isAggressiveEligible(selectedSerpItem) || trackingInProgress.has(selectedId)}
+                            className="flex-1 rounded-xl py-3 text-sm text-center border disabled:opacity-40"
+                            style={{ color: '#555', borderColor: '#e0e0e0' }}
+                          >
+                            Aggressively track
+                          </button>
+                          <a
+                            href={selected.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 rounded-xl py-3 text-sm text-center border no-underline"
+                            style={{ color: '#555', borderColor: '#e0e0e0' }}
+                          >
+                            Buy ↗
+                          </a>
+                        </div>
+                      </>
+                    )}
+                    {selectedId && trackedIds.has(selectedId) && (
+                      <div className="text-center text-sm font-medium" style={{ color: '#1D9E75' }}>Tracked ✓</div>
+                    )}
+                    {selected.isShopping && (
+                      <a
+                        href={(selected.item as ShoppingResult).productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full rounded-xl py-3 text-sm font-medium text-white text-center no-underline"
                         style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
                       >
-                        {trackingInProgress.has(selectedId) ? 'Adding...' : 'Track price'}
-                      </button>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => { if (isAggressiveEligible(selectedSerpItem)) handleTrack(selectedSerpItem, true) }}
-                          disabled={!isAggressiveEligible(selectedSerpItem) || trackingInProgress.has(selectedId)}
-                          className="flex-1 rounded-xl py-3 text-sm text-center border disabled:opacity-40"
-                          style={{ color: '#555', borderColor: '#e0e0e0' }}
-                        >
-                          Aggressively track
-                        </button>
-                        <a
-                          href={selected.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 rounded-xl py-3 text-sm text-center border no-underline"
-                          style={{ color: '#555', borderColor: '#e0e0e0' }}
-                        >
-                          Buy ↗
-                        </a>
+                        Buy ↗
+                      </a>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Store error state */}
+              {storeState === 'error' && (
+                <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {scanResult?.productName
+                      ? `Found ${scanResult.productName} but couldn't load store results right now.`
+                      : 'Couldn\'t load store results.'}
+                  </p>
+                  <button
+                    onClick={() => handleFindBestPrice()}
+                    className="text-sm text-primary font-medium hover:opacity-80 transition"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ═══ SCROLLABLE SECTION ═══ */}
+            {hasResults && allPriced.length > 1 && (
+              <div className="flex-1 overflow-y-auto min-h-0" style={{ marginTop: '12px' }}>
+                <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
+                  {visiblePrices.map((r, idx) => {
+                    const isSelected = idx === selectedPriceIdx
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setSelectedPriceIdx(idx)
+                          const serpItem = !r.isShopping ? (r.item as SerpResult) : null
+                          if (serpItem) {
+                            const id = `${serpItem.engine}-${serpItem.url}`
+                            if (!(id in bestCardByResultId) && !bestCardLoadingIds.has(id)) {
+                              handleBestCard(serpItem, id)
+                            }
+                          }
+                        }}
+                        className="flex items-center justify-between cursor-pointer"
+                        style={{
+                          padding: '12px 14px',
+                          borderBottom: idx < visiblePrices.length - 1 || hiddenCount > 0 ? '0.5px solid #f5f5f5' : 'none',
+                          backgroundColor: isSelected ? '#f4f3fe' : 'transparent',
+                          borderLeft: isSelected ? '3px solid #534AB7' : '3px solid transparent',
+                        }}
+                      >
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
+                        <span style={{ fontSize: '15px', fontWeight: 600, color: idx === 0 ? '#534AB7' : '#111' }}>
+                          {r.priceFormatted}{idx === 0 ? ' ✓' : ''}
+                        </span>
                       </div>
-                    </>
-                  )}
-                  {selectedId && trackedIds.has(selectedId) && (
-                    <div className="text-center text-sm font-medium" style={{ color: '#1D9E75' }}>Tracked ✓</div>
-                  )}
-                  {selected.isShopping && (
-                    <a
-                      href={(selected.item as ShoppingResult).productUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full rounded-xl py-3 text-sm font-medium text-white text-center no-underline"
-                      style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
+                    )
+                  })}
+
+                  {hiddenCount > 0 && !showAllPrices && (
+                    <div
+                      onClick={() => setShowAllPrices(true)}
+                      className="flex items-center justify-between cursor-pointer"
+                      style={{ padding: '12px 14px' }}
                     >
-                      Buy ↗
-                    </a>
+                      <span style={{ fontSize: '13px', color: '#aaa' }}>{hiddenCount} filtered</span>
+                      <span style={{ fontSize: '13px', color: '#534AB7', fontWeight: 600 }}>Show</span>
+                    </div>
                   )}
                 </div>
 
-                {/* ─── INTERACTIVE PRICE LIST ─── */}
-                {allPriced.length > 1 && (
-                  <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
-                    {visiblePrices.map((r, idx) => {
-                      const isSelected = idx === selectedPriceIdx
-                      return (
-                        <div
-                          key={idx}
-                          onClick={() => {
-                            setSelectedPriceIdx(idx)
-                            const serpItem = !r.isShopping ? (r.item as SerpResult) : null
-                            if (serpItem) {
-                              const id = `${serpItem.engine}-${serpItem.url}`
-                              if (!(id in bestCardByResultId) && !bestCardLoadingIds.has(id)) {
-                                handleBestCard(serpItem, id)
-                              }
-                            }
-                          }}
-                          className="flex items-center justify-between cursor-pointer"
-                          style={{
-                            padding: '12px 14px',
-                            borderBottom: idx < visiblePrices.length - 1 || hiddenCount > 0 ? '0.5px solid #f5f5f5' : 'none',
-                            backgroundColor: isSelected ? '#f4f3fe' : 'transparent',
-                            borderLeft: isSelected ? '3px solid #534AB7' : '3px solid transparent',
-                          }}
-                        >
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
-                          <span style={{ fontSize: '15px', fontWeight: 600, color: isSelected ? '#534AB7' : '#111' }}>
-                            {r.priceFormatted}{idx === 0 ? ' ✓' : ''}
-                          </span>
-                        </div>
-                      )
-                    })}
-
-                    {hiddenCount > 0 && !showAllPrices && (
-                      <div
-                        onClick={() => setShowAllPrices(true)}
-                        className="flex items-center justify-between cursor-pointer"
-                        style={{ padding: '12px 14px' }}
-                      >
-                        <span style={{ fontSize: '13px', color: '#aaa' }}>{hiddenCount} filtered</span>
-                        <span style={{ fontSize: '13px', color: '#534AB7', fontWeight: 600 }}>Show</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* Affiliate disclosure */}
-                <p className="text-xs text-center text-foreground-secondary">
+                <p className="text-xs text-center text-foreground-secondary" style={{ marginTop: '12px', paddingBottom: '20px' }}>
                   K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
                 </p>
-              </>
-            )
-          })()}
-
-          {/* 6. STORE ERROR STATE */}
-          {storeState === 'error' && (
-            <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
-              <p className="text-sm font-semibold text-foreground">
-                {scanResult?.productName
-                  ? `Found ${scanResult.productName} but couldn't load store results right now.`
-                  : 'Couldn\'t load store results.'}
-              </p>
-              <button
-                onClick={() => handleFindBestPrice()}
-                className="text-sm text-primary font-medium hover:opacity-80 transition"
-              >
-                Try Again
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
