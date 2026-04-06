@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AreaChart,
@@ -102,6 +102,18 @@ export default function TrackingPage() {
   const [latestChecks, setLatestChecks] = useState<Map<string, PriceCheck>>(new Map())
   const [loading, setLoading] = useState(true)
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const main = containerRef.current?.closest('main') as HTMLElement | null
+    if (!main) return
+    const prev = main.style.overflow
+    main.style.overflow = 'hidden'
+    return () => {
+      main.style.overflow = prev || 'auto'
+    }
+  }, [])
 
   // Chart state
   const [selectedItem, setSelectedItem] = useState<TrackedItem | null>(null)
@@ -287,9 +299,10 @@ export default function TrackingPage() {
 
   return (
     <div
+      ref={containerRef}
       style={{
         backgroundColor: '#f8f8f8',
-        height: '100%',
+        height: 'calc(100vh - 56px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
