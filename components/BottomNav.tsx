@@ -59,7 +59,7 @@ export default function SideDrawer() {
 
       // Suppress drawer open if this looks like an iOS back gesture:
       // started within 20px of left edge, fast horizontal swipe, nearly horizontal
-      if (touchStartX.current < 20 && velocity > 0.5 && deltaY < 10) {
+      if (touchStartX.current < 100 && velocity > 0.5 && deltaY < 10) {
         return
       }
     }
@@ -68,12 +68,12 @@ export default function SideDrawer() {
       const dy = e.changedTouches[0].clientY - touchStartY.current
       const absDx = Math.abs(dx)
       const absDy = Math.abs(dy)
-      if (!openRef.current && touchStartX.current <= 40 && dx >= 50 && absDx > absDy) {
+      if (!openRef.current && touchStartX.current <= 100 && dx >= 50 && absDx > absDy) {
         const elapsed = Date.now() - touchStartTime.current
         const velocity = elapsed > 0 ? dx / elapsed : 0
         const absDyFinal = Math.abs(dy)
         // Suppress if iOS back gesture characteristics are met
-        if (touchStartX.current < 20 && velocity > 0.5 && absDyFinal < 10) {
+        if (touchStartX.current < 100 && velocity > 0.5 && absDyFinal < 10) {
           return
         }
         setOpen(true)
