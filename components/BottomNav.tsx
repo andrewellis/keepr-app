@@ -8,7 +8,6 @@ import { useScanSaved } from '@/lib/scan-saved-context'
 
 const navItems = [
   { label: 'Home', href: '/home' },
-  { label: 'History', href: '/history' },
   { label: 'Tracking', href: '/tracking' },
   { label: 'Settings', href: '/settings' },
 ]

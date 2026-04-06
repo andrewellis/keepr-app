@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   AreaChart,
   Area,
@@ -88,6 +89,7 @@ function ChartTooltip({
 }
 
 export default function TrackingPage() {
+  const router = useRouter()
   const [trackedItems, setTrackedItems] = useState<TrackedItem[]>([])
   const [latestChecks, setLatestChecks] = useState<Map<string, PriceCheck>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -204,6 +206,7 @@ export default function TrackingPage() {
     fetchChartData(item)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function handleStopTracking(itemId: string) {
     if (deletingIds.has(itemId)) return
     setDeletingIds(prev => new Set(prev).add(itemId))
@@ -246,223 +249,315 @@ export default function TrackingPage() {
     )
   }
 
-  return (
-    <div className="bg-background px-5 pt-12 pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Tracked Items</h1>
-        {trackedItems.length > 0 && (
-          <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-semibold bg-[#534AB7] text-white">
-            {trackedItems.length}
-          </span>
-        )}
-      </div>
-
-      {trackedItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="w-20 h-20 rounded-full bg-surface border border-border flex items-center justify-center">
-            <svg
-              className="w-9 h-9 text-foreground-secondary"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-          </div>
-          <div className="text-center">
-            <p className="text-foreground font-semibold">No items tracked yet.</p>
-            <p className="text-foreground-secondary text-sm mt-1">
-              Scan a product and tap Track Price to get started.
-            </p>
-          </div>
+  // Empty state
+  if (trackedItems.length === 0) {
+    return (
+      <div style={{ backgroundColor: '#f8f8f8', minHeight: '100vh', paddingBottom: 100 }}>
+        <div style={{ paddingTop: 80, textAlign: 'center' }}>
+          <p style={{ fontSize: 13, color: '#aaa' }}>No items tracked yet</p>
+          <p style={{ fontSize: 11, color: '#ccc', marginTop: 4 }}>Start scanning to track prices</p>
+          <button
+            onClick={() => router.push('/scan')}
+            style={{
+              background: '#534AB7',
+              color: 'white',
+              borderRadius: 8,
+              padding: '8px 16px',
+              fontSize: 12,
+              fontWeight: 500,
+              marginTop: 12,
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Scan a product
+          </button>
         </div>
-      ) : (
-        <>
-          {/* Section 1 — Price history chart */}
-          {selectedItem && (
-            <div className="bg-surface border border-border rounded-2xl px-4 py-4 mb-4">
-              <p className="text-sm font-semibold text-foreground mb-3 line-clamp-1">
-                {selectedItem.title}
-              </p>
+      </div>
+    )
+  }
 
-              {chartLoading ? (
-                <div className="h-[200px] flex items-center justify-center">
-                  <p className="text-xs text-foreground-secondary">Loading chart…</p>
-                </div>
-              ) : chartData.length === 0 ? (
-                <div className="h-[200px] flex items-center justify-center">
-                  <p className="text-xs text-foreground-secondary text-center px-4">
-                    Price history will appear after the first weekly check
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart
-                      data={chartData}
-                      margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#534AB7" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#534AB7" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={formatMonthYear}
-                        tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
-                        tickLine={false}
-                        axisLine={false}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis
-                        tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-                        tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
-                        tickLine={false}
-                        axisLine={false}
-                        width={55}
-                      />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Area
-                        type="monotone"
-                        dataKey="price"
-                        stroke="#534AB7"
-                        strokeWidth={2}
-                        fill="url(#priceGradient)"
-                        dot={false}
-                        activeDot={{ r: 4, fill: '#534AB7' }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                  <div className="flex gap-2 mt-3">
-                    {(() => {
-                      const prices = chartData.map(d => d.price)
-                      const current = prices[prices.length - 1]
-                      const low = Math.min(...prices)
-                      const avg = prices.reduce((a, b) => a + b, 0) / prices.length
-                      return (
-                        <>
-                          <div className="flex-1 bg-background rounded-xl p-2.5 text-center">
-                            <p className="text-xs text-foreground-secondary mb-0.5">Current</p>
-                            <p className="text-sm font-semibold text-foreground">{formatCurrency(current)}</p>
-                          </div>
-                          <div className="flex-1 bg-background rounded-xl p-2.5 text-center">
-                            <p className="text-xs text-foreground-secondary mb-0.5">90-day low</p>
-                            <p className="text-sm font-semibold" style={{ color: '#D85A30' }}>{formatCurrency(low)}</p>
-                          </div>
-                          <div className="flex-1 bg-background rounded-xl p-2.5 text-center">
-                            <p className="text-xs text-foreground-secondary mb-0.5">Avg</p>
-                            <p className="text-sm font-semibold text-foreground">{formatCurrency(avg)}</p>
-                          </div>
-                        </>
-                      )
-                    })()}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+  return (
+    <div style={{ backgroundColor: '#f8f8f8', minHeight: '100vh', paddingBottom: 100 }}>
 
-          {/* Section 2 — Tracked items list */}
-          <div className="space-y-3">
-            {trackedItems.map((item) => {
-              const latestCheck = latestChecks.get(item.id) ?? null
-              const currentPrice = latestCheck?.price ?? null
-              const addedPrice = item.min_observed_price
-              const isSelected = selectedItem?.id === item.id
+      {/* 1. CHART CARD */}
+      <div
+        style={{
+          background: 'white',
+          border: '0.5px solid #ebebeb',
+          borderRadius: 12,
+          padding: '9px 10px',
+          marginLeft: 16,
+          marginRight: 16,
+          marginTop: 12,
+        }}
+      >
+        {selectedItem && (
+          <>
+            {/* Title */}
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#111',
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: 'vertical',
+                margin: 0,
+              }}
+            >
+              {selectedItem.title}
+            </p>
 
-              let delta: { text: string; color: string } | null = null
-              if (currentPrice !== null && addedPrice !== null) {
-                const diff = currentPrice - addedPrice
-                if (diff < -0.005) {
-                  delta = {
-                    text: `↓ ${formatCurrency(Math.abs(diff))} lower`,
-                    color: 'text-green-600',
-                  }
-                } else if (diff > 0.005) {
-                  delta = {
-                    text: `↑ ${formatCurrency(diff)} higher`,
-                    color: 'text-red-500',
-                  }
+            {/* Price + delta row */}
+            {(() => {
+              const latestCheck = latestChecks.get(selectedItem.id) ?? null
+              const currentPrice = chartData.length > 0 ? chartData[chartData.length - 1].price : (latestCheck?.price ?? null)
+              const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : null
+
+              let deltaEl: React.ReactNode = null
+              if (chartData.length > 0 && currentPrice !== null && maxPrice !== null) {
+                if (currentPrice < maxPrice) {
+                  const diff = maxPrice - currentPrice
+                  deltaEl = (
+                    <span style={{ fontSize: 12, color: '#1D9E75', fontWeight: 500 }}>
+                      ↓ ${diff.toFixed(2)} from high
+                    </span>
+                  )
+                } else {
+                  deltaEl = (
+                    <span style={{ fontSize: 12, color: '#D85A30', fontWeight: 500 }}>
+                      At high
+                    </span>
+                  )
                 }
               }
 
               return (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelectItem(item)}
-                  className={`bg-surface border rounded-2xl px-4 py-4 cursor-pointer transition-colors ${
-                    isSelected ? 'border-[#534AB7]' : 'border-border'
-                  }`}
-                >
-                  {/* Title row */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="text-sm font-semibold text-foreground line-clamp-2 flex-1">
-                      {item.title}
-                    </p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {item.aggressive && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#534AB7]/10 text-[#534AB7]">
-                          Daily
-                        </span>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStopTracking(item.id)
-                        }}
-                        disabled={deletingIds.has(item.id)}
-                        className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-50 transition-colors"
-                      >
-                        {deletingIds.has(item.id) ? 'Removing...' : '✕ Stop'}
-                      </button>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4 }}>
+                  <span style={{ fontSize: 20, fontWeight: 500, color: '#111' }}>
+                    {currentPrice !== null ? formatCurrency(currentPrice) : '—'}
+                  </span>
+                  {deltaEl}
+                </div>
+              )
+            })()}
+          </>
+        )}
+
+        {/* Chart area */}
+        {chartLoading ? (
+          <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ fontSize: 12, color: '#aaa' }}>Loading chart…</p>
+          </div>
+        ) : chartData.length === 0 ? (
+          <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '0 16px' }}>
+              Price history will appear after the first weekly check
+            </p>
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart
+                data={chartData}
+                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#534AB7" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#534AB7" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatMonthYear}
+                  tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+                  tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={55}
+                />
+                <Tooltip content={<ChartTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#534AB7"
+                  strokeWidth={2}
+                  fill="url(#priceGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#534AB7' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+
+            {/* Stat pills */}
+            {(() => {
+              const prices = chartData.map(d => d.price)
+              const current = prices[prices.length - 1]
+              const low = Math.min(...prices)
+              const avg = prices.reduce((a, b) => a + b, 0) / prices.length
+              return (
+                <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
+                  <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>Current</p>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#111', margin: 0 }}>{formatCurrency(current)}</p>
                   </div>
-
-                  {/* Price row */}
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-base font-bold text-foreground">
-                      {currentPrice !== null ? formatCurrency(currentPrice) : 'Not checked yet'}
-                    </span>
-                    {addedPrice !== null && (
-                      <span className="text-xs text-foreground-secondary">
-                        was {formatCurrency(addedPrice)}
-                      </span>
-                    )}
-                    {addedPrice === null && currentPrice !== null && (
-                      <span className="text-xs text-foreground-secondary">was —</span>
-                    )}
+                  <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>90-day low</p>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#D85A30', margin: 0 }}>{formatCurrency(low)}</p>
                   </div>
-
-                  {/* Delta */}
-                  {delta && (
-                    <p className={`text-xs font-medium mb-1 ${delta.color}`}>{delta.text}</p>
-                  )}
-
-                  {/* Retailer + last checked */}
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-foreground-secondary">
-                      {latestCheck?.retailer_domain ?? '—'}
-                    </span>
-                    <span className="text-xs text-foreground-secondary">
-                      {latestCheck?.checked_at
-                        ? formatRelativeDate(latestCheck.checked_at)
-                        : 'Never'}
-                    </span>
+                  <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>Avg</p>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#111', margin: 0 }}>{formatCurrency(avg)}</p>
                   </div>
                 </div>
               )
-            })}
-          </div>
-        </>
-      )}
+            })()}
+          </>
+        )}
+      </div>
+
+      {/* 2. ITEM COUNT + TRACK NEW row */}
+      <div
+        style={{
+          marginLeft: 16,
+          marginRight: 16,
+          marginTop: 12,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            color: '#aaa',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {trackedItems.length} items tracked
+        </span>
+        <button
+          onClick={() => router.push('/scan')}
+          style={{
+            background: '#f4f3fe',
+            borderRadius: 6,
+            padding: '3px 8px',
+            fontSize: 11,
+            color: '#534AB7',
+            fontWeight: 500,
+            cursor: 'pointer',
+            border: 'none',
+          }}
+        >
+          + Track new
+        </button>
+      </div>
+
+      {/* 3. ITEM LIST CARD */}
+      <div
+        style={{
+          background: 'white',
+          border: '0.5px solid #ebebeb',
+          borderRadius: 12,
+          marginLeft: 16,
+          marginRight: 16,
+          marginTop: 8,
+          overflow: 'hidden',
+        }}
+      >
+        {trackedItems.map((item, index) => {
+          const latestCheck = latestChecks.get(item.id) ?? null
+          const isSelected = selectedItem?.id === item.id
+          const isLast = index === trackedItems.length - 1
+
+          // vs-low calculation
+          let vsLowEl: React.ReactNode = <span style={{ color: '#ccc' }}>—</span>
+          if (latestCheck !== null && item.min_observed_price !== null) {
+            const diff = latestCheck.price - item.min_observed_price
+            if (diff > 0.005) {
+              vsLowEl = (
+                <span style={{ color: '#D85A30' }}>+${diff.toFixed(2)} vs low</span>
+              )
+            } else {
+              vsLowEl = (
+                <span style={{ color: '#1D9E75' }}>At low ✓</span>
+              )
+            }
+          }
+
+          // Relative time
+          const relTime = latestCheck?.checked_at
+            ? formatRelativeDate(latestCheck.checked_at)
+            : item.last_checked_at
+            ? formatRelativeDate(item.last_checked_at)
+            : null
+
+          return (
+            <div
+              key={item.id}
+              onClick={() => handleSelectItem(item)}
+              style={{
+                padding: '10px 12px',
+                borderBottom: isLast ? 'none' : '0.5px solid #f5f5f5',
+                borderLeft: isSelected ? '2px solid #534AB7' : '2px solid transparent',
+                background: isSelected ? '#fafafa' : 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+              }}
+            >
+              {/* Left side */}
+              <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: '#111',
+                    margin: 0,
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 1,
+                    WebkitBoxOrient: 'vertical',
+                  }}
+                >
+                  {item.title}
+                </p>
+                <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0 0' }}>
+                  {latestCheck
+                    ? `${formatCurrency(latestCheck.price)} · ${latestCheck.retailer_domain ?? '—'}`
+                    : 'Not checked yet'}
+                </p>
+              </div>
+
+              {/* Right side */}
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <p style={{ fontSize: 11, fontWeight: 500, margin: 0 }}>
+                  {vsLowEl}
+                </p>
+                {relTime && (
+                  <p style={{ fontSize: 10, color: '#ccc', margin: '2px 0 0 0' }}>
+                    {relTime}
+                  </p>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 4. Bottom spacer */}
+      <div style={{ height: 100 }} />
     </div>
   )
 }

@@ -331,7 +331,7 @@ export default async function HomePage() {
           <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             RECENT SCANS
           </p>
-          <Link href="/history" style={{ fontSize: '11px', color: '#534AB7' }}>
+          <Link href="/scan" style={{ fontSize: '11px', color: '#534AB7' }}>
             See all
           </Link>
         </div>
