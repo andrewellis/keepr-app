@@ -773,7 +773,7 @@ export default function ScanClient() {
         </div>
       )}
 
-      {scanState === 'result' && scanResult && (
+      {scanState === 'result' && scanResult && !isResuming && (
         <div className="space-y-4">
 
           {/* Pill button at top of results */}
