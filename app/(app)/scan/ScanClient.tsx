@@ -13,6 +13,7 @@ import { getUserCardsWithRates } from '@/lib/cards/actions'
 import { getBestCardRecommendation } from '@/lib/cards/recommender'
 import { getCardCategory } from '@/lib/cards/categoryMap'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useScanSaved } from '@/lib/scan-saved-context'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -147,6 +148,7 @@ function formatRelativeTime(dateStr: string): string {
 export default function ScanClient() {
   const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
   const searchParams = useSearchParams()
+  const { notifyScanSaved } = useScanSaved()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [scanState, setScanState] = useState<ScanState>('idle')
@@ -220,6 +222,8 @@ export default function ScanClient() {
     if (!resumeId) return
     resumeHandledRef.current = true
 
+    let isMounted = true
+
     const supabase = createClient()
     supabase
       .from('scan_history')
@@ -227,12 +231,17 @@ export default function ScanClient() {
       .eq('id', resumeId)
       .single()
       .then(({ data }: { data: SearchHistoryEntry | null }) => {
+        if (!isMounted) return
         console.log('[RESUME DEBUG] fetched row:', JSON.stringify(data, null, 2))
         if (data && data.results_payload) {
           handleLoadHistoryEntry(data)
         }
         window.history.replaceState({}, '', '/scan')
       })
+
+    return () => {
+      isMounted = false
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -376,6 +385,7 @@ export default function ScanClient() {
 
       // Save to search history (fire-and-forget)
       saveToHistory(result, matchData)
+      notifyScanSaved()
     } catch {
       setStoreState('error')
     }

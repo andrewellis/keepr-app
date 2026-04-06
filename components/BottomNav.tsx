@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useScanSaved } from '@/lib/scan-saved-context'
 
 const navItems = [
   { label: 'Home', href: '/home' },
@@ -35,6 +36,7 @@ export default function SideDrawer() {
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const openRef = useRef(open)
+  const { subscribe } = useScanSaved()
 
   useEffect(() => {
     openRef.current = open
@@ -64,12 +66,8 @@ export default function SideDrawer() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!open || fetchedRef.current) return
-    fetchedRef.current = true
-
+  function fetchRecentSearches() {
     const supabase = createClient()
-
     setLoadingRecent(true)
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
@@ -91,7 +89,15 @@ export default function SideDrawer() {
           setLoadingRecent(false)
         })
     })
+  }
 
+  useEffect(() => {
+    if (!open || fetchedRef.current) return
+    fetchedRef.current = true
+
+    fetchRecentSearches()
+
+    const supabase = createClient()
     setLoadingTracked(true)
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { setLoadingTracked(false); return }
@@ -108,6 +114,16 @@ export default function SideDrawer() {
         })
     })
   }, [open])
+
+  // Re-fetch recent searches whenever a new scan is saved
+  useEffect(() => {
+    const unsubscribe = subscribe(() => {
+      fetchedRef.current = false
+      fetchRecentSearches()
+    })
+    return unsubscribe
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscribe])
 
   function navigate(href: string) {
     setOpen(false)
