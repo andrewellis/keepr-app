@@ -292,6 +292,7 @@ export default function TrackingPage() {
         height: 'calc(100vh - 56px)',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
       {/* PINNED SECTION */}
