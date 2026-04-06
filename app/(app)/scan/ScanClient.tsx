@@ -186,8 +186,6 @@ export default function ScanClient() {
   // Search history state
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
-  const resumeHandledRef = useRef(false)
-
   // Load search history on mount (only for logged-in users)
   const loadSearchHistory = useCallback(async () => {
     try {
@@ -217,12 +215,15 @@ export default function ScanClient() {
   }, [loadSearchHistory])
 
   useEffect(() => {
-    if (resumeHandledRef.current) return
     const resumeId = searchParams.get('resume')
     if (!resumeId) return
-    resumeHandledRef.current = true
 
     let isMounted = true
+
+    setDisplayedSerpResults([])
+    setMatchResult(null)
+    setProducts([])
+    setShoppingResults([])
 
     const supabase = createClient()
     supabase
@@ -243,7 +244,7 @@ export default function ScanClient() {
       isMounted = false
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [searchParams.get('resume')])
 
   // Save to search history after successful match results
   const saveToHistory = useCallback(async (
