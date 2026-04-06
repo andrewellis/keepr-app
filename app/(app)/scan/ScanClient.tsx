@@ -125,6 +125,13 @@ function getPriceRange(category: string | null): string {
   return PRICE_RANGES[category] ?? PRICE_RANGES['Other']
 }
 
+function cleanDomain(raw: string): string {
+  return raw
+    .replace(/^www\./i, '')
+    .replace(/\.(com|co\.uk|org|net|co)$/i, '')
+    .replace(/^./, c => c.toUpperCase())
+}
+
 function extractAsinFromUrl(url: string): string | null {
   const match = url.match(/\/dp\/([A-Z0-9]{10})/)
   return match ? match[1] : null
@@ -571,29 +578,18 @@ export default function ScanClient() {
     setScanState('result')
   }
 
-  // Pill-shaped "Scan New Product" button used above results
-  function ScanNewProductButton() {
-    return (
-      <div className="flex justify-center mb-4">
-        <button
-          onClick={handleReset}
-          className="flex items-center gap-2 rounded-full text-white text-sm font-medium shadow-sm transition active:scale-95"
-          style={{
-            backgroundColor: '#534AB7',
-            paddingTop: 10,
-            paddingBottom: 10,
-            paddingLeft: 20,
-            paddingRight: 20,
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#7F77DD' }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#534AB7' }}
-        >
-          <Camera size={16} />
-          Scan New Product
-        </button>
-      </div>
-    )
-  }
+  // Auto-fetch best card when results are ready
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (storeState !== 'done') return
+    const allResults = [...displayedSerpResults].filter(r => r.price !== null).sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+    if (allResults.length === 0) return
+    const cheapest = allResults[0]
+    const id = `${cheapest.engine}-${cheapest.url}`
+    if (id in bestCardByResultId || bestCardLoadingIds.has(id)) return
+    handleBestCard(cheapest, id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeState, displayedSerpResults])
 
   return (
     <div className="bg-background px-5 pt-12 pb-24">
@@ -603,9 +599,9 @@ export default function ScanClient() {
         </div>
       )}
 
-      {!isResuming && (
+      {!isResuming && scanState !== 'result' && (
         <h1 className="text-2xl font-bold text-foreground mb-6">
-          {scanState === 'processing' ? 'Identifying...' : scanState === 'result' ? 'K33pr Results' : 'Scan Product'}
+          {scanState === 'processing' ? 'Identifying...' : 'Scan Product'}
         </h1>
       )}
 
@@ -773,15 +769,21 @@ export default function ScanClient() {
       {scanState === 'result' && scanResult && !isResuming && (
         <div className="space-y-3">
 
-          {/* 1. SCAN NEW PRODUCT BUTTON */}
-          <ScanNewProductButton />
-
-          {/* 2. PRODUCT HEADER */}
-          <div>
-            <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', lineHeight: 1.3 }}>{scanResult.productName}</p>
-            <p style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
-              {scanResult.category ?? 'Product'} · typical {getPriceRange(scanResult.category)}
-            </p>
+          {/* Product header row with scan-new button */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', lineHeight: 1.3 }}>{scanResult.productName}</p>
+              <p style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
+                {scanResult.category ?? 'Product'} · typical {getPriceRange(scanResult.category)}
+              </p>
+            </div>
+            <button
+              onClick={handleReset}
+              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: '#534AB7' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4" fill="white"/></svg>
+            </button>
           </div>
 
           {/* 3. LOADING STATE */}
@@ -832,6 +834,15 @@ export default function ScanClient() {
             const bestSerpItem = !best.isShopping ? (best.item as SerpResult) : null
             const bestId = bestSerpItem ? `${bestSerpItem.engine}-${bestSerpItem.url}` : null
 
+            const bestDomain = best.domain.replace(/^www\./i, '')
+            const bestCardKey = bestId ?? `shopping-${best.url}`
+            const bestCardData = bestCardByResultId[bestCardKey] ?? null
+            const cardRate = bestCardData?.rate ?? 0
+            const cardSavings = best.price * (cardRate / 100)
+            const netCost = best.price - cardSavings
+            const netCostFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netCost)
+            const cardSavingsFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cardSavings)
+
             return (
               <>
                 {/* ─── BEST VERIFIED PRICE CARD ─── */}
@@ -842,8 +853,20 @@ export default function ScanClient() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
                     </div>
                     <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1 }}>{best.priceFormatted}</p>
+                    {cardRate > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1" style={{ marginTop: '4px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: 500, color: '#1D9E75' }}>{netCostFormatted} net</span>
+                          <span style={{ fontSize: '9px', backgroundColor: '#E1F5EE', color: '#085041', borderRadius: '3px', padding: '1px 5px' }}>after card savings</span>
+                        </div>
+                        <div className="flex items-center justify-between" style={{ backgroundColor: '#f8f8f8', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', color: '#888' }}>{bestCardData!.cardName} ({cardRate}%)</span>
+                          <span style={{ fontSize: '11px', fontWeight: 500, color: '#1D9E75' }}>−{cardSavingsFormatted}</span>
+                        </div>
+                      </div>
+                    )}
                     <p style={{ fontSize: '12px', color: '#aaa', marginTop: '6px' }}>
-                      {best.domain.replace(/^www\./i, '')}
+                      {cleanDomain(best.domain)}
                       {bestSerpItem?.delivery && bestSerpItem.delivery.length > 0 ? ` · ${bestSerpItem.delivery[0]}` : ''}
                     </p>
                   </div>
@@ -864,7 +887,7 @@ export default function ScanClient() {
                     </div>
                     <div className="flex-1" style={{ padding: '8px 6px' }}>
                       <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>net cost</p>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{best.priceFormatted}</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{cardRate > 0 ? netCostFormatted : best.priceFormatted}</p>
                     </div>
                   </div>
                 </div>
@@ -883,9 +906,9 @@ export default function ScanClient() {
                       </button>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => { if (isAggressiveEligible(bestSerpItem)) handleTrack(bestSerpItem, true) }}
-                          disabled={!isAggressiveEligible(bestSerpItem) || trackingInProgress.has(bestId)}
-                          className="flex-1 rounded-xl py-3 text-sm text-center border"
+                          onClick={() => { if (bestSerpItem && isAggressiveEligible(bestSerpItem)) handleTrack(bestSerpItem, true) }}
+                          disabled={!bestSerpItem || !isAggressiveEligible(bestSerpItem) || (bestId ? trackingInProgress.has(bestId) : false)}
+                          className="flex-1 rounded-xl py-3 text-sm text-center border disabled:opacity-40"
                           style={{ color: '#555', borderColor: '#e0e0e0' }}
                         >
                           Aggressively track
@@ -935,10 +958,24 @@ export default function ScanClient() {
                           borderBottom: idx < rest.length - 1 ? '0.5px solid #f5f5f5' : 'none',
                         }}
                       >
-                        <span style={{ fontSize: '13px', color: '#555' }}>{r.domain.replace(/^www\./i, '')}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>{r.priceFormatted}</span>
+                        <span style={{ fontSize: '13px', color: '#555' }}>{r.domain.replace(/^www\./i, '').replace(/\.(com|co\.uk|org|net|co)$/i, '').replace(/^./, c => c.toUpperCase())}</span>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: idx === 0 ? '#534AB7' : '#111' }}>
+                          {r.priceFormatted}{idx === 0 ? ' ✓' : ''}
+                        </span>
                       </a>
                     ))}
+                    {(() => {
+                      const totalAll = shoppingResults.length + displayedSerpResults.length
+                      const shown = 1 + rest.length
+                      const filtered = totalAll - shown
+                      if (filtered <= 0) return null
+                      return (
+                        <div className="flex items-center justify-between" style={{ padding: '10px 14px', borderTop: '0.5px solid #f5f5f5' }}>
+                          <span style={{ fontSize: '13px', color: '#aaa' }}>{filtered} filtered</span>
+                          <span style={{ fontSize: '13px', color: '#534AB7', fontWeight: 500 }}>Show</span>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
 
