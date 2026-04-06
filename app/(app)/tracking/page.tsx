@@ -108,7 +108,7 @@ export default function TrackingPage() {
         const res = await fetch(`/api/keepa/product?asin=${encodeURIComponent(item.asin)}`)
         if (res.ok) {
           const data = await res.json()
-          const history: { price: number; timestamp: number }[] = data.priceHistory90Days ?? []
+          const history: { price: number; timestamp: number }[] = (data.data ?? data).priceHistory90Days ?? []
           const mapped = history.map((entry) => ({
             date: new Date(entry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             price: entry.price,
