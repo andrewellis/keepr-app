@@ -107,25 +107,14 @@ export default function TrackingPage() {
         // Fetch from Keepa
         const res = await fetch(`/api/keepa/product?asin=${encodeURIComponent(item.asin)}`)
         if (res.ok) {
-          const json = await res.json()
-          const csvArray: number[] | undefined = json?.data?.csv?.[0]
-          if (csvArray && csvArray.length >= 2) {
-            const points: ChartPoint[] = []
-            for (let i = 0; i < csvArray.length - 1; i += 2) {
-              const keepaTime = csvArray[i]
-              const priceInCents = csvArray[i + 1]
-              if (priceInCents === -1) continue
-              const jsDate = new Date((keepaTime + 21564000) * 60000)
-              points.push({
-                date: jsDate.toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                }),
-                price: priceInCents / 100,
-              })
-            }
-            setChartData(points)
+          const data = await res.json()
+          const history: { price: number; timestamp: number }[] = data.priceHistory90Days ?? []
+          const mapped = history.map((entry) => ({
+            date: new Date(entry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            price: entry.price,
+          }))
+          if (mapped.length > 0) {
+            setChartData(mapped)
             setChartLoading(false)
             return
           }
