@@ -227,6 +227,7 @@ export default function ScanClient() {
       .eq('id', resumeId)
       .single()
       .then(({ data }: { data: SearchHistoryEntry | null }) => {
+        console.log('[RESUME DEBUG] fetched row:', JSON.stringify(data, null, 2))
         if (data && data.results_payload) {
           handleLoadHistoryEntry(data)
         }
@@ -551,6 +552,8 @@ export default function ScanClient() {
     setPreviewUrl(null)
     setProducts(matchResults.results ?? [])
     setShoppingResults(matchResults.shoppingResults ?? [])
+    setDisplayedSerpResults(matchResults.serpResults ?? [])
+    setMatchResult(matchResults)
     setStoreState('done')
     setScanState('result')
   }
