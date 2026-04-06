@@ -21,7 +21,7 @@ export default function ScanBar() {
   }, [])
 
   return (
-    <div style={{ position: 'fixed', bottom: '72px', left: 0, right: 0, padding: '0 20px', zIndex: 40 }}>
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '0 20px', paddingBottom: 'env(safe-area-inset-bottom, 8px)', zIndex: 40, backgroundColor: '#f8f8f8', borderTop: '0.5px solid #e8e8e8', paddingTop: '8px' }}>
       <div className="flex items-center gap-3 bg-white border border-border rounded-2xl px-4 py-3">
         <input
           type="text"

@@ -9,6 +9,7 @@ type StoredPayload = {
   serpResults?: { price: number | null; retailerDomain: string | null }[]
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getBestPrice(payload: unknown): { price: string; source: string } | null {
   const p = payload as StoredPayload
   if (p?.shoppingResults && p.shoppingResults.length > 0) {
@@ -28,6 +29,36 @@ function getBestPrice(payload: unknown): { price: string; source: string } | nul
     }
   }
   return null
+}
+
+function getTopResults(payload: unknown): { price: string; source: string; priceNum: number }[] {
+  const p = payload as StoredPayload
+  const results: { price: string; source: string; priceNum: number }[] = []
+  if (p?.shoppingResults) {
+    for (const r of p.shoppingResults) {
+      results.push({ price: r.price, source: r.merchant, priceNum: r.priceValue })
+    }
+  }
+  if (p?.serpResults) {
+    for (const r of p.serpResults) {
+      if (r.price !== null) {
+        results.push({
+          price: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(r.price),
+          source: r.retailerDomain ?? '',
+          priceNum: r.price,
+        })
+      }
+    }
+  }
+  results.sort((a, b) => a.priceNum - b.priceNum)
+  return results.slice(0, 3)
+}
+
+function cleanDomain(raw: string): string {
+  return raw
+    .replace(/^www\./i, '')
+    .replace(/\.(com|co\.uk|org|net|co)$/i, '')
+    .replace(/^./, c => c.toUpperCase())
 }
 
 function relativeTime(dateStr: string): string {
@@ -311,44 +342,32 @@ export default async function HomePage() {
           </div>
         ) : (
           recentScans.map((scan, i) => {
-            const best = getBestPrice(scan.results_payload)
+            const topResults = getTopResults(scan.results_payload)
             const isLast = i === recentScans.length - 1
             return (
-              <div
-                key={scan.id}
-                className="flex items-center gap-2 px-3"
-                style={{
-                  paddingTop: '10px',
-                  paddingBottom: '10px',
-                  borderBottom: isLast ? 'none' : '1px solid var(--border)',
-                }}
-              >
-                {/* Dot */}
-                <div
-                  className="flex-shrink-0"
-                  style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: '#534AB7' }}
-                />
-                {/* Middle */}
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="truncate"
-                    style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}
-                  >
+              <div key={scan.id} style={{ borderBottom: isLast ? 'none' : '0.5px solid #f0f0f0' }}>
+                <div className="flex items-center gap-2 px-3" style={{ paddingTop: '10px', paddingBottom: topResults.length > 0 ? '4px' : '10px' }}>
+                  <div className="flex-shrink-0" style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: '#534AB7' }} />
+                  <p className="flex-1 min-w-0 truncate" style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>
                     {scan.product_name}
                   </p>
-                  <p className="truncate" style={{ fontSize: '13px', color: '#555' }}>
-                    {best ? best.source : ''}
-                  </p>
-                </div>
-                {/* Right: price + timestamp */}
-                <div className="flex-shrink-0 text-right flex flex-col items-end gap-0.5">
-                  <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>
-                    {best ? best.price : ''}
-                  </p>
-                  <p style={{ fontSize: '10px', color: '#ccc' }}>
+                  <p className="flex-shrink-0" style={{ fontSize: '10px', color: '#ccc' }}>
                     {relativeTime(scan.created_at)}
                   </p>
                 </div>
+                {topResults.length > 0 && (
+                  <div style={{ paddingLeft: '22px', paddingRight: '12px', paddingBottom: '8px' }}>
+                    {topResults.map((r, j) => (
+                      <div key={j} className="flex items-center justify-between" style={{ paddingTop: '3px', paddingBottom: '3px', borderBottom: j < topResults.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
+                        <span style={{ fontSize: '12px', color: '#aaa' }}>{cleanDomain(r.source)}</span>
+                        <div className="flex items-center gap-1">
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#111' }}>{r.price}</span>
+                          {j === 0 && <span style={{ fontSize: '10px', backgroundColor: '#534AB7', color: '#fff', borderRadius: '2px', padding: '1px 4px' }}>Best</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })
@@ -356,7 +375,7 @@ export default async function HomePage() {
       </div>
 
       {/* Bottom scan bar */}
-      <div style={{ height: '80px' }} />
+      <div style={{ height: '100px' }} />
       <ScanBar />
     </div>
   )
