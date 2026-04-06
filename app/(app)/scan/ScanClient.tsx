@@ -915,7 +915,7 @@ export default function ScanClient() {
                             return (
                               <button
                                 onClick={() => setShowHeroChart(prev => !prev)}
-                                style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '11px', color: '#534AB7', fontWeight: 500 }}
+                                style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '11px', color: '#534AB7', fontWeight: 600 }}
                               >
                                 {showHeroChart ? 'Hide chart' : 'Price history'}
                               </button>
