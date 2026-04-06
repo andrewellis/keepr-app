@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
@@ -770,412 +771,186 @@ export default function ScanClient() {
       )}
 
       {scanState === 'result' && scanResult && !isResuming && (
-        <div className="space-y-4">
+        <div className="space-y-3">
 
-          {/* Pill button at top of results */}
+          {/* 1. SCAN NEW PRODUCT BUTTON */}
           <ScanNewProductButton />
 
-          {/* Product identification card — always visible */}
-          <div className="bg-surface border border-border rounded-2xl p-4 space-y-3">
-            {/* Top row: image + product info */}
-            <div className="flex items-center gap-4">
-              {previewUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewUrl}
-                  alt={scanResult.productName || 'Product'}
-                  className="w-[120px] h-[120px] rounded-xl object-cover flex-shrink-0"
-                />
-              )}
-              <div>
-                <p className="text-base font-bold text-foreground">{scanResult.productName}</p>
-                {scanResult.category && (
-                  <p className="text-sm text-foreground-secondary mt-1">{scanResult.category}</p>
-                )}
-                <p className="text-xs text-foreground-secondary mt-2">Identified by K33pr</p>
-                <p className="text-xs text-foreground-secondary mt-1">
-                  Typical price range: {getPriceRange(scanResult.category)}
-                </p>
-              </div>
-            </div>
-
+          {/* 2. PRODUCT HEADER */}
+          <div>
+            <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', lineHeight: 1.3 }}>{scanResult.productName}</p>
+            <p style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
+              {scanResult.category ?? 'Product'} · typical {getPriceRange(scanResult.category)}
+            </p>
           </div>
 
-          {/* Retailer engagement banner */}
-          {matchResult?.retailerContext && matchResult?.engagementMessage && (
-            <RetailerEngagementBanner
-              retailerContext={matchResult.retailerContext}
-              engagementMessage={matchResult.engagementMessage}
-            />
-          )}
-
-          {/* Loading indicator while fetching prices */}
+          {/* 3. LOADING STATE */}
           {storeState === 'loading' && (
             <p className="text-[14px] text-center" style={{ color: '#666666' }}>Finding best prices...</p>
           )}
 
+          {/* 4. NO RESULTS STATE */}
           {storeState === 'done' && products.length === 0 && (
             <p className="text-sm text-center text-foreground-secondary">
               No matching products found{scanResult?.productName ? ` for ${scanResult.productName}` : ''}.
             </p>
           )}
 
-          {storeState === 'done' && products.length > 0 && (
-            <div className="space-y-3">
+          {/* 5. RESULTS BODY */}
+          {storeState === 'done' && (shoppingResults.length > 0 || displayedSerpResults.length > 0) && (() => {
+            const allPriced: { price: number; priceFormatted: string; domain: string; url: string; isShopping: boolean; item: ShoppingResult | SerpResult }[] = []
 
-              {/* Price Check section — informational only, no affiliate links or Click IDs */}
-              {shoppingResults.length > 0 && (
+            for (const s of shoppingResults) {
+              allPriced.push({
+                price: s.priceValue,
+                priceFormatted: s.price,
+                domain: s.merchant,
+                url: s.productUrl,
+                isShopping: true,
+                item: s,
+              })
+            }
+            for (const s of displayedSerpResults) {
+              if (s.price !== null) {
+                allPriced.push({
+                  price: s.price,
+                  priceFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(s.price),
+                  domain: s.retailerDomain ?? '',
+                  url: s.url,
+                  isShopping: false,
+                  item: s,
+                })
+              }
+            }
+            allPriced.sort((a, b) => a.price - b.price)
+
+            const best = allPriced[0]
+            if (!best) return null
+            const rest = allPriced.slice(1)
+            const totalSearched = shoppingResults.length + displayedSerpResults.length
+
+            const bestSerpItem = !best.isShopping ? (best.item as SerpResult) : null
+            const bestId = bestSerpItem ? `${bestSerpItem.engine}-${bestSerpItem.url}` : null
+
+            return (
+              <>
+                {/* ─── BEST VERIFIED PRICE CARD ─── */}
+                <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
+                  <div style={{ padding: '14px 14px 10px' }}>
+                    <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
+                      <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Best verified price</p>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                    </div>
+                    <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1 }}>{best.priceFormatted}</p>
+                    <p style={{ fontSize: '12px', color: '#aaa', marginTop: '6px' }}>
+                      {best.domain.replace(/^www\./i, '')}
+                      {bestSerpItem?.delivery && bestSerpItem.delivery.length > 0 ? ` · ${bestSerpItem.delivery[0]}` : ''}
+                    </p>
+                  </div>
+
+                  {/* Stat bar */}
+                  <div className="flex" style={{ borderTop: '0.5px solid #f0f0f0' }}>
+                    <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>90-day low</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
+                    </div>
+                    <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>vs low</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
+                    </div>
+                    <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>searched</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#534AB7' }}>{totalSearched}</p>
+                    </div>
+                    <div className="flex-1" style={{ padding: '8px 6px' }}>
+                      <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>net cost</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{best.priceFormatted}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── ACTION BUTTONS ─── */}
                 <div>
-                  {/* Section header */}
-                  <p className="text-base font-semibold mb-0.5" style={{ color: '#1a1a1a' }}>Price Check</p>
-                  <p className="text-[13px] mb-3" style={{ color: '#666666' }}>
-                    Prices from Google Shopping. May not reflect current retailer pricing.
-                  </p>
-
-                  {/* Shopping result cards */}
-                  <div className="space-y-2">
-                    {shoppingResults.slice().sort((a, b) => a.priceValue - b.priceValue).map((item, idx) => (
+                  {bestSerpItem && bestId && !trackedIds.has(bestId) && (
+                    <>
+                      <button
+                        onClick={() => handleTrack(bestSerpItem, false)}
+                        disabled={trackingInProgress.has(bestId)}
+                        className="w-full rounded-xl py-3 text-sm font-medium text-white"
+                        style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
+                      >
+                        {trackingInProgress.has(bestId) ? 'Adding...' : 'Track price'}
+                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { if (isAggressiveEligible(bestSerpItem)) handleTrack(bestSerpItem, true) }}
+                          disabled={!isAggressiveEligible(bestSerpItem) || trackingInProgress.has(bestId)}
+                          className="flex-1 rounded-xl py-3 text-sm text-center border"
+                          style={{ color: '#555', borderColor: '#e0e0e0' }}
+                        >
+                          Aggressively track
+                        </button>
+                        <a
+                          href={bestSerpItem.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 rounded-xl py-3 text-sm text-center border no-underline"
+                          style={{ color: '#555', borderColor: '#e0e0e0' }}
+                        >
+                          Buy ↗
+                        </a>
+                      </div>
+                    </>
+                  )}
+                  {bestId && trackedIds.has(bestId) && (
+                    <div className="text-center text-sm font-medium" style={{ color: '#1D9E75' }}>Tracked ✓</div>
+                  )}
+                  {best.isShopping && (
+                    <>
                       <a
-                        key={idx}
-                        href={item.productUrl}
+                        href={(best.item as ShoppingResult).productUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 rounded-2xl p-3 border no-underline"
-                        style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
+                        className="block w-full rounded-xl py-3 text-sm font-medium text-white text-center no-underline"
+                        style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
                       >
-                        {/* Thumbnail */}
-                        <div
-                          className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
-                          style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={item.imageUrl}
-                            alt={item.title}
-                            style={{ width: 80, height: 80, objectFit: 'contain' }}
-                          />
-                        </div>
+                        View Deal ↗
+                      </a>
+                    </>
+                  )}
+                </div>
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className="text-[14px] leading-snug font-normal overflow-hidden"
-                            style={{
-                              color: '#1a1a1a',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                            }}
-                          >
-                            {item.title}
-                          </p>
-                          <p className="text-[18px] font-semibold mt-1" style={{ color: '#1a1a1a' }}>
-                            {item.price}
-                          </p>
-                          {item.merchant && (
-                            <p className="text-[13px]" style={{ color: '#666666' }}>
-                              from {item.merchant}
-                            </p>
-                          )}
-                          {item.rating !== null && (
-                            <p className="text-[13px]" style={{ color: '#666666' }}>
-                              {item.rating} ★{item.reviews !== null ? ` (${item.reviews.toLocaleString()})` : ''}
-                            </p>
-                          )}
-                        </div>
+                {/* ─── FLAT PRICE LIST ─── */}
+                {rest.length > 0 && (
+                  <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
+                    {rest.map((r, idx) => (
+                      <a
+                        key={idx}
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between no-underline"
+                        style={{
+                          padding: '10px 14px',
+                          borderBottom: idx < rest.length - 1 ? '0.5px solid #f5f5f5' : 'none',
+                        }}
+                      >
+                        <span style={{ fontSize: '13px', color: '#555' }}>{r.domain.replace(/^www\./i, '')}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>{r.priceFormatted}</span>
                       </a>
                     ))}
                   </div>
+                )}
 
-                  {/* Disclaimer */}
-                  <p className="text-[12px] mt-3" style={{ color: '#666666' }}>
-                    Prices shown are from Google Shopping and may change. Tap a link below to earn cashback on your purchase.
-                  </p>
-                </div>
-              )}
+                {/* Affiliate disclosure */}
+                <p className="text-xs text-center text-foreground-secondary">
+                  K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
+                </p>
+              </>
+            )
+          })()}
 
-              {/* SERP Results section */}
-              {displayedSerpResults.length > 0 && (
-                <div>
-                  <p className="text-base font-semibold mb-0.5" style={{ color: '#1a1a1a' }}>More Prices</p>
-                  <p className="text-[13px] mb-3" style={{ color: '#666666' }}>
-                    Prices from across the web. May not reflect current retailer pricing.
-                  </p>
-                  <div className="space-y-2">
-                    {displayedSerpResults.slice().sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).map((item, idx) => {
-                      const id = `${item.engine}-${item.url}`
-                      const isExpanded = expandedResultId === id
-                      return (
-                        <div
-                          key={idx}
-                          className="relative rounded-2xl border overflow-hidden"
-                          style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
-                        >
-                          {/* Tappable card content */}
-                          <div
-                            className="flex items-center gap-3 p-3 cursor-pointer"
-                            onClick={() => setExpandedResultId(isExpanded ? null : id)}
-                          >
-                            {/* Thumbnail */}
-                            <div
-                              className="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
-                              style={{ width: 80, height: 80, backgroundColor: '#ffffff', border: '1px solid #E5E5E3' }}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={item.thumbnail}
-                                alt={item.title}
-                                style={{ width: 80, height: 80, objectFit: 'contain' }}
-                              />
-                            </div>
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <p
-                                className="text-[14px] leading-snug font-normal overflow-hidden"
-                                style={{
-                                  color: '#1a1a1a',
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                }}
-                              >
-                                {item.title}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                {item.price !== null && (
-                                  <p className="text-[18px] font-semibold" style={{ color: '#1a1a1a' }}>
-                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}
-                                  </p>
-                                )}
-                                {item.retailerDomain === 'amazon.com' && item.in_stock === true && (
-                                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
-                                    In Stock
-                                  </span>
-                                )}
-                                {item.retailerDomain === 'amazon.com' && item.in_stock === false && (
-                                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                                    Out of Stock
-                                  </span>
-                                )}
-                              </div>
-                              {item.retailerDomain && (
-                                <p className="text-[13px]" style={{ color: '#666666' }}>
-                                  {item.retailerDomain}
-                                </p>
-                              )}
-                              {item.retailerDomain === 'amazon.com' && item.delivery && item.delivery.length > 0 && (
-                                <p className="text-xs mt-0.5" style={{ color: '#666666' }}>
-                                  {item.delivery[0]}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Expanded action panel */}
-                          {isExpanded && (
-                            <div className="border-t border-gray-100 px-4 py-3 flex flex-col gap-2">
-                              {/* Keepa price history section */}
-                              {(() => {
-                                const asin = extractAsinFromUrl(item.url)
-                                if (!asin) return null
-                                if (item.engine !== 'amazon' && item.retailerDomain !== 'amazon.com') return null
-
-                                const isLoading = keepaLoadingAsins.has(asin)
-                                const isRequested = keepaRequestedAsins.has(asin)
-                                const kd = keepaDataByAsin[asin]
-
-                                return (
-                                  <div className="border-t border-gray-100 pt-3 pb-1">
-                                    {!isRequested && (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); fetchKeepaData(asin) }}
-                                        className="w-full rounded-md border border-indigo-200 px-4 py-2 text-sm font-medium text-[#534AB7] hover:bg-indigo-50 transition-colors"
-                                      >
-                                        View Price History
-                                      </button>
-                                    )}
-
-                                    {isRequested && isLoading && (
-                                      <div className="py-3 text-center text-xs text-gray-400">Loading price history...</div>
-                                    )}
-
-                                    {isRequested && !isLoading && kd === null && (
-                                      <div className="py-2 text-center text-xs text-gray-400">Price history unavailable for this product.</div>
-                                    )}
-
-                                    {isRequested && !isLoading && kd !== null && (() => {
-                                      const chartData = kd.priceHistory90Days.map(p => ({
-                                        date: new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                                        price: p.price,
-                                      }))
-
-                                      return (
-                                        <div>
-                                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price History (90 days)</p>
-
-                                          {chartData.length > 1 && (
-                                            <ResponsiveContainer width="100%" height={120}>
-                                              <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                                <XAxis
-                                                  dataKey="date"
-                                                  tick={{ fontSize: 9, fill: '#9ca3af' }}
-                                                  tickLine={false}
-                                                  axisLine={false}
-                                                  interval="preserveStartEnd"
-                                                />
-                                                <YAxis
-                                                  tick={{ fontSize: 9, fill: '#9ca3af' }}
-                                                  tickLine={false}
-                                                  axisLine={false}
-                                                  tickFormatter={(v) => `$${v}`}
-                                                  domain={['auto', 'auto']}
-                                                />
-                                                <Tooltip
-                                                  formatter={(value) => {
-                                                    const num = typeof value === 'number' ? value : Number(value)
-                                                    return [`$${num.toFixed(2)}`, 'Price']
-                                                  }}
-                                                  labelStyle={{ fontSize: 10 }}
-                                                  contentStyle={{ fontSize: 10, borderRadius: 6 }}
-                                                />
-                                                <Line
-                                                  type="monotone"
-                                                  dataKey="price"
-                                                  stroke="#534AB7"
-                                                  strokeWidth={2}
-                                                  dot={false}
-                                                  activeDot={{ r: 3 }}
-                                                />
-                                              </LineChart>
-                                            </ResponsiveContainer>
-                                          )}
-
-                                          <div className="flex gap-3 mt-2 flex-wrap">
-                                            {kd.currentBuyBox !== null && (
-                                              <div className="text-center">
-                                                <p className="text-xs text-gray-400">Current</p>
-                                                <p className="text-sm font-semibold text-gray-900">${kd.currentBuyBox.toFixed(2)}</p>
-                                              </div>
-                                            )}
-                                            {kd.avg90 !== null && (
-                                              <div className="text-center">
-                                                <p className="text-xs text-gray-400">90-day avg</p>
-                                                <p className="text-sm font-semibold text-gray-900">${kd.avg90.toFixed(2)}</p>
-                                              </div>
-                                            )}
-                                            {kd.allTimeLow !== null && (
-                                              <div className="text-center">
-                                                <p className="text-xs text-gray-400">All-time low</p>
-                                                <p className="text-sm font-semibold text-gray-900">${kd.allTimeLow.toFixed(2)}</p>
-                                              </div>
-                                            )}
-                                            {kd.percentVsAvg90 !== null && (
-                                              <div className="text-center">
-                                                <p className="text-xs text-gray-400">vs 90-day avg</p>
-                                                <p className={`text-sm font-semibold ${kd.percentVsAvg90 <= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                  {kd.percentVsAvg90 <= 0 ? '↓' : '↑'} {Math.abs(kd.percentVsAvg90)}%
-                                                </p>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )
-                                    })()}
-                                  </div>
-                                )
-                              })()}
-
-                              {trackedIds.has(id) ? (
-                                <div className="text-center text-sm font-medium text-green-600">Tracked ✓</div>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleTrack(item, false) }}
-                                    disabled={trackingInProgress.has(id)}
-                                    className="w-full rounded-md bg-[#534AB7] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-                                  >
-                                    {trackingInProgress.has(id) ? 'Adding...' : 'Track Price'}
-                                  </button>
-
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); if (isAggressiveEligible(item)) { handleTrack(item, true) } }}
-                                    disabled={!isAggressiveEligible(item) || trackingInProgress.has(id)}
-                                    className={`w-full rounded-md px-4 py-2 text-sm font-medium ${
-                                      isAggressiveEligible(item)
-                                        ? 'bg-indigo-100 text-[#534AB7]'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    }`}
-                                  >
-                                    {isAggressiveEligible(item)
-                                      ? 'Aggressively Track'
-                                      : 'Available for items over $100 or electronics, appliances, gaming, or furniture'}
-                                  </button>
-
-                                  {bestCardLoadingIds.has(id) ? (
-                                    <div className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-500 text-center">
-                                      Finding best card...
-                                    </div>
-                                  ) : id in bestCardByResultId ? (
-                                    bestCardByResultId[id] ? (
-                                      <div className="rounded-md border border-indigo-100 bg-indigo-50 px-4 py-3">
-                                        <p className="text-xs text-gray-500">Best card for {item.retailerDomain}</p>
-                                        <p className="text-sm font-semibold text-gray-900">{bestCardByResultId[id]!.cardName}</p>
-                                        <p className="text-xs text-[#534AB7]">{bestCardByResultId[id]!.rate}% cashback</p>
-                                      </div>
-                                    ) : (
-                                      <div className="rounded-md border border-gray-200 px-4 py-3 text-sm text-gray-500">
-                                        No cards saved — add cards in Settings
-                                      </div>
-                                    )
-                                  ) : (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleBestCard(item, id) }}
-                                      className="w-full rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700"
-                                    >
-                                      Best Card
-                                    </button>
-                                  )}
-
-                                  <a
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="block w-full rounded-md border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700"
-                                  >
-                                    Buy ↗
-                                  </a>
-                                </>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Dismiss button */}
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              handleDismissSerpResult(item)
-                            }}
-                            className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: '#D1D1CF' }}
-                            aria-label="Dismiss result"
-                          >
-                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M1 1L9 9M9 1L1 9" stroke="#555" strokeWidth="1.5" strokeLinecap="round"/>
-                            </svg>
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-
-            </div>
-          )}
-
+          {/* 6. STORE ERROR STATE */}
           {storeState === 'error' && (
             <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
               <p className="text-sm font-semibold text-foreground">
@@ -1190,12 +965,6 @@ export default function ScanClient() {
                 Try Again
               </button>
             </div>
-          )}
-
-          {storeState === 'done' && products.length > 0 && (
-            <p className="text-xs text-center text-foreground-secondary">
-              K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
-            </p>
           )}
         </div>
       )}
