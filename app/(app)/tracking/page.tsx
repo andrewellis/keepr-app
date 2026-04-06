@@ -64,9 +64,17 @@ function formatRelativeDate(dateStr: string): string {
   return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`
 }
 
-function formatMonthYear(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+function cleanDomain(domain: string): string {
+  if (
+    domain.includes('google.shopping') ||
+    domain.includes('google_shopping') ||
+    domain.startsWith('google.')
+  ) {
+    return 'Google Shopping'
+  }
+  let d = domain.replace(/^www\./, '')
+  d = d.replace(/\.(com|co\.uk|org|net|co)$/, '')
+  return d.charAt(0).toUpperCase() + d.slice(1)
 }
 
 // Custom tooltip for the chart
@@ -278,286 +286,297 @@ export default function TrackingPage() {
   }
 
   return (
-    <div style={{ backgroundColor: '#f8f8f8', minHeight: '100vh', paddingBottom: 100 }}>
-
-      {/* 1. CHART CARD */}
-      <div
-        style={{
-          background: 'white',
-          border: '0.5px solid #ebebeb',
-          borderRadius: 12,
-          padding: '9px 10px',
-          marginLeft: 16,
-          marginRight: 16,
-          marginTop: 12,
-        }}
-      >
-        {selectedItem && (
-          <>
-            {/* Title */}
-            <p
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: '#111',
-                overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitLineClamp: 1,
-                WebkitBoxOrient: 'vertical',
-                margin: 0,
-              }}
-            >
-              {selectedItem.title}
-            </p>
-
-            {/* Price + delta row */}
-            {(() => {
-              const latestCheck = latestChecks.get(selectedItem.id) ?? null
-              const currentPrice = chartData.length > 0 ? chartData[chartData.length - 1].price : (latestCheck?.price ?? null)
-              const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : null
-
-              let deltaEl: React.ReactNode = null
-              if (chartData.length > 0 && currentPrice !== null && maxPrice !== null) {
-                if (currentPrice < maxPrice) {
-                  const diff = maxPrice - currentPrice
-                  deltaEl = (
-                    <span style={{ fontSize: 12, color: '#1D9E75', fontWeight: 500 }}>
-                      ↓ ${diff.toFixed(2)} from high
-                    </span>
-                  )
-                } else {
-                  deltaEl = (
-                    <span style={{ fontSize: 12, color: '#D85A30', fontWeight: 500 }}>
-                      At high
-                    </span>
-                  )
-                }
-              }
-
-              return (
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span style={{ fontSize: 20, fontWeight: 500, color: '#111' }}>
-                    {currentPrice !== null ? formatCurrency(currentPrice) : '—'}
-                  </span>
-                  {deltaEl}
-                </div>
-              )
-            })()}
-          </>
-        )}
-
-        {/* Chart area */}
-        {chartLoading ? (
-          <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: 12, color: '#aaa' }}>Loading chart…</p>
-          </div>
-        ) : chartData.length === 0 ? (
-          <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '0 16px' }}>
-              Price history will appear after the first weekly check
-            </p>
-          </div>
-        ) : (
-          <>
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart
-                data={chartData}
-                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+    <div
+      style={{
+        backgroundColor: '#f8f8f8',
+        height: 'calc(100vh - 56px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* PINNED SECTION */}
+      <div style={{ flexShrink: 0 }}>
+        {/* 1. CHART CARD */}
+        <div
+          style={{
+            background: 'white',
+            border: '0.5px solid #ebebeb',
+            borderRadius: 12,
+            padding: '9px 10px',
+            marginLeft: 16,
+            marginRight: 16,
+            marginTop: 12,
+          }}
+        >
+          {selectedItem && (
+            <>
+              {/* Title */}
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: '#111',
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 1,
+                  WebkitBoxOrient: 'vertical',
+                  margin: 0,
+                }}
               >
-                <defs>
-                  <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#534AB7" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#534AB7" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={formatMonthYear}
-                  tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-                  tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={55}
-                />
-                <Tooltip content={<ChartTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="price"
-                  stroke="#534AB7"
-                  strokeWidth={2}
-                  fill="url(#priceGradient)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: '#534AB7' }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+                {selectedItem.title}
+              </p>
 
-            {/* Stat pills */}
-            {(() => {
-              const prices = chartData.map(d => d.price)
-              const current = prices[prices.length - 1]
-              const low = Math.min(...prices)
-              const avg = prices.reduce((a, b) => a + b, 0) / prices.length
-              return (
-                <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
-                  <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
-                    <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>Current</p>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#111', margin: 0 }}>{formatCurrency(current)}</p>
+              {/* Price + delta row */}
+              {(() => {
+                const latestCheck = latestChecks.get(selectedItem.id) ?? null
+                const currentPrice = chartData.length > 0 ? chartData[chartData.length - 1].price : (latestCheck?.price ?? null)
+                const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : null
+
+                let deltaEl: React.ReactNode = null
+                if (chartData.length > 0 && currentPrice !== null && maxPrice !== null) {
+                  if (currentPrice < maxPrice) {
+                    const diff = maxPrice - currentPrice
+                    deltaEl = (
+                      <span style={{ fontSize: 12, color: '#1D9E75', fontWeight: 500 }}>
+                        ↓ ${diff.toFixed(2)} from high
+                      </span>
+                    )
+                  } else {
+                    deltaEl = (
+                      <span style={{ fontSize: 12, color: '#D85A30', fontWeight: 500 }}>
+                        At high
+                      </span>
+                    )
+                  }
+                }
+
+                return (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span style={{ fontSize: 20, fontWeight: 500, color: '#111' }}>
+                      {currentPrice !== null ? formatCurrency(currentPrice) : '—'}
+                    </span>
+                    {deltaEl}
                   </div>
-                  <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
-                    <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>90-day low</p>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#D85A30', margin: 0 }}>{formatCurrency(low)}</p>
-                  </div>
-                  <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
-                    <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>Avg</p>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#111', margin: 0 }}>{formatCurrency(avg)}</p>
-                  </div>
-                </div>
-              )
-            })()}
-          </>
-        )}
-      </div>
+                )
+              })()}
+            </>
+          )}
 
-      {/* 2. ITEM COUNT + TRACK NEW row */}
-      <div
-        style={{
-          marginLeft: 16,
-          marginRight: 16,
-          marginTop: 12,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <span
-          style={{
-            fontSize: 10,
-            color: '#aaa',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}
-        >
-          {trackedItems.length} items tracked
-        </span>
-        <button
-          onClick={() => router.push('/scan')}
-          style={{
-            background: '#f4f3fe',
-            borderRadius: 6,
-            padding: '3px 8px',
-            fontSize: 11,
-            color: '#534AB7',
-            fontWeight: 500,
-            cursor: 'pointer',
-            border: 'none',
-          }}
-        >
-          + Track new
-        </button>
-      </div>
-
-      {/* 3. ITEM LIST CARD */}
-      <div
-        style={{
-          background: 'white',
-          border: '0.5px solid #ebebeb',
-          borderRadius: 12,
-          marginLeft: 16,
-          marginRight: 16,
-          marginTop: 8,
-          overflow: 'hidden',
-        }}
-      >
-        {trackedItems.map((item, index) => {
-          const latestCheck = latestChecks.get(item.id) ?? null
-          const isSelected = selectedItem?.id === item.id
-          const isLast = index === trackedItems.length - 1
-
-          // vs-low calculation
-          let vsLowEl: React.ReactNode = <span style={{ color: '#ccc' }}>—</span>
-          if (latestCheck !== null && item.min_observed_price !== null) {
-            const diff = latestCheck.price - item.min_observed_price
-            if (diff > 0.005) {
-              vsLowEl = (
-                <span style={{ color: '#D85A30' }}>+${diff.toFixed(2)} vs low</span>
-              )
-            } else {
-              vsLowEl = (
-                <span style={{ color: '#1D9E75' }}>At low ✓</span>
-              )
-            }
-          }
-
-          // Relative time
-          const relTime = latestCheck?.checked_at
-            ? formatRelativeDate(latestCheck.checked_at)
-            : item.last_checked_at
-            ? formatRelativeDate(item.last_checked_at)
-            : null
-
-          return (
-            <div
-              key={item.id}
-              onClick={() => handleSelectItem(item)}
-              style={{
-                padding: '10px 12px',
-                borderBottom: isLast ? 'none' : '0.5px solid #f5f5f5',
-                borderLeft: isSelected ? '2px solid #534AB7' : '2px solid transparent',
-                background: isSelected ? '#fafafa' : 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-              }}
-            >
-              {/* Left side */}
-              <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                <p
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: '#111',
-                    margin: 0,
-                    overflow: 'hidden',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: 'vertical',
-                  }}
-                >
-                  {item.title}
-                </p>
-                <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0 0' }}>
-                  {latestCheck
-                    ? `${formatCurrency(latestCheck.price)} · ${latestCheck.retailer_domain ?? '—'}`
-                    : 'Not checked yet'}
-                </p>
-              </div>
-
-              {/* Right side */}
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontSize: 11, fontWeight: 500, margin: 0 }}>
-                  {vsLowEl}
-                </p>
-                {relTime && (
-                  <p style={{ fontSize: 10, color: '#ccc', margin: '2px 0 0 0' }}>
-                    {relTime}
-                  </p>
-                )}
-              </div>
+          {/* Chart area */}
+          {chartLoading ? (
+            <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ fontSize: 12, color: '#aaa' }}>Loading chart…</p>
             </div>
-          )
-        })}
+          ) : chartData.length === 0 ? (
+            <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '0 16px' }}>
+                Price history will appear after the first weekly check
+              </p>
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={160}>
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#534AB7" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#534AB7" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+                    tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={55}
+                  />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="price"
+                    stroke="#534AB7"
+                    strokeWidth={2}
+                    fill="url(#priceGradient)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: '#534AB7' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+
+              {/* Stat pills */}
+              {(() => {
+                const prices = chartData.map(d => d.price)
+                const current = prices[prices.length - 1]
+                const low = Math.min(...prices)
+                const avg = prices.reduce((a, b) => a + b, 0) / prices.length
+                return (
+                  <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
+                    <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
+                      <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>Current</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#111', margin: 0 }}>{formatCurrency(current)}</p>
+                    </div>
+                    <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
+                      <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>90-day low</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#D85A30', margin: 0 }}>{formatCurrency(low)}</p>
+                    </div>
+                    <div style={{ flex: 1, background: '#f8f8f8', borderRadius: 6, padding: '5px 6px', textAlign: 'center' }}>
+                      <p style={{ fontSize: 10, color: '#aaa', margin: 0 }}>Avg</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#111', margin: 0 }}>{formatCurrency(avg)}</p>
+                    </div>
+                  </div>
+                )
+              })()}
+            </>
+          )}
+        </div>
+
+        {/* 2. ITEM COUNT + TRACK NEW row */}
+        <div
+          style={{
+            marginLeft: 16,
+            marginRight: 16,
+            marginTop: 12,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              color: '#aaa',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            {trackedItems.length} items tracked
+          </span>
+          <button
+            onClick={() => router.push('/scan')}
+            style={{
+              background: '#f4f3fe',
+              borderRadius: 6,
+              padding: '3px 8px',
+              fontSize: 11,
+              color: '#534AB7',
+              fontWeight: 500,
+              cursor: 'pointer',
+              border: 'none',
+            }}
+          >
+            + Track new
+          </button>
+        </div>
       </div>
 
-      {/* 4. Bottom spacer */}
-      <div style={{ height: 100 }} />
+      {/* SCROLLABLE SECTION */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        {/* 3. ITEM LIST CARD */}
+        <div
+          style={{
+            background: 'white',
+            border: '0.5px solid #ebebeb',
+            borderRadius: 12,
+            marginLeft: 16,
+            marginRight: 16,
+            marginTop: 8,
+            overflow: 'hidden',
+          }}
+        >
+          {trackedItems.map((item, index) => {
+            const latestCheck = latestChecks.get(item.id) ?? null
+            const isSelected = selectedItem?.id === item.id
+            const isLast = index === trackedItems.length - 1
+
+            // vs-low calculation
+            let vsLowEl: React.ReactNode = <span style={{ color: '#ccc' }}>—</span>
+            if (latestCheck !== null && item.min_observed_price !== null) {
+              const diff = latestCheck.price - item.min_observed_price
+              if (diff > 0.005) {
+                vsLowEl = (
+                  <span style={{ color: '#D85A30' }}>+${diff.toFixed(2)} vs low</span>
+                )
+              } else {
+                vsLowEl = (
+                  <span style={{ color: '#1D9E75' }}>At low ✓</span>
+                )
+              }
+            }
+
+            // Relative time
+            const relTime = latestCheck?.checked_at
+              ? formatRelativeDate(latestCheck.checked_at)
+              : item.last_checked_at
+              ? formatRelativeDate(item.last_checked_at)
+              : null
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => handleSelectItem(item)}
+                style={{
+                  padding: '10px 12px',
+                  borderBottom: isLast ? 'none' : '0.5px solid #f5f5f5',
+                  borderLeft: isSelected ? '2px solid #534AB7' : '2px solid transparent',
+                  background: isSelected ? '#fafafa' : 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                }}
+              >
+                {/* Left side */}
+                <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: '#111',
+                      margin: 0,
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: 'vertical',
+                    }}
+                  >
+                    {item.title}
+                  </p>
+                  <p style={{ fontSize: 11, color: '#aaa', margin: '2px 0 0 0' }}>
+                    {latestCheck
+                      ? `${formatCurrency(latestCheck.price)} · ${latestCheck.retailer_domain ? cleanDomain(latestCheck.retailer_domain) : '—'}`
+                      : 'Not checked yet'}
+                  </p>
+                </div>
+
+                {/* Right side */}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ fontSize: 11, fontWeight: 500, margin: 0 }}>
+                    {vsLowEl}
+                  </p>
+                  {relTime && (
+                    <p style={{ fontSize: 10, color: '#ccc', margin: '2px 0 0 0' }}>
+                      {relTime}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* 4. Bottom spacer */}
+        <div style={{ height: 100 }} />
+      </div>
     </div>
   )
 }
