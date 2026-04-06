@@ -905,7 +905,28 @@ export default function ScanClient() {
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
                         </button>
                       </div>
-                      <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1 }}>{selected.priceFormatted}</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1 }}>{selected.priceFormatted}</p>
+                        {(() => {
+                          const selectedAsinInline = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
+                          const kdInline = selectedAsinInline ? keepaDataByAsin[selectedAsinInline] ?? null : null
+                          const isKeepaLoadingInline = selectedAsinInline ? keepaLoadingAsins.has(selectedAsinInline) : false
+                          if (selectedAsinInline && kdInline && !isKeepaLoadingInline) {
+                            return (
+                              <button
+                                onClick={() => setShowHeroChart(prev => !prev)}
+                                style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '11px', color: '#534AB7', fontWeight: 500 }}
+                              >
+                                {showHeroChart ? 'Hide chart' : 'Price history'}
+                              </button>
+                            )
+                          }
+                          if (selectedAsinInline && isKeepaLoadingInline) {
+                            return <span style={{ fontSize: '11px', color: '#aaa' }}>Loading...</span>
+                          }
+                          return null
+                        })()}
+                      </div>
 
                       {cardRate > 0 && (
                         <div>
@@ -923,26 +944,14 @@ export default function ScanClient() {
                       {(() => {
                         const selectedAsinLocal = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
                         const kdLocal = selectedAsinLocal ? keepaDataByAsin[selectedAsinLocal] ?? null : null
-                        const isKeepaLoadingLocal = selectedAsinLocal ? keepaLoadingAsins.has(selectedAsinLocal) : false
 
                         return (
                           <>
-                            <div className="flex items-center justify-between" style={{ marginTop: cardRate > 0 ? '0px' : '6px' }}>
+                            <div style={{ marginTop: cardRate > 0 ? '0px' : '6px' }}>
                               <p style={{ fontSize: '12px', color: '#aaa', margin: 0 }}>
                                 {cleanDomain(selected.domain)}
                                 {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 ? ` · ${selectedSerpItem.delivery[0]}` : ''}
                               </p>
-                              {selectedAsinLocal && kdLocal && !isKeepaLoadingLocal && (
-                                <button
-                                  onClick={() => setShowHeroChart(prev => !prev)}
-                                  style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '11px', color: '#534AB7', fontWeight: 500 }}
-                                >
-                                  {showHeroChart ? 'Hide chart' : 'Price history'}
-                                </button>
-                              )}
-                              {selectedAsinLocal && isKeepaLoadingLocal && (
-                                <span style={{ fontSize: '11px', color: '#aaa' }}>Loading...</span>
-                              )}
                             </div>
 
                             {showHeroChart && kdLocal && kdLocal.priceHistory90Days.length > 1 && (
