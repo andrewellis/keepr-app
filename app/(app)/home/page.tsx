@@ -13,7 +13,7 @@ export default async function HomePage() {
   // Anonymous visitor — show landing page
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="bg-background">
         {/* Hero section */}
         <section className="px-5 pt-16 pb-12">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-4">
@@ -197,7 +197,7 @@ export default async function HomePage() {
   const firstName = displayName.split(' ')[0]
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       {/* Header */}
       <header className="px-5 pt-12 pb-4 flex items-center justify-between">
         <div>
