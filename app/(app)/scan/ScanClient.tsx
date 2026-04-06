@@ -189,10 +189,12 @@ export default function ScanClient() {
 
   const [selectedPriceIdx, setSelectedPriceIdx] = useState<number>(0)
   const [showAllPrices, setShowAllPrices] = useState(false)
+  const [showHeroChart, setShowHeroChart] = useState(false)
 
   useEffect(() => {
     setSelectedPriceIdx(0)
     setShowAllPrices(false)
+    setShowHeroChart(false)
   }, [storeState])
 
   // Search history state
@@ -599,6 +601,18 @@ export default function ScanClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeState, displayedSerpResults])
 
+  // Auto-fetch Keepa data for Amazon results so "Price history" button appears immediately
+  useEffect(() => {
+    if (storeState !== 'done') return
+    for (const s of displayedSerpResults) {
+      if (s.retailerDomain === 'amazon.com' || s.engine === 'amazon') {
+        const asin = extractAsinFromUrl(s.url)
+        if (asin) fetchKeepaData(asin)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeState, displayedSerpResults])
+
   return (
     <div className="bg-background px-5 pt-4 pb-24">
       {isOffline && (
@@ -818,6 +832,11 @@ export default function ScanClient() {
         const netCostFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netCost)
         const cardSavingsFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cardSavings)
 
+        const selectedAsin = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
+        const keepaData = selectedAsin ? (keepaDataByAsin[selectedAsin] ?? null) : null
+        const ninetyDayLow = keepaData?.allTimeLow ?? null
+        const vsLow = (ninetyDayLow !== null && selected) ? selected.price - ninetyDayLow : null
+
         const VISIBLE_COUNT = 3
         const visiblePrices = showAllPrices ? allPriced : allPriced.slice(0, VISIBLE_COUNT)
         const hiddenCount = allPriced.length - VISIBLE_COUNT
@@ -901,21 +920,89 @@ export default function ScanClient() {
                         </div>
                       )}
 
-                      <p style={{ fontSize: '12px', color: '#aaa', marginTop: cardRate > 0 ? '0px' : '6px' }}>
-                        {cleanDomain(selected.domain)}
-                        {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 ? ` · ${selectedSerpItem.delivery[0]}` : ''}
-                      </p>
+                      {(() => {
+                        const selectedAsinLocal = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
+                        const kdLocal = selectedAsinLocal ? keepaDataByAsin[selectedAsinLocal] ?? null : null
+                        const isKeepaLoadingLocal = selectedAsinLocal ? keepaLoadingAsins.has(selectedAsinLocal) : false
+
+                        return (
+                          <>
+                            <div className="flex items-center justify-between" style={{ marginTop: cardRate > 0 ? '0px' : '6px' }}>
+                              <p style={{ fontSize: '12px', color: '#aaa', margin: 0 }}>
+                                {cleanDomain(selected.domain)}
+                                {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 ? ` · ${selectedSerpItem.delivery[0]}` : ''}
+                              </p>
+                              {selectedAsinLocal && kdLocal && !isKeepaLoadingLocal && (
+                                <button
+                                  onClick={() => setShowHeroChart(prev => !prev)}
+                                  style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '11px', color: '#534AB7', fontWeight: 500 }}
+                                >
+                                  {showHeroChart ? 'Hide chart' : 'Price history'}
+                                </button>
+                              )}
+                              {selectedAsinLocal && isKeepaLoadingLocal && (
+                                <span style={{ fontSize: '11px', color: '#aaa' }}>Loading...</span>
+                              )}
+                            </div>
+
+                            {showHeroChart && kdLocal && kdLocal.priceHistory90Days.length > 1 && (
+                              <div style={{ marginTop: '10px', marginBottom: '4px' }}>
+                                <ResponsiveContainer width="100%" height={100}>
+                                  <LineChart
+                                    data={kdLocal.priceHistory90Days.map(p => ({
+                                      date: new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                                      price: p.price,
+                                    }))}
+                                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+                                  >
+                                    <XAxis
+                                      dataKey="date"
+                                      tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                      tickLine={false}
+                                      axisLine={false}
+                                      interval="preserveStartEnd"
+                                    />
+                                    <YAxis
+                                      tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                      tickLine={false}
+                                      axisLine={false}
+                                      tickFormatter={(v) => `$${v}`}
+                                      domain={['auto', 'auto']}
+                                    />
+                                    <Tooltip
+                                      formatter={(value) => {
+                                        const num = typeof value === 'number' ? value : Number(value)
+                                        return [`$${num.toFixed(2)}`, 'Price']
+                                      }}
+                                      labelStyle={{ fontSize: 10 }}
+                                      contentStyle={{ fontSize: 10, borderRadius: 6 }}
+                                    />
+                                    <Line
+                                      type="monotone"
+                                      dataKey="price"
+                                      stroke="#534AB7"
+                                      strokeWidth={2}
+                                      dot={false}
+                                      activeDot={{ r: 3 }}
+                                    />
+                                  </LineChart>
+                                </ResponsiveContainer>
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
 
                     {/* Stat bar */}
                     <div className="flex" style={{ borderTop: '0.5px solid #f0f0f0' }}>
                       <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
                         <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>90-day low</p>
-                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>{ninetyDayLow !== null ? `$${ninetyDayLow.toFixed(2)}` : '—'}</p>
                       </div>
                       <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
                         <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>vs low</p>
-                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>—</p>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: vsLow !== null && vsLow > 0 ? '#D85A30' : '#1D9E75' }}>{vsLow !== null ? (vsLow > 0 ? `+$${vsLow.toFixed(2)}` : vsLow === 0 ? 'At low ✓' : `-$${Math.abs(vsLow).toFixed(2)}`) : '—'}</p>
                       </div>
                       <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
                         <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>searched</p>
@@ -1008,6 +1095,7 @@ export default function ScanClient() {
                         key={idx}
                         onClick={() => {
                           setSelectedPriceIdx(idx)
+                          setShowHeroChart(false)
                           const serpItem = !r.isShopping ? (r.item as SerpResult) : null
                           if (serpItem) {
                             const id = `${serpItem.engine}-${serpItem.url}`
