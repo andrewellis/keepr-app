@@ -2,6 +2,44 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
+import ScanBar from './ScanBar'
+
+type StoredPayload = {
+  shoppingResults?: { priceValue: number; price: string; merchant: string }[]
+  serpResults?: { price: number | null; retailerDomain: string | null }[]
+}
+
+function getBestPrice(payload: unknown): { price: string; source: string } | null {
+  const p = payload as StoredPayload
+  if (p?.shoppingResults && p.shoppingResults.length > 0) {
+    const sorted = [...p.shoppingResults].sort((a, b) => a.priceValue - b.priceValue)
+    const best = sorted[0]
+    return { price: best.price, source: best.merchant }
+  }
+  if (p?.serpResults && p.serpResults.length > 0) {
+    const sorted = [...p.serpResults]
+      .filter(r => r.price !== null)
+      .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+    if (sorted.length > 0) {
+      return {
+        price: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(sorted[0].price!),
+        source: sorted[0].retailerDomain ?? '',
+      }
+    }
+  }
+  return null
+}
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (mins < 60) return `${mins}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days === 1) return 'Yesterday'
+  return `${days}d ago`
+}
 
 export default async function HomePage() {
   const supabase = createClient()
@@ -196,81 +234,126 @@ export default async function HomePage() {
   const displayName = profile?.display_name ?? user.email ?? 'there'
   const firstName = displayName.split(' ')[0]
 
+  const { count: trackedCount } = await supabase
+    .from('tracked_items')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+
+  const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  const { data: recentScans } = await supabase
+    .from('scan_history')
+    .select('id, product_name, created_at, results_payload')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(4)
+
+  // suppress unused import warning — signout is kept per requirements
+  void signout
+
   return (
     <div className="bg-background">
-      {/* Header */}
-      <header className="px-5 pt-12 pb-4 flex items-center justify-between">
+      {/* Greeting header */}
+      <header className="pt-4 pb-3 px-5 flex items-center justify-between">
         <div>
-          <p className="text-sm text-foreground-secondary">Good day,</p>
-          <h1 className="text-2xl font-bold text-foreground">{firstName} 👋</h1>
+          <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            GOOD DAY
+          </p>
+          <p style={{ fontSize: '22px', fontWeight: 500, color: '#111' }}>{firstName}</p>
         </div>
-        <form action={signout}>
-          <button
-            type="submit"
-            className="text-xs text-foreground-secondary border border-border rounded-lg px-3 py-1.5 hover:border-primary hover:text-primary transition"
-          >
-            Sign out
-          </button>
-        </form>
+        <div className="text-right">
+          <p style={{ fontSize: '11px', color: '#aaa' }}>{today}</p>
+          <p style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500 }}>
+            {trackedCount ?? 0} tracked
+          </p>
+        </div>
       </header>
 
-      {/* Balance card */}
-      <div className="mx-5 mt-2 bg-surface border border-border rounded-2xl p-6">
-        <p className="text-sm text-foreground-secondary mb-1">Total Earnings</p>
-        <p className="text-4xl font-bold text-foreground">$0.00</p>
-        <div className="mt-4 flex gap-3">
-          <div className="flex-1 bg-background rounded-xl p-3 text-center">
-            <p className="text-xs text-foreground-secondary">This Week</p>
-            <p className="text-lg font-semibold text-foreground mt-0.5">$0.00</p>
+      {/* Savings card */}
+      <div className="bg-white border border-border rounded-2xl mx-5 mt-3 p-4">
+        <p style={{ fontSize: '10px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+          TOTAL SAVINGS
+        </p>
+        <p style={{ fontSize: '28px', fontWeight: 500, color: '#534AB7', letterSpacing: '-0.02em', marginBottom: '16px' }}>
+          $0.00
+        </p>
+        <div className="flex" style={{ borderTop: '1.5px solid #f0f0f0', paddingTop: '12px' }}>
+          <div className="flex-1 text-center">
+            <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS WEEK</p>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
           </div>
-          <div className="flex-1 bg-background rounded-xl p-3 text-center">
-            <p className="text-xs text-foreground-secondary">This Month</p>
-            <p className="text-lg font-semibold text-foreground mt-0.5">$0.00</p>
+          <div className="flex-1 text-center">
+            <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS MONTH</p>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
           </div>
-          <div className="flex-1 bg-background rounded-xl p-3 text-center">
-            <p className="text-xs text-foreground-secondary">Pending</p>
-            <p className="text-lg font-semibold text-primary mt-0.5">$0.00</p>
+          <div className="flex-1 text-center">
+            <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ALL TIME</p>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
           </div>
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="mx-5 mt-5">
-        <h2 className="text-sm font-semibold text-foreground-secondary uppercase tracking-wider mb-3">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <a
-            href="/scan"
-            className="bg-primary rounded-2xl p-5 flex flex-col gap-2 hover:opacity-90 transition"
-          >
-            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 8H3m18-8h-2M5 4H3m2 16H3m18-4h-2M19 4h-2" />
-            </svg>
-            <span className="text-sm font-semibold text-white">Scan Product</span>
-          </a>
-          <a
-            href="/history"
-            className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-2 hover:border-primary transition"
-          >
-            <svg className="w-7 h-7 text-foreground-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <span className="text-sm font-semibold text-foreground">View History</span>
-          </a>
-        </div>
+      {/* Recent scans section */}
+      <div className="mx-5 mt-4 flex items-center justify-between">
+        <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          RECENT SCANS
+        </p>
+        <Link href="/history" style={{ fontSize: '11px', color: '#534AB7' }}>
+          See all
+        </Link>
       </div>
 
-      {/* Recent activity placeholder */}
-      <div className="mx-5 mt-5">
-        <h2 className="text-sm font-semibold text-foreground-secondary uppercase tracking-wider mb-3">
-          Recent Activity
-        </h2>
-        <div className="bg-surface border border-border rounded-2xl p-6 text-center">
-          <p className="text-foreground-secondary text-sm">No items scanned yet.</p>
-          <p className="text-foreground-secondary text-xs mt-1">Scan a product to get started.</p>
-        </div>
+      <div className="bg-white border border-border rounded-2xl mx-5 overflow-hidden" style={{ marginTop: '8px' }}>
+        {!recentScans || recentScans.length === 0 ? (
+          <div className="flex items-center justify-center py-6">
+            <p style={{ fontSize: '12px', color: '#aaa' }}>No scans yet</p>
+          </div>
+        ) : (
+          recentScans.map((scan, i) => {
+            const best = getBestPrice(scan.results_payload)
+            const isLast = i === recentScans.length - 1
+            return (
+              <div
+                key={scan.id}
+                className="flex items-center gap-2 px-3"
+                style={{
+                  paddingTop: '10px',
+                  paddingBottom: '10px',
+                  borderBottom: isLast ? 'none' : '1px solid var(--border)',
+                }}
+              >
+                {/* Dot */}
+                <div
+                  className="flex-shrink-0"
+                  style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: '#534AB7' }}
+                />
+                {/* Middle */}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="truncate"
+                    style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}
+                  >
+                    {scan.product_name}
+                  </p>
+                  {best && (
+                    <p style={{ fontSize: '11px', color: '#aaa' }}>
+                      {best.source} · {best.price}
+                    </p>
+                  )}
+                </div>
+                {/* Relative time */}
+                <p className="flex-shrink-0" style={{ fontSize: '10px', color: '#ccc' }}>
+                  {relativeTime(scan.created_at)}
+                </p>
+              </div>
+            )
+          })
+        )}
       </div>
+
+      {/* Bottom scan bar */}
+      <ScanBar />
     </div>
   )
 }
