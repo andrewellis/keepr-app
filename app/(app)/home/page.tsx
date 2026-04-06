@@ -303,7 +303,7 @@ export default async function HomePage() {
 
       {/* Savings card */}
       <div className="bg-white border border-border rounded-2xl mx-5 mt-3 p-4">
-        <p style={{ fontSize: '10px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+        <p style={{ fontSize: '12px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
           TOTAL SAVINGS
         </p>
         <p style={{ fontSize: '28px', fontWeight: 500, color: '#534AB7', letterSpacing: '-0.02em', marginBottom: '16px' }}>
@@ -361,8 +361,8 @@ export default async function HomePage() {
                       <div key={j} className="flex items-center justify-between" style={{ paddingTop: '3px', paddingBottom: '3px', borderBottom: j < topResults.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
                         <span style={{ fontSize: '12px', color: '#aaa' }}>{cleanDomain(r.source)}</span>
                         <div className="flex items-center gap-1">
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#111' }}>{r.price}</span>
                           {j === 0 && <span style={{ fontSize: '10px', backgroundColor: '#534AB7', color: '#fff', borderRadius: '2px', padding: '1px 4px' }}>Best</span>}
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#111' }}>{r.price}</span>
                         </div>
                       </div>
                     ))}
