@@ -35,6 +35,7 @@ export default function SideDrawer() {
   const fetchedRef = useRef(false)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
+  const touchStartTime = useRef(0)
   const openRef = useRef(open)
   const { subscribe } = useScanSaved()
 
@@ -46,6 +47,21 @@ export default function SideDrawer() {
     function onTouchStart(e: TouchEvent) {
       touchStartX.current = e.touches[0].clientX
       touchStartY.current = e.touches[0].clientY
+      touchStartTime.current = Date.now()
+    }
+    function onTouchMove(e: TouchEvent) {
+      const currentX = e.touches[0].clientX
+      const currentY = e.touches[0].clientY
+      const deltaX = currentX - touchStartX.current
+      const deltaY = Math.abs(currentY - touchStartY.current)
+      const elapsed = Date.now() - touchStartTime.current
+      const velocity = elapsed > 0 ? deltaX / elapsed : 0
+
+      // Suppress drawer open if this looks like an iOS back gesture:
+      // started within 20px of left edge, fast horizontal swipe, nearly horizontal
+      if (touchStartX.current < 20 && velocity > 0.5 && deltaY < 10) {
+        return
+      }
     }
     function onTouchEnd(e: TouchEvent) {
       const dx = e.changedTouches[0].clientX - touchStartX.current
@@ -53,15 +69,24 @@ export default function SideDrawer() {
       const absDx = Math.abs(dx)
       const absDy = Math.abs(dy)
       if (!openRef.current && touchStartX.current <= 40 && dx >= 50 && absDx > absDy) {
+        const elapsed = Date.now() - touchStartTime.current
+        const velocity = elapsed > 0 ? dx / elapsed : 0
+        const absDyFinal = Math.abs(dy)
+        // Suppress if iOS back gesture characteristics are met
+        if (touchStartX.current < 20 && velocity > 0.5 && absDyFinal < 10) {
+          return
+        }
         setOpen(true)
       } else if (openRef.current && dx <= -50 && absDx > absDy) {
         setOpen(false)
       }
     }
     document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchmove', onTouchMove, { passive: true })
     document.addEventListener('touchend', onTouchEnd, { passive: true })
     return () => {
       document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchmove', onTouchMove)
       document.removeEventListener('touchend', onTouchEnd)
     }
   }, [])
