@@ -255,7 +255,7 @@ export default async function HomePage() {
   return (
     <div className="bg-background">
       {/* Greeting header */}
-      <header className="pt-4 pb-3 px-5 flex items-center justify-between">
+      <header className="mt-2 pt-4 pb-3 px-5 flex items-center justify-between">
         <div>
           <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             GOOD DAY
@@ -336,16 +336,19 @@ export default async function HomePage() {
                   >
                     {scan.product_name}
                   </p>
-                  {best && (
-                    <p style={{ fontSize: '11px', color: '#aaa' }}>
-                      {best.source} · {best.price}
-                    </p>
-                  )}
+                  <p className="truncate" style={{ fontSize: '13px', color: '#555' }}>
+                    {best ? best.source : ''}
+                  </p>
                 </div>
-                {/* Relative time */}
-                <p className="flex-shrink-0" style={{ fontSize: '10px', color: '#ccc' }}>
-                  {relativeTime(scan.created_at)}
-                </p>
+                {/* Right: price + timestamp */}
+                <div className="flex-shrink-0 text-right flex flex-col items-end gap-0.5">
+                  <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>
+                    {best ? best.price : ''}
+                  </p>
+                  <p style={{ fontSize: '10px', color: '#ccc' }}>
+                    {relativeTime(scan.created_at)}
+                  </p>
+                </div>
               </div>
             )
           })
@@ -353,6 +356,7 @@ export default async function HomePage() {
       </div>
 
       {/* Bottom scan bar */}
+      <div style={{ height: '80px' }} />
       <ScanBar />
     </div>
   )
