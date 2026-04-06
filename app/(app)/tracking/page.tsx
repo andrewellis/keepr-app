@@ -105,16 +105,6 @@ export default function TrackingPage() {
 
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const main = (containerRef.current?.closest('main') ?? document.querySelector('main')) as HTMLElement | null
-    if (!main) return
-    const prev = main.style.overflow
-    main.style.overflow = 'hidden'
-    return () => {
-      main.style.overflow = prev || 'auto'
-    }
-  }, [loading])
-
   // Chart state
   const [selectedItem, setSelectedItem] = useState<TrackedItem | null>(null)
   const [chartData, setChartData] = useState<ChartPoint[]>([])
@@ -263,7 +253,20 @@ export default function TrackingPage() {
 
   if (loading) {
     return (
-      <div ref={containerRef} className="bg-background px-5 pt-12 pb-24 flex items-center justify-center">
+      <div
+        style={{
+          position: 'fixed',
+          top: 56,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: '#f8f8f8',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <p className="text-sm text-foreground-secondary">Loading...</p>
       </div>
     )
@@ -272,7 +275,17 @@ export default function TrackingPage() {
   // Empty state
   if (trackedItems.length === 0) {
     return (
-      <div ref={containerRef} style={{ backgroundColor: '#f8f8f8', minHeight: '100vh', paddingBottom: 100 }}>
+      <div
+        style={{
+          position: 'fixed',
+          top: 56,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: '#f8f8f8',
+          zIndex: 10,
+        }}
+      >
         <div style={{ paddingTop: 80, textAlign: 'center' }}>
           <p style={{ fontSize: 13, color: '#aaa' }}>No items tracked yet</p>
           <p style={{ fontSize: 11, color: '#ccc', marginTop: 4 }}>Start scanning to track prices</p>
@@ -301,11 +314,16 @@ export default function TrackingPage() {
     <div
       ref={containerRef}
       style={{
-        backgroundColor: '#f8f8f8',
-        height: 'calc(100vh - 56px)',
+        position: 'fixed',
+        top: 56,
+        left: 0,
+        right: 0,
+        bottom: 0,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        background: '#f8f8f8',
+        zIndex: 10,
       }}
     >
       {/* PINNED SECTION */}
