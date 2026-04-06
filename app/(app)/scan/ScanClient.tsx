@@ -762,9 +762,34 @@ export default function ScanClient() {
       )}
 
       {scanState === 'processing' && (
-        <div className="flex flex-col items-center justify-center py-20 gap-6">
-          <div className="w-24 h-24 rounded-2xl bg-surface border border-border animate-pulse" />
-          <p className="text-sm text-foreground-secondary">Identifying product...</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingBottom: 80, gap: 12 }}>
+          {/* Scanner box with corner brackets */}
+          <div style={{ width: 120, height: 120, borderRadius: 14, background: '#fff', border: '0.5px solid #e5e5e5', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <div style={{ width: 90, height: 90, background: '#f0f0f0', borderRadius: 7 }} />
+            {/* Four corner brackets */}
+            <div style={{ position: 'absolute', top: 5, left: 5, width: 12, height: 12, borderTop: '2px solid #534AB7', borderLeft: '2px solid #534AB7', borderRadius: '2px 0 0 0' }} />
+            <div style={{ position: 'absolute', top: 5, right: 5, width: 12, height: 12, borderTop: '2px solid #534AB7', borderRight: '2px solid #534AB7', borderRadius: '0 2px 0 0' }} />
+            <div style={{ position: 'absolute', bottom: 5, left: 5, width: 12, height: 12, borderBottom: '2px solid #534AB7', borderLeft: '2px solid #534AB7', borderRadius: '0 0 0 2px' }} />
+            <div style={{ position: 'absolute', bottom: 5, right: 5, width: 12, height: 12, borderBottom: '2px solid #534AB7', borderRight: '2px solid #534AB7', borderRadius: '0 0 2px 0' }} />
+            {/* Scanning line animation */}
+            <div style={{ position: 'absolute', top: '50%', left: 5, right: 5, height: 1, background: '#534AB7', opacity: 0.5 }} className="animate-pulse" />
+          </div>
+          {/* Text */}
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <p style={{ fontSize: 14, fontWeight: 500, color: '#111', marginBottom: 4 }}>Identifying product...</p>
+            <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+              <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0s' }} />
+              <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0.15s' }} />
+              <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0.3s' }} />
+            </div>
+          </div>
+          {/* Progress bar card */}
+          <div style={{ width: '100%', background: '#fff', borderRadius: 9, border: '0.5px solid #ebebeb', padding: '7px 10px', marginTop: 8 }}>
+            <p style={{ fontSize: 11, color: '#aaa', marginBottom: 3 }}>Vision API → Claude AI</p>
+            <div style={{ background: '#f0f0f0', borderRadius: 3, height: 2, overflow: 'hidden' }}>
+              <div className="animate-pulse" style={{ height: 2, background: '#534AB7', borderRadius: 3, width: '60%' }} />
+            </div>
+          </div>
         </div>
       )}
 
@@ -865,7 +890,23 @@ export default function ScanClient() {
 
               {/* Loading state */}
               {storeState === 'loading' && (
-                <p className="text-[14px] text-center" style={{ color: '#666666' }}>Finding best prices...</p>
+                <div style={{ background: '#fff', border: '0.5px solid #ebebeb', borderRadius: 11, overflow: 'hidden' }}>
+                  <div style={{ padding: '8px 12px', borderBottom: '0.5px solid #f0f0f0' }}>
+                    <p style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Searching retailers...</p>
+                  </div>
+                  {['Amazon', 'Walmart', 'eBay', 'Best Buy', 'Target'].map((name, i) => (
+                    <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: i < 4 ? '0.5px solid #f5f5f5' : 'none', opacity: i < 2 ? 1 : i < 3 ? 0.6 : 0.35 }}>
+                      <span style={{ fontSize: 13, color: i < 3 ? '#111' : '#aaa' }}>{name}</span>
+                      {i < 2 ? (
+                        <span style={{ fontSize: 13, color: '#534AB7', fontWeight: 500 }}>✓</span>
+                      ) : i === 2 ? (
+                        <span className="animate-pulse" style={{ fontSize: 13, color: '#534AB7' }}>···</span>
+                      ) : (
+                        <span style={{ fontSize: 13, color: '#ddd' }}>—</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
 
               {/* No results state */}
