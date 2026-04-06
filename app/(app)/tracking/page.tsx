@@ -302,44 +302,70 @@ export default function TrackingPage() {
                   </p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart
-                    data={chartData}
-                    margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#534AB7" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#534AB7" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={formatMonthYear}
-                      tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
-                      tickLine={false}
-                      axisLine={false}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis
-                      tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-                      tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={55}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="price"
-                      stroke="#534AB7"
-                      strokeWidth={2}
-                      fill="url(#priceGradient)"
-                      dot={false}
-                      activeDot={{ r: 4, fill: '#534AB7' }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart
+                      data={chartData}
+                      margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#534AB7" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#534AB7" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={formatMonthYear}
+                        tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+                        tick={{ fontSize: 10, fill: 'var(--color-foreground-secondary, #6b7280)' }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={55}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="price"
+                        stroke="#534AB7"
+                        strokeWidth={2}
+                        fill="url(#priceGradient)"
+                        dot={false}
+                        activeDot={{ r: 4, fill: '#534AB7' }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="flex gap-2 mt-3">
+                    {(() => {
+                      const prices = chartData.map(d => d.price)
+                      const current = prices[prices.length - 1]
+                      const low = Math.min(...prices)
+                      const avg = prices.reduce((a, b) => a + b, 0) / prices.length
+                      return (
+                        <>
+                          <div className="flex-1 bg-background rounded-xl p-2.5 text-center">
+                            <p className="text-xs text-foreground-secondary mb-0.5">Current</p>
+                            <p className="text-sm font-semibold text-foreground">{formatCurrency(current)}</p>
+                          </div>
+                          <div className="flex-1 bg-background rounded-xl p-2.5 text-center">
+                            <p className="text-xs text-foreground-secondary mb-0.5">90-day low</p>
+                            <p className="text-sm font-semibold" style={{ color: '#D85A30' }}>{formatCurrency(low)}</p>
+                          </div>
+                          <div className="flex-1 bg-background rounded-xl p-2.5 text-center">
+                            <p className="text-xs text-foreground-secondary mb-0.5">Avg</p>
+                            <p className="text-sm font-semibold text-foreground">{formatCurrency(avg)}</p>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                </>
               )}
             </div>
           )}

@@ -158,6 +158,10 @@ export default function SideDrawer() {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-border z-50 flex items-center px-4">
+        <div className="w-6 h-6" />
+        <div className="flex-1 flex justify-center">
+          <span className="font-bold text-primary">K33pr</span>
+        </div>
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
@@ -169,10 +173,6 @@ export default function SideDrawer() {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <div className="flex-1 flex justify-center">
-          <span className="font-bold text-primary">K33pr</span>
-        </div>
-        <div className="w-6 h-6" />
       </header>
 
       {open && (
