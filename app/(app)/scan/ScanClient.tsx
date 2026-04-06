@@ -150,7 +150,9 @@ export default function ScanClient() {
   const searchParams = useSearchParams()
   const { notifyScanSaved } = useScanSaved()
 
+  const resumeId = searchParams.get('resume')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isResuming, setIsResuming] = useState(!!resumeId)
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [currentFile, setCurrentFile] = useState<File | null>(null)
@@ -220,6 +222,7 @@ export default function ScanClient() {
 
     let isMounted = true
 
+    setIsResuming(true)
     setDisplayedSerpResults([])
     setMatchResult(null)
     setProducts([])
@@ -231,13 +234,17 @@ export default function ScanClient() {
       .select('id, product_name, category, results_payload, created_at')
       .eq('id', resumeId)
       .single()
-      .then(({ data }: { data: SearchHistoryEntry | null }) => {
+      .then(({ data, error }: { data: SearchHistoryEntry | null; error: unknown }) => {
         if (!isMounted) return
         console.log('[RESUME DEBUG] fetched row:', JSON.stringify(data, null, 2))
-        if (data && data.results_payload) {
+        if (!error && data && data.results_payload) {
           handleLoadHistoryEntry(data)
         }
+        setIsResuming(false)
         window.history.replaceState({}, '', '/scan')
+      }, () => {
+        if (!isMounted) return
+        setIsResuming(false)
       })
 
     return () => {
@@ -623,7 +630,13 @@ export default function ScanClient() {
         onChange={handleFileChange}
       />
 
-      {scanState === 'idle' && (
+      {isResuming && (
+        <div className="flex items-center justify-center pt-32">
+          <div className="text-sm text-foreground-secondary">Loading...</div>
+        </div>
+      )}
+
+      {!isResuming && scanState === 'idle' && (
         <div className="space-y-3">
           <button
             onClick={handleCameraCapture}
