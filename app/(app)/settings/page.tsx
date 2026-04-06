@@ -23,7 +23,7 @@ export default async function SettingsPage() {
     .single()
 
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+    <div className="bg-background px-5 pt-12 pb-24">
       <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
 
       {/* Account section */}

@@ -67,7 +67,7 @@ export default async function PayoutSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+    <div className="bg-background px-5 pt-12 pb-24">
       <Link
         href="/settings"
         className="inline-flex items-center gap-1 text-sm text-foreground-secondary hover:text-primary transition mb-6"

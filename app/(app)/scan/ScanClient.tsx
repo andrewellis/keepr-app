@@ -594,7 +594,7 @@ export default function ScanClient() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+    <div className="bg-background px-5 pt-12 pb-24">
       {isOffline && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
           <p className="text-sm text-red-600 text-center">No internet connection.</p>

@@ -40,7 +40,7 @@ const articles = [
 
 export default function BlogIndexPage() {
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
+    <div className="bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-2">K33pr Blog</h1>
       <p className="text-sm text-foreground-secondary mb-10">
         Tips and guides for getting the most cashback on every purchase.

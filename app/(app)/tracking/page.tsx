@@ -123,14 +123,14 @@ export default function TrackingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background px-5 pt-12 pb-24 flex items-center justify-center">
+      <div className="bg-background px-5 pt-12 pb-24 flex items-center justify-center">
         <p className="text-sm text-foreground-secondary">Loading...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+    <div className="bg-background px-5 pt-12 pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-foreground">Tracked Items</h1>

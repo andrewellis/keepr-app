@@ -97,7 +97,7 @@ export default function HistoryPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24">
+    <div className="bg-background px-5 pt-12 pb-24">
       <h1 className="text-2xl font-bold text-foreground mb-1">History</h1>
       <p className="text-sm text-foreground-secondary mb-6">
         {!loading && !error

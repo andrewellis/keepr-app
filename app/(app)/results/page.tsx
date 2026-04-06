@@ -26,7 +26,7 @@ function fmtPrice(priceCents: number) {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background px-5 pt-12 pb-36"><ResultSkeleton /></div>}>
+    <Suspense fallback={<div className="bg-background px-5 pt-12 pb-36"><ResultSkeleton /></div>}>
       <ResultsContent />
     </Suspense>
   )
@@ -170,7 +170,7 @@ function ResultsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-36">
+    <div className="bg-background px-5 pt-12 pb-36">
       {/* Product summary card with scanned image */}
       <div className="bg-surface border border-border rounded-2xl p-4 mb-6">
         <div className="flex items-center gap-4">

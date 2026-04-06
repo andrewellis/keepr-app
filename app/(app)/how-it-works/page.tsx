@@ -3,7 +3,7 @@ import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
+    <div className="bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-8">How K33pr Works</h1>
 
       <div className="space-y-10">

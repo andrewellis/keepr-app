@@ -1,6 +1,6 @@
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
+    <div className="bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-6">Privacy Policy</h1>
       <p className="text-xs text-foreground-secondary mb-8">Last updated: March 30, 2026</p>
 
