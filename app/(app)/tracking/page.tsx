@@ -289,7 +289,7 @@ export default function TrackingPage() {
     <div
       style={{
         backgroundColor: '#f8f8f8',
-        height: 'calc(100vh - 56px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
