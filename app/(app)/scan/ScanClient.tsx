@@ -987,12 +987,10 @@ export default function ScanClient() {
                             return (
                               <button
                                 onClick={() => {
-                                  setShowHeroChart(prev => {
-                                    if (prev) {
-                                      setSelectedPriceIdx(0)
-                                    }
-                                    return !prev
-                                  })
+                                  if (showHeroChart) {
+                                    setSelectedPriceIdx(0)
+                                  }
+                                  setShowHeroChart(prev => !prev)
                                 }}
                                 style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '19px', color: '#534AB7', fontWeight: 600 }}
                               >
