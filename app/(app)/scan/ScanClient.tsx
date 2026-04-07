@@ -613,6 +613,37 @@ export default function ScanClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeState, displayedSerpResults])
 
+  // Auto-show Keepa chart when Amazon result has data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (storeState !== 'done') return
+    // Check if any Amazon result has Keepa data loaded
+    const amazonWithKeepa = displayedSerpResults.find(s => {
+      if (s.retailerDomain !== 'amazon.com' && s.engine !== 'amazon') return false
+      const asin = extractAsinFromUrl(s.url)
+      return asin && keepaDataByAsin[asin] && keepaDataByAsin[asin]!.priceHistory90Days.length > 1
+    })
+    if (!amazonWithKeepa) return
+    // Only auto-show if chart is not already showing (avoid overriding user toggle)
+    if (showHeroChart) return
+    // Build the combined sorted price array to find the correct index
+    const allPricedCalc: { price: number; domain: string; url: string; isShopping: boolean }[] = []
+    for (const s of shoppingResults) {
+      allPricedCalc.push({ price: s.priceValue, domain: s.merchant, url: s.productUrl, isShopping: true })
+    }
+    for (const s of displayedSerpResults) {
+      if (s.price !== null) {
+        allPricedCalc.push({ price: s.price, domain: s.retailerDomain ?? '', url: s.url, isShopping: false })
+      }
+    }
+    allPricedCalc.sort((a, b) => a.price - b.price)
+    const amazonIdx = allPricedCalc.findIndex(p => p.url === amazonWithKeepa.url)
+    if (amazonIdx >= 0) {
+      setSelectedPriceIdx(amazonIdx)
+      setShowHeroChart(true)
+    }
+  }, [keepaDataByAsin, storeState, displayedSerpResults, shoppingResults, showHeroChart])
+
   return (
     <div className="bg-background px-5 pt-4 pb-24">
       {isOffline && (
@@ -955,8 +986,15 @@ export default function ScanClient() {
                           if (selectedAsinInline && kdInline && !isKeepaLoadingInline) {
                             return (
                               <button
-                                onClick={() => setShowHeroChart(prev => !prev)}
-                                style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '11px', color: '#534AB7', fontWeight: 600 }}
+                                onClick={() => {
+                                  setShowHeroChart(prev => {
+                                    if (prev) {
+                                      setSelectedPriceIdx(0)
+                                    }
+                                    return !prev
+                                  })
+                                }}
+                                style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '19px', color: '#534AB7', fontWeight: 600 }}
                               >
                                 {showHeroChart ? 'Hide chart' : 'Price history'}
                               </button>
