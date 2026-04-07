@@ -190,11 +190,13 @@ export default function ScanClient() {
   const [selectedPriceIdx, setSelectedPriceIdx] = useState<number>(0)
   const [showAllPrices, setShowAllPrices] = useState(false)
   const [showHeroChart, setShowHeroChart] = useState(false)
+  const [userDismissedChart, setUserDismissedChart] = useState(false)
 
   useEffect(() => {
     setSelectedPriceIdx(0)
     setShowAllPrices(false)
     setShowHeroChart(false)
+    setUserDismissedChart(false)
   }, [storeState])
 
   // Search history state
@@ -625,7 +627,7 @@ export default function ScanClient() {
     })
     if (!amazonWithKeepa) return
     // Only auto-show if chart is not already showing (avoid overriding user toggle)
-    if (showHeroChart) return
+    if (showHeroChart || userDismissedChart) return
     // Build the combined sorted price array to find the correct index
     const allPricedCalc: { price: number; domain: string; url: string; isShopping: boolean }[] = []
     for (const s of shoppingResults) {
@@ -642,7 +644,7 @@ export default function ScanClient() {
       setSelectedPriceIdx(amazonIdx)
       setShowHeroChart(true)
     }
-  }, [keepaDataByAsin, storeState, displayedSerpResults, shoppingResults, showHeroChart])
+  }, [keepaDataByAsin, storeState, displayedSerpResults, shoppingResults, showHeroChart, userDismissedChart])
 
   return (
     <div className="bg-background px-5 pt-4 pb-24">
@@ -989,6 +991,7 @@ export default function ScanClient() {
                                 onClick={() => {
                                   if (showHeroChart) {
                                     setSelectedPriceIdx(0)
+                                    setUserDismissedChart(true)
                                   }
                                   setShowHeroChart(prev => !prev)
                                 }}
