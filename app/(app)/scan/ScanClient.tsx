@@ -847,6 +847,12 @@ export default function ScanClient() {
       )}
 
       {scanState === 'result' && scanResult && !isResuming && (() => {
+        const truncateDelivery = (text: string) => {
+          const onIdx = text.indexOf(' on ')
+          if (onIdx > 0) return text.slice(0, onIdx)
+          return text.length > 45 ? text.slice(0, 45) + '…' : text
+        }
+
         const allPriced: { price: number; priceFormatted: string; domain: string; url: string; isShopping: boolean; item: ShoppingResult | SerpResult }[] = []
 
         if (storeState === 'done') {
@@ -1061,7 +1067,7 @@ export default function ScanClient() {
                                 <div className="flex items-center gap-1" style={{ marginTop: '3px' }}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                                   <span style={{ fontSize: '11px', color: selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
-                                    {selectedSerpItem.delivery[0]}
+                                    {truncateDelivery(selectedSerpItem.delivery[0])}
                                   </span>
                                 </div>
                               )}
@@ -1248,7 +1254,7 @@ export default function ScanClient() {
                                     <div className="flex items-center gap-1">
                                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                                       <span style={{ fontSize: '11px', color: serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
-                                        {serpItem.delivery[0]}
+                                        {truncateDelivery(serpItem.delivery[0])}
                                       </span>
                                     </div>
                                   )}

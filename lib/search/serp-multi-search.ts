@@ -94,6 +94,9 @@ function parseAmazon(data: Record<string, unknown>): SerpResult[] {
       retailerDomain: 'amazon.com',
       in_stock: typeof item.in_stock === 'boolean' ? item.in_stock : undefined,
       delivery: Array.isArray(item.delivery) ? (item.delivery as string[]) : undefined,
+      rating: typeof item.rating === 'number' ? item.rating : undefined,
+      reviews: typeof item.reviews === 'number' ? item.reviews : undefined,
+      extensions: Array.isArray(item.extensions) ? (item.extensions as unknown[]).map(e => String(e)) : undefined,
     }));
 }
 
