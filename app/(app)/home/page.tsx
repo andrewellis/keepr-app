@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 import ScanBar from './ScanBar'
+import RecentScans from './RecentScans'
 
 type StoredPayload = {
   shoppingResults?: { priceValue: number; price: string; merchant: string }[]
@@ -52,24 +53,6 @@ function getTopResults(payload: unknown): { price: string; source: string; price
   }
   results.sort((a, b) => a.priceNum - b.priceNum)
   return results.slice(0, 3)
-}
-
-function cleanDomain(raw: string): string {
-  return raw
-    .replace(/^www\./i, '')
-    .replace(/\.(com|co\.uk|org|net|co)$/i, '')
-    .replace(/^./, c => c.toUpperCase())
-}
-
-function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-  if (mins < 60) return `${mins}m ago`
-  if (hours < 24) return `${hours}h ago`
-  if (days === 1) return 'Yesterday'
-  return `${days}d ago`
 }
 
 export default async function HomePage() {
@@ -282,7 +265,7 @@ export default async function HomePage() {
     .select('id, product_name, created_at, results_payload')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(4)
+    .limit(20)
 
   // suppress unused import warning — signout is kept per requirements
   void signout
@@ -331,52 +314,7 @@ export default async function HomePage() {
 
       {/* Scrollable section */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="mx-5 mt-4 flex items-center justify-between">
-          <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            RECENT SCANS
-          </p>
-          <Link href="/scan" style={{ fontSize: '11px', color: '#534AB7' }}>
-            See all
-          </Link>
-        </div>
-        <div className="bg-white border border-border rounded-2xl mx-5 overflow-hidden" style={{ marginTop: '8px' }}>
-          {!recentScans || recentScans.length === 0 ? (
-            <div className="flex items-center justify-center py-6">
-              <p style={{ fontSize: '12px', color: '#aaa' }}>No scans yet</p>
-            </div>
-          ) : (
-            recentScans.map((scan, i) => {
-              const topResults = getTopResults(scan.results_payload)
-              const isLast = i === recentScans.length - 1
-              return (
-                <div key={scan.id} style={{ borderBottom: isLast ? 'none' : '0.5px solid #f0f0f0' }}>
-                  <div className="flex items-center gap-2 px-3" style={{ paddingTop: '10px', paddingBottom: topResults.length > 0 ? '4px' : '10px' }}>
-                    <div className="flex-shrink-0" style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: '#534AB7' }} />
-                    <p className="flex-1 min-w-0 truncate" style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>
-                      {scan.product_name}
-                    </p>
-                    <p className="flex-shrink-0" style={{ fontSize: '10px', color: '#ccc' }}>
-                      {relativeTime(scan.created_at)}
-                    </p>
-                  </div>
-                  {topResults.length > 0 && (
-                    <div style={{ paddingLeft: '22px', paddingRight: '12px', paddingBottom: '8px' }}>
-                      {topResults.map((r, j) => (
-                        <div key={j} className="flex items-center justify-between" style={{ paddingTop: '3px', paddingBottom: '3px', borderBottom: j < topResults.length - 1 ? '0.5px solid #f5f5f5' : 'none' }}>
-                          <span style={{ fontSize: '12px', color: '#aaa' }}>{cleanDomain(r.source)}</span>
-                          <div className="flex items-center gap-1">
-                            {j === 0 && <span style={{ fontSize: '10px', backgroundColor: '#534AB7', color: '#fff', borderRadius: '2px', padding: '1px 4px' }}>Best</span>}
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#111' }}>{r.price}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })
-          )}
-        </div>
+        <RecentScans scans={(recentScans ?? []).map(scan => ({ id: scan.id, product_name: scan.product_name, created_at: scan.created_at, topResults: getTopResults(scan.results_payload) }))} />
         <div style={{ height: '80px' }} />
       </div>
 
