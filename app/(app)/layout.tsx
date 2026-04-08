@@ -1,12 +1,12 @@
-import SideDrawer from '@/components/BottomNav'
+import BottomNav from '@/components/BottomNav'
 import { ScanSavedProvider } from '@/lib/scan-saved-context'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ScanSavedProvider>
-      <div className="h-screen bg-background overflow-hidden flex flex-col">
-        <SideDrawer />
-        <main className="flex-1 overflow-y-auto pt-14">{children}</main>
+      <div className="min-h-screen bg-background pb-16">
+        <main>{children}</main>
+        <BottomNav />
       </div>
     </ScanSavedProvider>
   )

@@ -1,244 +1,73 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useScanSaved } from '@/lib/scan-saved-context'
 
-const navItems = [
-  { label: 'Home', href: '/home' },
-  { label: 'Tracking', href: '/tracking' },
-  { label: 'Settings', href: '/settings' },
+const tabs = [
+  { label: 'Home', href: '/home', icon: 'home' },
+  { label: 'Scan', href: '/scan', icon: 'scan' },
+  { label: 'Tracking', href: '/tracking', icon: 'tracking' },
+  { label: 'Settings', href: '/settings', icon: 'settings' },
 ]
 
-interface ScanHistoryItem {
-  id: string
-  product_name: string
-  results_payload: unknown
+function TabIcon({ icon, active }: { icon: string; active: boolean }) {
+  const color = active ? '#534AB7' : '#aaaaaa'
+  switch (icon) {
+    case 'home':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      )
+    case 'scan':
+      return (
+        <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: '#534AB7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -18, boxShadow: '0 2px 8px rgba(83,74,183,0.3)' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+            <circle cx="12" cy="13" r="4" fill="white" />
+          </svg>
+        </div>
+      )
+    case 'tracking':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      )
+    case 'settings':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+        </svg>
+      )
+    default:
+      return null
+  }
 }
 
-interface TrackedItem {
-  id: string
-  title: string
-}
-
-export default function SideDrawer() {
+export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [recentSearches, setRecentSearches] = useState<ScanHistoryItem[]>([])
-  const [trackedItems, setTrackedItems] = useState<TrackedItem[]>([])
-  const [loadingRecent, setLoadingRecent] = useState(false)
-  const [loadingTracked, setLoadingTracked] = useState(false)
-  const fetchedRef = useRef(false)
-  const touchStartX = useRef(0)
-  const touchStartY = useRef(0)
-  const touchStartTime = useRef(0)
-  const openRef = useRef(open)
-  const { subscribe } = useScanSaved()
-
-  useEffect(() => {
-    openRef.current = open
-  }, [open])
-
-  useEffect(() => {
-    function onTouchStart(e: TouchEvent) {
-      touchStartX.current = e.touches[0].clientX
-      touchStartY.current = e.touches[0].clientY
-      touchStartTime.current = Date.now()
-    }
-    function onTouchMove(e: TouchEvent) {
-      const currentX = e.touches[0].clientX
-      const currentY = e.touches[0].clientY
-      const deltaX = currentX - touchStartX.current
-      const deltaY = Math.abs(currentY - touchStartY.current)
-      const elapsed = Date.now() - touchStartTime.current
-      const velocity = elapsed > 0 ? deltaX / elapsed : 0
-
-      // Suppress drawer open if this looks like an iOS back gesture:
-      // started within 20px of left edge, fast horizontal swipe, nearly horizontal
-      if (touchStartX.current < 100 && velocity > 0.5 && deltaY < 10) {
-        return
-      }
-    }
-    function onTouchEnd(e: TouchEvent) {
-      const dx = e.changedTouches[0].clientX - touchStartX.current
-      const dy = e.changedTouches[0].clientY - touchStartY.current
-      const absDx = Math.abs(dx)
-      const absDy = Math.abs(dy)
-      if (!openRef.current && touchStartX.current <= 100 && dx >= 50 && absDx > absDy) {
-        const elapsed = Date.now() - touchStartTime.current
-        const velocity = elapsed > 0 ? dx / elapsed : 0
-        const absDyFinal = Math.abs(dy)
-        // Suppress if iOS back gesture characteristics are met
-        if (touchStartX.current < 100 && velocity > 0.5 && absDyFinal < 10) {
-          return
-        }
-        setOpen(true)
-      } else if (openRef.current && dx <= -50 && absDx > absDy) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('touchstart', onTouchStart, { passive: true })
-    document.addEventListener('touchmove', onTouchMove, { passive: true })
-    document.addEventListener('touchend', onTouchEnd, { passive: true })
-    return () => {
-      document.removeEventListener('touchstart', onTouchStart)
-      document.removeEventListener('touchmove', onTouchMove)
-      document.removeEventListener('touchend', onTouchEnd)
-    }
-  }, [])
-
-  function fetchRecentSearches() {
-    const supabase = createClient()
-    setLoadingRecent(true)
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        setLoadingRecent(false)
-        return
-      }
-      supabase
-        .from('scan_history')
-        .select('id, product_name, results_payload')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(4)
-        .then(({ data, error }: { data: ScanHistoryItem[] | null; error: unknown }) => {
-          if (error) {
-            setRecentSearches([])
-          } else {
-            setRecentSearches(data ?? [])
-          }
-          setLoadingRecent(false)
-        })
-    })
-  }
-
-  useEffect(() => {
-    if (!open || fetchedRef.current) return
-    fetchedRef.current = true
-
-    fetchRecentSearches()
-
-    const supabase = createClient()
-    setLoadingTracked(true)
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { setLoadingTracked(false); return }
-      supabase
-        .from('tracked_items')
-        .select('id, title')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(5)
-        .then(({ data, error }: { data: TrackedItem[] | null; error: unknown }) => {
-          setTrackedItems(error ? [] : (data ?? []))
-          setLoadingTracked(false)
-        })
-    })
-  }, [open])
-
-  // Re-fetch recent searches whenever a new scan is saved
-  useEffect(() => {
-    const unsubscribe = subscribe(() => {
-      fetchedRef.current = false
-      fetchRecentSearches()
-    })
-    return unsubscribe
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subscribe])
-
-  function navigate(href: string) {
-    setOpen(false)
-    router.push(href)
-  }
 
   return (
-    <>
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-border z-50 flex items-center px-4">
-        <div className="w-6 h-6" />
-        <div className="flex-1 flex justify-center">
-          <span className="font-bold text-primary">K33pr</span>
-        </div>
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="w-6 h-6 text-foreground flex items-center justify-center"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-      </header>
-
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      <div
-        className={`fixed top-0 left-0 bottom-0 w-[60vw] bg-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        <div className="pt-4">
-          {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href)
-            return (
-              <button
-                key={item.href}
-                onClick={() => navigate(item.href)}
-                className={`flex items-center w-full h-12 pl-4 text-sm font-bold transition-colors ${isActive ? 'text-primary bg-primary/5' : 'text-foreground-secondary'}`}
-              >
-                {item.label}
-              </button>
-            )
-          })}
-
-          <div className="border-t border-border my-4" />
-
-          <p className="text-xs text-foreground-secondary font-medium pl-4 mb-2">Tracked Items</p>
-
-          {loadingTracked ? (
-            <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
-          ) : (
-            trackedItems.map((item) => (
-              <Link
-                key={item.id}
-                href="/tracking"
-                onClick={() => setOpen(false)}
-                className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
-              >
-                <span className="truncate">{item.title}</span>
-              </Link>
-            ))
-          )}
-
-          <div className="border-t border-border mt-4" />
-
-          <p className="text-xs text-foreground-secondary font-medium pl-4 mt-2 mb-2">Recent</p>
-
-          {loadingRecent ? (
-            <div className="mx-4 h-4 rounded bg-gray-200 animate-pulse" />
-          ) : (
-            recentSearches.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => item.results_payload
-                  ? navigate(`/scan?resume=${item.id}`)
-                  : navigate('/history')
-                }
-                className="flex items-center w-full h-10 pl-4 text-xs text-foreground truncate"
-              >
-                <span className="truncate">{item.product_name}</span>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-    </>
+    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '0.5px solid #ebebeb', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', paddingTop: 6, paddingBottom: 'max(4px, env(safe-area-inset-bottom))', zIndex: 50 }}>
+      {tabs.map(tab => {
+        const isActive = tab.href === '/scan' ? pathname === '/scan' : pathname.startsWith(tab.href)
+        const isScan = tab.icon === 'scan'
+        return (
+          <button
+            key={tab.href}
+            onClick={() => router.push(tab.href)}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isScan ? 0 : 2, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            <TabIcon icon={tab.icon} active={isActive} />
+            <span style={{ fontSize: 10, color: isActive ? '#534AB7' : '#aaaaaa', fontWeight: isActive ? 500 : 400 }}>
+              {tab.label}
+            </span>
+          </button>
+        )
+      })}
+    </nav>
   )
 }

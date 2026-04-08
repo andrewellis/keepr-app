@@ -288,10 +288,10 @@ export default async function HomePage() {
   void signout
 
   return (
-    <div className="bg-background flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
-      {/* Pinned top section — does not scroll */}
+    <div className="bg-background flex flex-col" style={{ minHeight: '100vh' }}>
       <div className="flex-shrink-0">
-        <header className="mt-2 pt-4 pb-3 px-5 flex items-center justify-between">
+        <ScanBar />
+        <header className="pt-2 pb-3 px-5 flex items-center justify-between">
           <div>
             <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               GOOD DAY
@@ -377,10 +377,9 @@ export default async function HomePage() {
             })
           )}
         </div>
-        <div style={{ height: '100px' }} />
+        <div style={{ height: '80px' }} />
       </div>
 
-      <ScanBar />
     </div>
   )
 }
