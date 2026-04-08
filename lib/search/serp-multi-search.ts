@@ -50,9 +50,10 @@ function extractDomain(url: string): string {
 
 // Per-engine result parsers
 function parseGoogleShopping(data: Record<string, unknown>): SerpResult[] {
+  console.log('[DIAG] google_shopping raw items:', JSON.stringify((data.shopping_results as unknown[])?.slice(0, 2), null, 2))
   const items = (data.shopping_results as Record<string, unknown>[]) ?? [];
   return items
-    .filter(item => item.link)
+    .filter(item => item.link || item.product_link)
     .map(item => ({
       engine: 'google_shopping' as SearchEngine,
       title: String(item.title ?? ''),
@@ -65,7 +66,7 @@ function parseGoogleShopping(data: Record<string, unknown>): SerpResult[] {
       snippet: typeof item.snippet === 'string' ? item.snippet : undefined,
       productId: typeof item.product_id === 'string' ? item.product_id : undefined,
       currency: 'USD',
-      url: String(item.link ?? ''),
+      url: String(item.link ?? item.product_link ?? ''),
       thumbnail: String(item.thumbnail ?? (item as Record<string, unknown>).serpapi_thumbnail ?? THUMBNAIL_PLACEHOLDER),
       retailerDomain: extractDomain(String(item.link ?? '')),
       rating: typeof item.rating === 'number' ? item.rating : undefined,
