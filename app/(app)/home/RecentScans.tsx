@@ -49,7 +49,7 @@ export default function RecentScans({ scans }: { scans: ScanItem[] }) {
           </button>
         )}
       </div>
-      <div className="bg-white border border-border rounded-2xl mx-5 overflow-hidden" style={{ marginTop: '8px' }}>
+      <div className="bg-white border border-border rounded-2xl mx-5" style={{ marginTop: '8px', maxHeight: expanded ? '60vh' : 'none', overflowY: expanded ? 'auto' : 'hidden', borderRadius: '16px', WebkitOverflowScrolling: 'touch' }}>
         {visible.length === 0 ? (
           <div className="flex items-center justify-center py-6">
             <p style={{ fontSize: '12px', color: '#aaa' }}>No scans yet</p>
