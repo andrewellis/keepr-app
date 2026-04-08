@@ -48,7 +48,6 @@ function extractDomain(url: string): string {
 
 // Per-engine result parsers
 function parseGoogleShopping(data: Record<string, unknown>): SerpResult[] {
-  console.log('[GOOGLE_SHOPPING_RAW]', JSON.stringify((data.shopping_results as unknown[])?.[0] ?? null));
   const items = (data.shopping_results as Record<string, unknown>[]) ?? [];
   return items
     .filter(item => item.link)
