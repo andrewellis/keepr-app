@@ -853,6 +853,16 @@ export default function ScanClient() {
           return text.length > 45 ? text.slice(0, 45) + '…' : text
         }
 
+        const detectMultiPack = (item: SerpResult): string | null => {
+          const patterns = /\b(\d+[\-\s]?pack|\bpack of \d+|\bcase of \d+|\bset of \d+|\d+[\-\s]?count|\d+[\-\s]?ct\b|\bbulk\b|\bwholesale\b|\bmulti[\-\s]?pack|\bbox of \d+|\blot of \d+|\d+\s*x\s*\d+)/i
+          const title = item.title ?? ''
+          const ext = item.extensions?.join(' ') ?? ''
+          const snippet = item.snippet ?? ''
+          const combined = `${title} ${ext} ${snippet}`
+          const match = combined.match(patterns)
+          return match ? match[0] : null
+        }
+
         const allPriced: { price: number; priceFormatted: string; domain: string; url: string; isShopping: boolean; item: ShoppingResult | SerpResult }[] = []
 
         if (storeState === 'done') {
@@ -929,10 +939,10 @@ export default function ScanClient() {
 
               {selectedSerpItem?.rating != null && (
                 <div className="flex items-center gap-1.5" style={{ marginTop: '-4px' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>{selectedSerpItem.rating}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#111' }}>{selectedSerpItem.rating}</span>
                   {selectedSerpItem.reviews != null && (
-                    <span style={{ fontSize: '12px', color: '#aaa' }}>({selectedSerpItem.reviews.toLocaleString()} reviews)</span>
+                    <span style={{ fontSize: '13px', color: '#aaa' }}>({selectedSerpItem.reviews.toLocaleString()} reviews)</span>
                   )}
                 </div>
               )}
@@ -1038,6 +1048,17 @@ export default function ScanClient() {
                           </span>
                         </div>
                       )}
+
+                      {(() => {
+                        const pack = selectedSerpItem ? detectMultiPack(selectedSerpItem) : null
+                        return pack ? (
+                          <div style={{ marginTop: '4px', display: 'inline-block' }}>
+                            <span style={{ backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
+                              {pack}
+                            </span>
+                          </div>
+                        ) : null
+                      })()}
 
                       {cardRate > 0 && (
                         <div>
@@ -1241,7 +1262,7 @@ export default function ScanClient() {
                         }}
                       >
                         <div className="flex-1 min-w-0">
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
                           {(() => {
                             const serpItem = !r.isShopping ? (r.item as SerpResult) : null
                             return (
@@ -1269,6 +1290,14 @@ export default function ScanClient() {
                                       <span style={{ fontSize: '11px', color: '#aaa' }}>{serpItem.rating}</span>
                                     </div>
                                   )}
+                                  {(() => {
+                                    const pack = serpItem ? detectMultiPack(serpItem) : null
+                                    return pack ? (
+                                      <span style={{ backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>
+                                        {pack}
+                                      </span>
+                                    ) : null
+                                  })()}
                                 </div>
                               </>
                             )
