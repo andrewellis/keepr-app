@@ -921,6 +921,16 @@ export default function ScanClient() {
                 </button>
               </div>
 
+              {selectedSerpItem?.rating != null && (
+                <div className="flex items-center gap-1.5" style={{ marginTop: '-4px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>{selectedSerpItem.rating}</span>
+                  {selectedSerpItem.reviews != null && (
+                    <span style={{ fontSize: '12px', color: '#aaa' }}>({selectedSerpItem.reviews.toLocaleString()} reviews)</span>
+                  )}
+                </div>
+              )}
+
               {/* Loading state */}
               {storeState === 'loading' && (
                 <div style={{ background: '#fff', border: '0.5px solid #ebebeb', borderRadius: 11, overflow: 'hidden' }}>
@@ -980,7 +990,14 @@ export default function ScanClient() {
                         </button>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1 }}>{selected.priceFormatted}</p>
+                        <div className="flex items-baseline gap-2">
+                          <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>{selected.priceFormatted}</p>
+                          {selectedSerpItem?.oldPrice != null && selectedSerpItem.oldPrice > selected.price && (
+                            <span style={{ fontSize: '14px', color: '#bbb', textDecoration: 'line-through' }}>
+                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedSerpItem.oldPrice)}
+                            </span>
+                          )}
+                        </div>
                         {(() => {
                           const selectedAsinInline = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
                           const kdInline = selectedAsinInline ? keepaDataByAsin[selectedAsinInline] ?? null : null
@@ -1008,6 +1025,14 @@ export default function ScanClient() {
                         })()}
                       </div>
 
+                      {selectedSerpItem?.extensions && selectedSerpItem.extensions.length > 0 && (
+                        <div style={{ marginTop: '4px' }}>
+                          <span style={{ backgroundColor: '#FAEEDA', color: '#854F0B', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
+                            {selectedSerpItem.extensions[0]}
+                          </span>
+                        </div>
+                      )}
+
                       {cardRate > 0 && (
                         <div>
                           <div className="flex items-center gap-1" style={{ marginTop: '4px', marginBottom: '6px' }}>
@@ -1030,8 +1055,16 @@ export default function ScanClient() {
                             <div style={{ marginTop: cardRate > 0 ? '0px' : '6px' }}>
                               <p style={{ fontSize: '12px', color: '#aaa', margin: 0 }}>
                                 {cleanDomain(selected.domain)}
-                                {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 ? ` · ${selectedSerpItem.delivery[0]}` : ''}
+                                {selectedSerpItem?.seller && selectedSerpItem.seller !== cleanDomain(selected.domain) ? ` · ${selectedSerpItem.seller}` : ''}
                               </p>
+                              {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 && (
+                                <div className="flex items-center gap-1" style={{ marginTop: '3px' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                  <span style={{ fontSize: '11px', color: selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
+                                    {selectedSerpItem.delivery[0]}
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             {showHeroChart && kdLocal && kdLocal.priceHistory90Days.length > 1 && (
@@ -1193,7 +1226,7 @@ export default function ScanClient() {
                             }
                           }
                         }}
-                        className="flex items-center justify-between cursor-pointer"
+                        className="flex items-start justify-between cursor-pointer"
                         style={{
                           padding: '12px 14px',
                           borderBottom: idx < visiblePrices.length - 1 || hiddenCount > 0 ? '0.5px solid #f5f5f5' : 'none',
@@ -1201,10 +1234,53 @@ export default function ScanClient() {
                           borderLeft: isSelected ? '3px solid #534AB7' : '3px solid transparent',
                         }}
                       >
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
-                        <span style={{ fontSize: '15px', fontWeight: 600, color: idx === 0 ? '#534AB7' : '#111' }}>
-                          {r.priceFormatted}{idx === 0 ? ' ✓' : ''}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
+                          {(() => {
+                            const serpItem = !r.isShopping ? (r.item as SerpResult) : null
+                            return (
+                              <>
+                                {serpItem?.seller && serpItem.seller !== cleanDomain(r.domain) && (
+                                  <p style={{ fontSize: '11px', color: '#aaa', margin: '1px 0 0' }}>{serpItem.seller}</p>
+                                )}
+                                <div className="flex items-center gap-2" style={{ marginTop: '4px' }}>
+                                  {serpItem?.delivery && serpItem.delivery.length > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                      <span style={{ fontSize: '11px', color: serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
+                                        {serpItem.delivery[0]}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {serpItem?.extensions && serpItem.extensions.length > 0 && (
+                                    <span style={{ backgroundColor: '#FAEEDA', color: '#854F0B', fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>
+                                      {serpItem.extensions[0]}
+                                    </span>
+                                  )}
+                                  {serpItem?.rating != null && (
+                                    <div className="flex items-center gap-0.5">
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                      <span style={{ fontSize: '11px', color: '#aaa' }}>{serpItem.rating}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )
+                          })()}
+                        </div>
+                        <div className="flex-shrink-0 text-right">
+                          <span style={{ fontSize: '15px', fontWeight: 600, color: idx === 0 ? '#534AB7' : '#111' }}>
+                            {r.priceFormatted}{idx === 0 ? ' ✓' : ''}
+                          </span>
+                          {(() => {
+                            const serpItem = !r.isShopping ? (r.item as SerpResult) : null
+                            return serpItem?.oldPrice != null && serpItem.oldPrice > r.price ? (
+                              <p style={{ fontSize: '11px', color: '#ccc', textDecoration: 'line-through', margin: '1px 0 0' }}>
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(serpItem.oldPrice)}
+                              </p>
+                            ) : null
+                          })()}
+                        </div>
                       </div>
                     )
                   })}

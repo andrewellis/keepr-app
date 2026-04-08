@@ -19,6 +19,8 @@ export interface SerpResult {
   seller?: string;
   extensions?: string[];
   oldPrice?: number;
+  snippet?: string;
+  productId?: string;
 }
 
 const THUMBNAIL_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='75' font-family='sans-serif' font-size='11' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
@@ -60,6 +62,8 @@ function parseGoogleShopping(data: Record<string, unknown>): SerpResult[] {
       oldPrice: typeof item.extracted_old_price === 'number'
         ? item.extracted_old_price
         : undefined,
+      snippet: typeof item.snippet === 'string' ? item.snippet : undefined,
+      productId: typeof item.product_id === 'string' ? item.product_id : undefined,
       currency: 'USD',
       url: String(item.link ?? ''),
       thumbnail: String(item.thumbnail ?? (item as Record<string, unknown>).serpapi_thumbnail ?? THUMBNAIL_PLACEHOLDER),
