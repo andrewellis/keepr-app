@@ -271,7 +271,7 @@ export default async function HomePage() {
   void signout
 
   return (
-    <div className="bg-background flex flex-col" style={{ minHeight: '100vh' }}>
+    <div className="bg-background flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
       <div className="flex-shrink-0">
         <ScanBar />
         <header className="pt-2 pb-3 px-5 flex items-center justify-between">
@@ -313,7 +313,7 @@ export default async function HomePage() {
       </div>
 
       {/* Scrollable section */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
         <RecentScans scans={(recentScans ?? []).map(scan => ({ id: scan.id, product_name: scan.product_name, created_at: scan.created_at, topResults: getTopResults(scan.results_payload) }))} />
         <div style={{ height: '80px' }} />
       </div>
