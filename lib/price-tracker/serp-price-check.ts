@@ -33,7 +33,7 @@ export async function runPriceCheck(
   // Extract first result based on engine schema
   let item: Record<string, unknown> | null = null;
 
-  if (engine === 'google_shopping_light' || engine === 'bing_shopping') {
+  if (engine === 'google_shopping' || engine === 'bing_shopping') {
     const results = data.shopping_results as Record<string, unknown>[] | undefined;
     item = results?.[0] ?? null;
   } else if (engine === 'amazon') {
@@ -57,7 +57,7 @@ export async function runPriceCheck(
   );
 
   let price: number | null = null;
-  if (engine === 'google_shopping_light') {
+  if (engine === 'google_shopping') {
     price = typeof item.extracted_price === 'number'
       ? item.extracted_price
       : parsePrice(item.price);

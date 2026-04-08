@@ -1,11 +1,12 @@
 /**
  * SerpApi engines available for product search.
- * google_shopping_light is preferred over google_shopping — 3x faster, same schema.
+ * google_shopping (full) provides richer data than google_shopping_light: ratings, reviews,
+ * seller names, delivery info, and product extensions. Slower but worth the data quality.
  * amazon engine fails ~30% of the time on Best Effort — always use with Promise.allSettled.
  * bing_shopping is a dedicated shopping engine, different schema from bing web search.
  */
 export type SearchEngine =
-  | 'google_shopping_light'
+  | 'google_shopping'
   | 'amazon'
   | 'walmart'
   | 'bing_shopping'
@@ -30,24 +31,24 @@ export type ProductCategory =
  */
 const ENGINE_MAP: Record<ProductCategory, Record<'free' | 'paid', SearchEngine[]>> = {
   electronics: {
-    free: ['google_shopping_light', 'amazon', 'ebay'],
-    paid: ['google_shopping_light', 'amazon', 'ebay', 'bing_shopping', 'bestbuy'],
+    free: ['google_shopping', 'amazon', 'ebay'],
+    paid: ['google_shopping', 'amazon', 'ebay', 'bing_shopping', 'bestbuy'],
   },
   home_improvement: {
-    free: ['google_shopping_light', 'home_depot', 'amazon'],
-    paid: ['google_shopping_light', 'home_depot', 'amazon', 'walmart'],
+    free: ['google_shopping', 'home_depot', 'amazon'],
+    paid: ['google_shopping', 'home_depot', 'amazon', 'walmart'],
   },
   furniture: {
-    free: ['google_shopping_light', 'walmart', 'amazon'],
-    paid: ['google_shopping_light', 'walmart', 'amazon', 'bing_shopping'],
+    free: ['google_shopping', 'walmart', 'amazon'],
+    paid: ['google_shopping', 'walmart', 'amazon', 'bing_shopping'],
   },
   appliances: {
-    free: ['google_shopping_light', 'amazon', 'walmart'],
-    paid: ['google_shopping_light', 'amazon', 'walmart', 'home_depot'],
+    free: ['google_shopping', 'amazon', 'walmart'],
+    paid: ['google_shopping', 'amazon', 'walmart', 'home_depot'],
   },
   general: {
-    free: ['google_shopping_light', 'amazon', 'walmart'],
-    paid: ['google_shopping_light', 'amazon', 'walmart', 'bing_shopping'],
+    free: ['google_shopping', 'amazon', 'walmart'],
+    paid: ['google_shopping', 'amazon', 'walmart', 'bing_shopping'],
   },
 };
 

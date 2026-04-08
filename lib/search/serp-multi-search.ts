@@ -14,6 +14,11 @@ export interface SerpResult {
   confidence?: number;
   in_stock?: boolean;
   delivery?: string[];
+  rating?: number;
+  reviews?: number;
+  seller?: string;
+  extensions?: string[];
+  oldPrice?: number;
 }
 
 const THUMBNAIL_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23f3f4f6'/%3E%3Ctext x='75' y='75' font-family='sans-serif' font-size='11' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
@@ -42,19 +47,31 @@ function extractDomain(url: string): string {
 }
 
 // Per-engine result parsers
-function parseGoogleShoppingLight(data: Record<string, unknown>): SerpResult[] {
+function parseGoogleShopping(data: Record<string, unknown>): SerpResult[] {
   const items = (data.shopping_results as Record<string, unknown>[]) ?? [];
-  return items.map(item => ({
-    engine: 'google_shopping_light' as SearchEngine,
-    title: String(item.title ?? ''),
-    price: typeof item.extracted_price === 'number'
-      ? item.extracted_price
-      : parsePrice(item.price),
-    currency: 'USD',
-    url: String(item.link ?? ''),
-    thumbnail: String(item.thumbnail ?? item.serpapi_thumbnail ?? THUMBNAIL_PLACEHOLDER),
-    retailerDomain: extractDomain(String(item.link ?? '')),
-  }));
+  return items
+    .filter(item => item.link)
+    .map(item => ({
+      engine: 'google_shopping' as SearchEngine,
+      title: String(item.title ?? ''),
+      price: typeof item.extracted_price === 'number'
+        ? item.extracted_price
+        : parsePrice(item.price),
+      oldPrice: typeof item.extracted_old_price === 'number'
+        ? item.extracted_old_price
+        : undefined,
+      currency: 'USD',
+      url: String(item.link ?? ''),
+      thumbnail: String(item.thumbnail ?? (item as Record<string, unknown>).serpapi_thumbnail ?? THUMBNAIL_PLACEHOLDER),
+      retailerDomain: extractDomain(String(item.link ?? '')),
+      rating: typeof item.rating === 'number' ? item.rating : undefined,
+      reviews: typeof item.reviews === 'number' ? item.reviews : undefined,
+      seller: typeof item.source === 'string' ? item.source : undefined,
+      delivery: typeof item.delivery === 'string' ? [item.delivery] : undefined,
+      extensions: Array.isArray(item.extensions)
+        ? (item.extensions as unknown[]).map(e => String(e))
+        : undefined,
+    }));
 }
 
 function parseAmazon(data: Record<string, unknown>): SerpResult[] {
@@ -179,7 +196,7 @@ function parseEngineResults(
   data: Record<string, unknown>
 ): SerpResult[] {
   switch (engine) {
-    case 'google_shopping_light': return parseGoogleShoppingLight(data);
+    case 'google_shopping': return parseGoogleShopping(data);
     case 'amazon':                return parseAmazon(data);
     case 'walmart':               return parseWalmart(data);
     case 'bing_shopping':         return parseBingShopping(data);
