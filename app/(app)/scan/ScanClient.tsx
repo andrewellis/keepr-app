@@ -667,7 +667,7 @@ export default function ScanClient() {
   }, [keepaDataByAsin, storeState, displayedSerpResults, shoppingResults, showHeroChart, userDismissedChart])
 
   return (
-    <div className="bg-background px-5 pt-4 pb-24">
+    <div className="bg-background px-5 pt-4 pb-24 md:px-8">
       {isOffline && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
           <p className="text-sm text-red-600 text-center">No internet connection.</p>
@@ -936,9 +936,9 @@ export default function ScanClient() {
         const hiddenCount = allPriced.length - VISIBLE_COUNT
 
         return (
-          <div className="flex flex-col" style={{ height: 'calc(100vh - 56px - 16px)' }}>
+          <div className="flex flex-col md:flex-row md:gap-8 md:max-w-5xl md:mx-auto" style={{ height: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'auto' : 'calc(100vh - 56px - 16px)' }}>
             {/* ═══ PINNED SECTION ═══ */}
-            <div className="flex-shrink-0 space-y-3">
+            <div className="flex-shrink-0 space-y-3 md:w-[380px]">
 
               {/* Product header row */}
               <div className="flex items-start justify-between gap-3">
@@ -1255,7 +1255,7 @@ export default function ScanClient() {
 
             {/* ═══ SCROLLABLE SECTION ═══ */}
             {hasResults && allPriced.length > 1 && (
-              <div className="flex-1 overflow-y-auto min-h-0" style={{ marginTop: '12px' }}>
+              <div className="flex-1 overflow-y-auto min-h-0 md:overflow-y-visible" style={{ marginTop: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0px' : '12px' }}>
                 <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
                   {visiblePrices.map((r, idx) => {
                     const isSelected = idx === selectedPriceIdx
