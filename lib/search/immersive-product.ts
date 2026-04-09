@@ -1,5 +1,6 @@
 import type { SerpResult } from './serp-multi-search';
 import { serpApiFetch } from './serp-fetch';
+import type { SearchEngine } from './engine-selector';
 
 export interface ImmersiveProductMeta {
   brand?: string;
@@ -80,8 +81,7 @@ export async function fetchImmersiveProduct(
         : undefined;
 
       return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        engine: 'google_immersive_product' as any,
+        engine: 'google_immersive_product' as SearchEngine,
         title: typeof store.title === 'string' ? store.title : '',
         price: typeof store.extracted_price === 'number' ? store.extracted_price : null,
         oldPrice: typeof store.extracted_original_price === 'number' ? store.extracted_original_price : undefined,

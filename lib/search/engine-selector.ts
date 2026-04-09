@@ -7,6 +7,7 @@
  */
 export type SearchEngine =
   | 'google_shopping'
+  | 'google_immersive_product'
   | 'amazon'
   | 'walmart'
   | 'bing_shopping'
