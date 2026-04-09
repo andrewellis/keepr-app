@@ -1406,7 +1406,7 @@ export default function ScanClient() {
             </div>
 
             {/* ═══ DESKTOP LAYOUT ═══ */}
-            <div className="hidden md:block" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 32px' }}>
+            <div className="hidden md:block" style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 32px 24px 32px' }}>
 
               {/* Edge case 2: No results at all */}
               {storeState === 'done' && allPriced.length === 0 && (
@@ -1420,6 +1420,8 @@ export default function ScanClient() {
                   </button>
                 </div>
               )}
+
+              <div style={{ height: '24px' }} />
 
               {(storeState !== 'done' || allPriced.length > 0) && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
