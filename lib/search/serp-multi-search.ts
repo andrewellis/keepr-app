@@ -102,6 +102,7 @@ function parseAmazon(data: Record<string, unknown>): SerpResult[] {
 
 function parseWalmart(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
+  if (items.length > 0) console.log('[WALMART_RAW]', JSON.stringify(items[0], null, 2))
   return items
     .filter(item => {
       const offer = item.primary_offer as Record<string, unknown> | undefined;
@@ -143,6 +144,7 @@ function parseBingShopping(data: Record<string, unknown>): SerpResult[] {
 
 function parseEbay(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
+  if (items.length > 0) console.log('[EBAY_RAW]', JSON.stringify(items[0], null, 2))
   return items
     .filter(item => {
       const condition = String(item.condition ?? '').toLowerCase();
@@ -164,6 +166,7 @@ function parseEbay(data: Record<string, unknown>): SerpResult[] {
 
 function parseHomeDepot(data: Record<string, unknown>): SerpResult[] {
   const items = (data.products as Record<string, unknown>[]) ?? [];
+  if (items.length > 0) console.log('[HOMEDEPOT_RAW]', JSON.stringify(items[0], null, 2))
   return items.map(item => {
     const priceObj = item.price as Record<string, unknown> | undefined;
     return {
@@ -180,6 +183,7 @@ function parseHomeDepot(data: Record<string, unknown>): SerpResult[] {
 
 function parseBestBuy(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
+  if (items.length > 0) console.log('[BESTBUY_RAW]', JSON.stringify(items[0], null, 2))
   return items
     .filter(item => item.link)
     .map(item => {
