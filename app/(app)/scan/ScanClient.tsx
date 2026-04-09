@@ -2,7 +2,7 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Camera } from 'lucide-react'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import type { ShoppingResult } from '@/lib/shopping/types'
@@ -15,6 +15,10 @@ import { getBestCardRecommendation } from '@/lib/cards/recommender'
 import { getCardCategory } from '@/lib/cards/categoryMap'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useScanSaved } from '@/lib/scan-saved-context'
+import { selectPicks } from '@/lib/search/pick-selector'
+import type { PickSet } from '@/lib/search/pick-selector'
+import { getRetailerTrust } from '@/lib/search/retailer-trust'
+import { getBuyTiming, getBuyTimingColor, getBuyTimingLabel } from '@/lib/keepa/buy-timing'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -45,6 +49,8 @@ interface MatchResults {
     detectedRetailer: string;
     enginesUsed: number;
     resultsFound: number;
+    enginesQueried?: string[];
+    enginesSucceeded?: string[];
   };
 }
 
@@ -153,9 +159,14 @@ function formatRelativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+}
+
 export default function ScanClient() {
   const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { notifyScanSaved } = useScanSaved()
 
   const resumeId = searchParams.get('resume')
@@ -191,6 +202,8 @@ export default function ScanClient() {
   const [showAllPrices, setShowAllPrices] = useState(false)
   const [showHeroChart, setShowHeroChart] = useState(false)
   const [userDismissedChart, setUserDismissedChart] = useState(false)
+  const [desktopPickIdx, setDesktopPickIdx] = useState<number>(1)
+  const [desktopTableExpanded, setDesktopTableExpanded] = useState(false)
 
   useEffect(() => {
     setSelectedPriceIdx(0)
@@ -522,9 +535,7 @@ export default function ScanClient() {
         return
       }
 
-      // Derive card category from retailer domain using getCardCategory
-      const retailerDomain = result.retailerDomain ?? ''
-      const cardCategory = getCardCategory(retailerDomain)
+      const cardCategory = getCardCategory(scanResult?.category ?? 'General')
 
       const recommendation = getBestCardRecommendation(userCards, cardCategory)
       if (!recommendation) {
@@ -614,12 +625,13 @@ export default function ScanClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (storeState !== 'done') return
-    const allResults = [...displayedSerpResults].filter(r => r.price !== null).sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
-    if (allResults.length === 0) return
-    const cheapest = allResults[0]
-    const id = `${cheapest.engine}-${cheapest.url}`
-    if (id in bestCardByResultId || bestCardLoadingIds.has(id)) return
-    handleBestCard(cheapest, id)
+    const sorted = [...displayedSerpResults].filter(r => r.price !== null).sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+    const top = sorted.slice(0, 5)
+    for (const r of top) {
+      const id = `${r.engine}-${r.url}`
+      if (id in bestCardByResultId || bestCardLoadingIds.has(id)) continue
+      handleBestCard(r, id)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeState, displayedSerpResults])
 
@@ -935,430 +947,913 @@ export default function ScanClient() {
         const visiblePrices = showAllPrices ? allPriced : allPriced.slice(0, VISIBLE_COUNT)
         const hiddenCount = allPriced.length - VISIBLE_COUNT
 
+        // Desktop picks computation
+        const picks = selectPicks(displayedSerpResults.filter(r => r.price !== null), bestCardByResultId)
+
+        // Edge case 7: safePickIdx guard
+        const safePickIdx = (desktopPickIdx === 2 && !picks?.premium) ? 1 : desktopPickIdx
+
+        const selectedAsinForTiming = (() => {
+          for (const item of allPriced) {
+            if (!item.isShopping) {
+              const serpItem = item.item as SerpResult
+              if (serpItem.retailerDomain === 'amazon.com' || serpItem.engine === 'amazon') {
+                const asin = extractAsinFromUrl(serpItem.url)
+                if (asin && keepaDataByAsin[asin]) return asin
+              }
+            }
+          }
+          return null
+        })()
+        const timingKeepa = selectedAsinForTiming ? (keepaDataByAsin[selectedAsinForTiming] ?? null) : null
+        const timingVerdict = timingKeepa ? getBuyTiming(timingKeepa.percentVsAvg90) : null
+
+        // Desktop selected pick (use safePickIdx)
+        const desktopSelectedResult = safePickIdx === 0 ? picks?.cheapest : safePickIdx === 1 ? picks?.pick : (picks?.premium ?? picks?.pick)
+        const desktopSelectedId = desktopSelectedResult ? `${desktopSelectedResult.engine}-${desktopSelectedResult.url}` : null
+        const desktopCardData = desktopSelectedId ? (bestCardByResultId[desktopSelectedId] ?? null) : null
+        const desktopCardRate = desktopCardData?.rate ?? 0
+        const desktopNetCost = desktopSelectedResult ? desktopSelectedResult.price! * (1 - desktopCardRate / 100) : 0
+        const desktopRetailerName = desktopSelectedResult ? desktopSelectedResult.retailerDomain.replace(/\.\w+$/, '') : ''
+
         return (
-          <div className="flex flex-col md:flex-row md:gap-8 md:max-w-5xl md:mx-auto" style={{ height: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'auto' : 'calc(100vh - 56px - 16px)' }}>
-            {/* ═══ PINNED SECTION ═══ */}
-            <div className="flex-shrink-0 space-y-3 md:w-[380px]">
+          <>
+            {/* ═══ MOBILE LAYOUT ═══ */}
+            <div className="md:hidden" style={{ height: 'calc(100vh - 56px - 16px)' }}>
+              <div className="flex flex-col" style={{ height: '100%' }}>
+                {/* ═══ PINNED SECTION ═══ */}
+                <div className="flex-shrink-0 space-y-3">
 
-              {/* Product header row */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', lineHeight: 1.3 }}>{scanResult.productName}</p>
-                  <p style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
-                    {scanResult.category ?? 'Product'} · typical {getPriceRange(scanResult.category)}
-                  </p>
-                </div>
-                <button
-                  onClick={handleReset}
-                  className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: '#534AB7' }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4" fill="white"/></svg>
-                </button>
-              </div>
-
-              {selectedSerpItem?.rating != null && (
-                <div className="flex items-center gap-1.5" style={{ marginTop: '-4px' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#111' }}>{selectedSerpItem.rating}</span>
-                  {selectedSerpItem.reviews != null && (
-                    <span style={{ fontSize: '13px', color: '#aaa' }}>({selectedSerpItem.reviews.toLocaleString()} reviews)</span>
-                  )}
-                </div>
-              )}
-
-              {/* Loading state */}
-              {storeState === 'loading' && (
-                <div style={{ background: '#fff', border: '0.5px solid #ebebeb', borderRadius: 11, overflow: 'hidden' }}>
-                  <div style={{ padding: '8px 12px', borderBottom: '0.5px solid #f0f0f0' }}>
-                    <p style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Searching retailers...</p>
+                  {/* Product header row */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', lineHeight: 1.3 }}>{scanResult.productName}</p>
+                      <p style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
+                        {scanResult.category ?? 'Product'} · typical {getPriceRange(scanResult.category)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleReset}
+                      className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: '#534AB7' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4" fill="white"/></svg>
+                    </button>
                   </div>
-                  {['Amazon', 'Walmart', 'eBay', 'Best Buy', 'Target'].map((name, i) => (
-                    <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: i < 4 ? '0.5px solid #f5f5f5' : 'none', opacity: i < 2 ? 1 : i < 3 ? 0.6 : 0.35 }}>
-                      <span style={{ fontSize: 13, color: i < 3 ? '#111' : '#aaa' }}>{name}</span>
-                      {i < 2 ? (
-                        <span style={{ fontSize: 13, color: '#534AB7', fontWeight: 500 }}>✓</span>
-                      ) : i === 2 ? (
-                        <span className="animate-pulse" style={{ fontSize: 13, color: '#534AB7' }}>···</span>
-                      ) : (
-                        <span style={{ fontSize: 13, color: '#ddd' }}>—</span>
+
+                  {selectedSerpItem?.rating != null && (
+                    <div className="flex items-center gap-1.5" style={{ marginTop: '-4px' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: '#111' }}>{selectedSerpItem.rating}</span>
+                      {selectedSerpItem.reviews != null && (
+                        <span style={{ fontSize: '13px', color: '#aaa' }}>({selectedSerpItem.reviews.toLocaleString()} reviews)</span>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
 
-              {/* No results state */}
-              {storeState === 'done' && !hasResults && (
-                <p className="text-sm text-center text-foreground-secondary">
-                  No matching products found{scanResult?.productName ? ` for ${scanResult.productName}` : ''}.
-                </p>
-              )}
-
-              {/* Hero card */}
-              {hasResults && selected && (
-                <>
-                  <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
-                    <div style={{ padding: '14px 14px 10px' }}>
-                      <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
-                        <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
-                        </p>
-                        <button
-                          onClick={async () => {
-                            const shareData = {
-                              title: scanResult.productName ?? 'K33pr Price Check',
-                              text: `${scanResult.productName} — ${selected.priceFormatted} at ${cleanDomain(selected.domain)}`,
-                              url: window.location.href,
-                            }
-                            try {
-                              if (navigator.share) {
-                                await navigator.share(shareData)
-                              } else {
-                                await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`)
-                              }
-                            } catch {}
-                          }}
-                          className="flex-shrink-0"
-                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
-                        </button>
+                  {/* Loading state */}
+                  {storeState === 'loading' && (
+                    <div style={{ background: '#fff', border: '0.5px solid #ebebeb', borderRadius: 11, overflow: 'hidden' }}>
+                      <div style={{ padding: '8px 12px', borderBottom: '0.5px solid #f0f0f0' }}>
+                        <p style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Searching retailers...</p>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <div className="flex items-baseline gap-2">
-                          <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>{selected.priceFormatted}</p>
-                          {selectedSerpItem?.oldPrice != null && selectedSerpItem.oldPrice > selected.price && (
-                            <span style={{ fontSize: '14px', color: '#bbb', textDecoration: 'line-through' }}>
-                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedSerpItem.oldPrice)}
-                            </span>
+                      {['Amazon', 'Walmart', 'eBay', 'Best Buy', 'Target'].map((name, i) => (
+                        <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: i < 4 ? '0.5px solid #f5f5f5' : 'none', opacity: i < 2 ? 1 : i < 3 ? 0.6 : 0.35 }}>
+                          <span style={{ fontSize: 13, color: i < 3 ? '#111' : '#aaa' }}>{name}</span>
+                          {i < 2 ? (
+                            <span style={{ fontSize: 13, color: '#534AB7', fontWeight: 500 }}>✓</span>
+                          ) : i === 2 ? (
+                            <span className="animate-pulse" style={{ fontSize: 13, color: '#534AB7' }}>···</span>
+                          ) : (
+                            <span style={{ fontSize: 13, color: '#ddd' }}>—</span>
                           )}
                         </div>
-                        {(() => {
-                          const selectedAsinInline = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
-                          const kdInline = selectedAsinInline ? keepaDataByAsin[selectedAsinInline] ?? null : null
-                          const isKeepaLoadingInline = selectedAsinInline ? keepaLoadingAsins.has(selectedAsinInline) : false
-                          if (selectedAsinInline && kdInline && !isKeepaLoadingInline) {
-                            return (
-                              <button
-                                onClick={() => {
-                                  if (showHeroChart) {
-                                    setSelectedPriceIdx(0)
-                                    setUserDismissedChart(true)
+                      ))}
+                    </div>
+                  )}
+
+                  {/* No results state */}
+                  {storeState === 'done' && !hasResults && (
+                    <p className="text-sm text-center text-foreground-secondary">
+                      No matching products found{scanResult?.productName ? ` for ${scanResult.productName}` : ''}.
+                    </p>
+                  )}
+
+                  {/* Hero card */}
+                  {hasResults && selected && (
+                    <>
+                      <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
+                        <div style={{ padding: '14px 14px 10px' }}>
+                          <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
+                            <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
+                            </p>
+                            <button
+                              onClick={async () => {
+                                const shareData = {
+                                  title: scanResult.productName ?? 'K33pr Price Check',
+                                  text: `${scanResult.productName} — ${selected.priceFormatted} at ${cleanDomain(selected.domain)}`,
+                                  url: window.location.href,
+                                }
+                                try {
+                                  if (navigator.share) {
+                                    await navigator.share(shareData)
+                                  } else {
+                                    await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`)
                                   }
-                                  setShowHeroChart(prev => !prev)
-                                }}
-                                style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '19px', color: '#534AB7', fontWeight: 600 }}
-                              >
-                                {showHeroChart ? 'Hide chart' : 'Price history'}
-                              </button>
-                            )
-                          }
-                          if (selectedAsinInline && isKeepaLoadingInline) {
-                            return <span style={{ fontSize: '11px', color: '#aaa' }}>Loading...</span>
-                          }
-                          return null
-                        })()}
-                      </div>
-
-                      {selectedSerpItem?.extensions && selectedSerpItem.extensions.length > 0 && (
-                        <div style={{ marginTop: '4px' }}>
-                          <span style={{ backgroundColor: '#FAEEDA', color: '#854F0B', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
-                            {selectedSerpItem.extensions[0]}
-                          </span>
-                        </div>
-                      )}
-
-                      {(() => {
-                        const pack = selectedSerpItem ? detectMultiPack(selectedSerpItem) : null
-                        return pack ? (
-                          <div style={{ marginTop: '4px', display: 'inline-block' }}>
-                            <span style={{ backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
-                              {pack}
-                            </span>
+                                } catch {}
+                              }}
+                              className="flex-shrink-0"
+                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                            </button>
                           </div>
-                        ) : null
-                      })()}
-
-                      {cardRate > 0 && (
-                        <div>
-                          <div className="flex items-center gap-1" style={{ marginTop: '4px', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '15px', fontWeight: 500, color: '#1D9E75' }}>{netCostFormatted} net</span>
-                            <span style={{ fontSize: '9px', backgroundColor: '#E1F5EE', color: '#085041', borderRadius: '3px', padding: '1px 5px' }}>after card savings</span>
-                          </div>
-                          <div className="flex items-center justify-between" style={{ backgroundColor: '#f8f8f8', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', color: '#888' }}>{selectedCardData!.cardName} ({cardRate}%)</span>
-                            <span style={{ fontSize: '11px', fontWeight: 500, color: '#1D9E75' }}>−{cardSavingsFormatted}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {(() => {
-                        const selectedAsinLocal = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
-                        const kdLocal = selectedAsinLocal ? keepaDataByAsin[selectedAsinLocal] ?? null : null
-
-                        return (
-                          <>
-                            <div style={{ marginTop: cardRate > 0 ? '0px' : '6px' }}>
-                              <p style={{ fontSize: '12px', color: '#aaa', margin: 0 }}>
-                                {cleanDomain(selected.domain)}
-                                {selectedSerpItem?.seller && selectedSerpItem.seller !== cleanDomain(selected.domain) ? ` · ${selectedSerpItem.seller}` : ''}
-                              </p>
-                              {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 && (
-                                <div className="flex items-center gap-1" style={{ marginTop: '3px' }}>
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                                  <span style={{ fontSize: '11px', color: selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
-                                    {truncateDelivery(selectedSerpItem.delivery[0])}
-                                  </span>
-                                </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <div className="flex items-baseline gap-2">
+                              <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>{selected.priceFormatted}</p>
+                              {selectedSerpItem?.oldPrice != null && selectedSerpItem.oldPrice > selected.price && (
+                                <span style={{ fontSize: '14px', color: '#bbb', textDecoration: 'line-through' }}>
+                                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedSerpItem.oldPrice)}
+                                </span>
                               )}
                             </div>
-
-                            {showHeroChart && kdLocal && kdLocal.priceHistory90Days.length > 1 && (
-                              <div style={{ marginTop: '10px', marginBottom: '4px' }}>
-                                <ResponsiveContainer width="100%" height={100}>
-                                  <LineChart
-                                    data={kdLocal.priceHistory90Days.map(p => ({
-                                      date: new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                                      price: p.price,
-                                    }))}
-                                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+                            {(() => {
+                              const selectedAsinInline = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
+                              const kdInline = selectedAsinInline ? keepaDataByAsin[selectedAsinInline] ?? null : null
+                              const isKeepaLoadingInline = selectedAsinInline ? keepaLoadingAsins.has(selectedAsinInline) : false
+                              if (selectedAsinInline && kdInline && !isKeepaLoadingInline) {
+                                return (
+                                  <button
+                                    onClick={() => {
+                                      if (showHeroChart) {
+                                        setSelectedPriceIdx(0)
+                                        setUserDismissedChart(true)
+                                      }
+                                      setShowHeroChart(prev => !prev)
+                                    }}
+                                    style={{ background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', fontSize: '19px', color: '#534AB7', fontWeight: 600 }}
                                   >
-                                    <XAxis
-                                      dataKey="date"
-                                      tick={{ fontSize: 9, fill: '#9ca3af' }}
-                                      tickLine={false}
-                                      axisLine={false}
-                                      interval="preserveStartEnd"
-                                    />
-                                    <YAxis
-                                      tick={{ fontSize: 9, fill: '#9ca3af' }}
-                                      tickLine={false}
-                                      axisLine={false}
-                                      tickFormatter={(v) => `$${v}`}
-                                      domain={['auto', 'auto']}
-                                    />
-                                    <Tooltip
-                                      formatter={(value) => {
-                                        const num = typeof value === 'number' ? value : Number(value)
-                                        return [`$${num.toFixed(2)}`, 'Price']
-                                      }}
-                                      labelStyle={{ fontSize: 10 }}
-                                      contentStyle={{ fontSize: 10, borderRadius: 6 }}
-                                    />
-                                    <Line
-                                      type="monotone"
-                                      dataKey="price"
-                                      stroke="#534AB7"
-                                      strokeWidth={2}
-                                      dot={false}
-                                      activeDot={{ r: 3 }}
-                                    />
-                                  </LineChart>
-                                </ResponsiveContainer>
+                                    {showHeroChart ? 'Hide chart' : 'Price history'}
+                                  </button>
+                                )
+                              }
+                              if (selectedAsinInline && isKeepaLoadingInline) {
+                                return <span style={{ fontSize: '11px', color: '#aaa' }}>Loading...</span>
+                              }
+                              return null
+                            })()}
+                          </div>
+
+                          {selectedSerpItem?.extensions && selectedSerpItem.extensions.length > 0 && (
+                            <div style={{ marginTop: '4px' }}>
+                              <span style={{ backgroundColor: '#FAEEDA', color: '#854F0B', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
+                                {selectedSerpItem.extensions[0]}
+                              </span>
+                            </div>
+                          )}
+
+                          {(() => {
+                            const pack = selectedSerpItem ? detectMultiPack(selectedSerpItem) : null
+                            return pack ? (
+                              <div style={{ marginTop: '4px', display: 'inline-block' }}>
+                                <span style={{ backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
+                                  {pack}
+                                </span>
                               </div>
-                            )}
+                            ) : null
+                          })()}
+
+                          {cardRate > 0 && (
+                            <div>
+                              <div className="flex items-center gap-1" style={{ marginTop: '4px', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '15px', fontWeight: 500, color: '#1D9E75' }}>{netCostFormatted} net</span>
+                                <span style={{ fontSize: '9px', backgroundColor: '#E1F5EE', color: '#085041', borderRadius: '3px', padding: '1px 5px' }}>after card savings</span>
+                              </div>
+                              <div className="flex items-center justify-between" style={{ backgroundColor: '#f8f8f8', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '11px', color: '#888' }}>{selectedCardData!.cardName} ({cardRate}%)</span>
+                                <span style={{ fontSize: '11px', fontWeight: 500, color: '#1D9E75' }}>−{cardSavingsFormatted}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {(() => {
+                            const selectedAsinLocal = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
+                            const kdLocal = selectedAsinLocal ? keepaDataByAsin[selectedAsinLocal] ?? null : null
+
+                            return (
+                              <>
+                                <div style={{ marginTop: cardRate > 0 ? '0px' : '6px' }}>
+                                  <p style={{ fontSize: '12px', color: '#aaa', margin: 0 }}>
+                                    {cleanDomain(selected.domain)}
+                                    {selectedSerpItem?.seller && selectedSerpItem.seller !== cleanDomain(selected.domain) ? ` · ${selectedSerpItem.seller}` : ''}
+                                  </p>
+                                  {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 && (
+                                    <div className="flex items-center gap-1" style={{ marginTop: '3px' }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                      <span style={{ fontSize: '11px', color: selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
+                                        {truncateDelivery(selectedSerpItem.delivery[0])}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {showHeroChart && kdLocal && kdLocal.priceHistory90Days.length > 1 && (
+                                  <div style={{ marginTop: '10px', marginBottom: '4px' }}>
+                                    <ResponsiveContainer width="100%" height={100}>
+                                      <LineChart
+                                        data={kdLocal.priceHistory90Days.map(p => ({
+                                          date: new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                                          price: p.price,
+                                        }))}
+                                        margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+                                      >
+                                        <XAxis
+                                          dataKey="date"
+                                          tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                          tickLine={false}
+                                          axisLine={false}
+                                          interval="preserveStartEnd"
+                                        />
+                                        <YAxis
+                                          tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                          tickLine={false}
+                                          axisLine={false}
+                                          tickFormatter={(v) => `$${v}`}
+                                          domain={['auto', 'auto']}
+                                        />
+                                        <Tooltip
+                                          formatter={(value) => {
+                                            const num = typeof value === 'number' ? value : Number(value)
+                                            return [`$${num.toFixed(2)}`, 'Price']
+                                          }}
+                                          labelStyle={{ fontSize: 10 }}
+                                          contentStyle={{ fontSize: 10, borderRadius: 6 }}
+                                        />
+                                        <Line
+                                          type="monotone"
+                                          dataKey="price"
+                                          stroke="#534AB7"
+                                          strokeWidth={2}
+                                          dot={false}
+                                          activeDot={{ r: 3 }}
+                                        />
+                                      </LineChart>
+                                    </ResponsiveContainer>
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
+                        </div>
+
+                        {/* Stat bar */}
+                        <div className="flex" style={{ borderTop: '0.5px solid #f0f0f0' }}>
+                          <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                            <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>90-day low</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>{ninetyDayLow !== null ? `$${ninetyDayLow.toFixed(2)}` : '—'}</p>
+                          </div>
+                          <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                            <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>vs low</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: vsLow !== null && vsLow > 0 ? '#D85A30' : '#1D9E75' }}>{vsLow !== null ? (vsLow > 0 ? `+$${vsLow.toFixed(2)}` : vsLow === 0 ? 'At low ✓' : `-$${Math.abs(vsLow).toFixed(2)}`) : '—'}</p>
+                          </div>
+                          <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
+                            <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>searched</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: '#534AB7' }}>{totalSearched}</p>
+                          </div>
+                          <div className="flex-1" style={{ padding: '8px 6px' }}>
+                            <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>net cost</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{cardRate > 0 ? netCostFormatted : selected.priceFormatted}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div>
+                        {selectedSerpItem && selectedId && !trackedIds.has(selectedId) && (
+                          <>
+                            <button
+                              onClick={() => handleTrack(selectedSerpItem, false)}
+                              disabled={trackingInProgress.has(selectedId)}
+                              className="w-full rounded-xl py-3 text-sm font-medium text-white"
+                              style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
+                            >
+                              {trackingInProgress.has(selectedId) ? 'Adding...' : 'Track price'}
+                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => { if (isAggressiveEligible(selectedSerpItem)) handleTrack(selectedSerpItem, true) }}
+                                disabled={!isAggressiveEligible(selectedSerpItem) || trackingInProgress.has(selectedId)}
+                                className="flex-1 rounded-xl py-3 text-sm text-center border disabled:opacity-40"
+                                style={{ color: '#555', borderColor: '#e0e0e0' }}
+                              >
+                                Aggressively track
+                              </button>
+                              <a
+                                href={selected.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 rounded-xl py-3 text-sm text-center border no-underline"
+                                style={{ color: '#555', borderColor: '#e0e0e0' }}
+                              >
+                                Buy ↗
+                              </a>
+                            </div>
                           </>
-                        )
-                      })()}
-                    </div>
-
-                    {/* Stat bar */}
-                    <div className="flex" style={{ borderTop: '0.5px solid #f0f0f0' }}>
-                      <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
-                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>90-day low</p>
-                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>{ninetyDayLow !== null ? `$${ninetyDayLow.toFixed(2)}` : '—'}</p>
-                      </div>
-                      <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
-                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>vs low</p>
-                        <p style={{ fontSize: '13px', fontWeight: 500, color: vsLow !== null && vsLow > 0 ? '#D85A30' : '#1D9E75' }}>{vsLow !== null ? (vsLow > 0 ? `+$${vsLow.toFixed(2)}` : vsLow === 0 ? 'At low ✓' : `-$${Math.abs(vsLow).toFixed(2)}`) : '—'}</p>
-                      </div>
-                      <div className="flex-1" style={{ padding: '8px 6px', borderRight: '0.5px solid #f0f0f0' }}>
-                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>searched</p>
-                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#534AB7' }}>{totalSearched}</p>
-                      </div>
-                      <div className="flex-1" style={{ padding: '8px 6px' }}>
-                        <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>net cost</p>
-                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{cardRate > 0 ? netCostFormatted : selected.priceFormatted}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div>
-                    {selectedSerpItem && selectedId && !trackedIds.has(selectedId) && (
-                      <>
-                        <button
-                          onClick={() => handleTrack(selectedSerpItem, false)}
-                          disabled={trackingInProgress.has(selectedId)}
-                          className="w-full rounded-xl py-3 text-sm font-medium text-white"
-                          style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
-                        >
-                          {trackingInProgress.has(selectedId) ? 'Adding...' : 'Track price'}
-                        </button>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => { if (isAggressiveEligible(selectedSerpItem)) handleTrack(selectedSerpItem, true) }}
-                            disabled={!isAggressiveEligible(selectedSerpItem) || trackingInProgress.has(selectedId)}
-                            className="flex-1 rounded-xl py-3 text-sm text-center border disabled:opacity-40"
-                            style={{ color: '#555', borderColor: '#e0e0e0' }}
-                          >
-                            Aggressively track
-                          </button>
+                        )}
+                        {selectedId && trackedIds.has(selectedId) && (
+                          <div className="text-center text-sm font-medium" style={{ color: '#1D9E75' }}>Tracked ✓</div>
+                        )}
+                        {selected.isShopping && (
                           <a
-                            href={selected.url}
+                            href={(selected.item as ShoppingResult).productUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 rounded-xl py-3 text-sm text-center border no-underline"
-                            style={{ color: '#555', borderColor: '#e0e0e0' }}
+                            className="block w-full rounded-xl py-3 text-sm font-medium text-white text-center no-underline"
+                            style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
                           >
                             Buy ↗
                           </a>
-                        </div>
-                      </>
-                    )}
-                    {selectedId && trackedIds.has(selectedId) && (
-                      <div className="text-center text-sm font-medium" style={{ color: '#1D9E75' }}>Tracked ✓</div>
-                    )}
-                    {selected.isShopping && (
-                      <a
-                        href={(selected.item as ShoppingResult).productUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full rounded-xl py-3 text-sm font-medium text-white text-center no-underline"
-                        style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
-                      >
-                        Buy ↗
-                      </a>
-                    )}
-                  </div>
-                </>
-              )}
+                        )}
+                      </div>
+                    </>
+                  )}
 
-              {/* Store error state */}
-              {storeState === 'error' && (
-                <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
-                  <p className="text-sm font-semibold text-foreground">
-                    {scanResult?.productName
-                      ? `Found ${scanResult.productName} but couldn't load store results right now.`
-                      : 'Couldn\'t load store results.'}
-                  </p>
+                  {/* Store error state */}
+                  {storeState === 'error' && (
+                    <div className="bg-surface border border-red-200 rounded-2xl p-5 text-center space-y-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        {scanResult?.productName
+                          ? `Found ${scanResult.productName} but couldn't load store results right now.`
+                          : 'Couldn\'t load store results.'}
+                      </p>
+                      <button
+                        onClick={() => handleFindBestPrice()}
+                        className="text-sm text-primary font-medium hover:opacity-80 transition"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ═══ SCROLLABLE SECTION ═══ */}
+                {hasResults && allPriced.length > 1 && (
+                  <div className="flex-1 overflow-y-auto min-h-0" style={{ marginTop: '12px' }}>
+                    <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
+                      {visiblePrices.map((r, idx) => {
+                        const isSelected = idx === selectedPriceIdx
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => {
+                              setSelectedPriceIdx(idx)
+                              setShowHeroChart(false)
+                              const serpItem = !r.isShopping ? (r.item as SerpResult) : null
+                              if (serpItem) {
+                                const id = `${serpItem.engine}-${serpItem.url}`
+                                if (!(id in bestCardByResultId) && !bestCardLoadingIds.has(id)) {
+                                  handleBestCard(serpItem, id)
+                                }
+                              }
+                            }}
+                            className="flex items-start justify-between cursor-pointer"
+                            style={{
+                              padding: '12px 14px',
+                              borderBottom: idx < visiblePrices.length - 1 || hiddenCount > 0 ? '0.5px solid #f5f5f5' : 'none',
+                              backgroundColor: isSelected ? '#f4f3fe' : 'transparent',
+                              borderLeft: isSelected ? '3px solid #534AB7' : '3px solid transparent',
+                            }}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <span style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
+                              {(() => {
+                                const serpItem = !r.isShopping ? (r.item as SerpResult) : null
+                                return (
+                                  <>
+                                    {serpItem?.seller && serpItem.seller !== cleanDomain(r.domain) && (
+                                      <p style={{ fontSize: '11px', color: '#aaa', margin: '1px 0 0' }}>{serpItem.seller}</p>
+                                    )}
+                                    <div className="flex items-center gap-2" style={{ marginTop: '4px' }}>
+                                      {serpItem?.delivery && serpItem.delivery.length > 0 && (
+                                        <div className="flex items-center gap-1">
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                          <span style={{ fontSize: '11px', color: serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
+                                            {truncateDelivery(serpItem.delivery[0])}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {serpItem?.extensions && serpItem.extensions.length > 0 && (
+                                        <span style={{ backgroundColor: '#FAEEDA', color: '#854F0B', fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>
+                                          {serpItem.extensions[0]}
+                                        </span>
+                                      )}
+                                      {serpItem?.rating != null && (
+                                        <div className="flex items-center gap-0.5">
+                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                          <span style={{ fontSize: '11px', color: '#aaa' }}>{serpItem.rating}</span>
+                                        </div>
+                                      )}
+                                      {(() => {
+                                        const pack = serpItem ? detectMultiPack(serpItem) : null
+                                        return pack ? (
+                                          <span style={{ backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>
+                                            {pack}
+                                          </span>
+                                        ) : null
+                                      })()}
+                                    </div>
+                                  </>
+                                )
+                              })()}
+                            </div>
+                            <div className="flex-shrink-0 text-right">
+                              <span style={{ fontSize: '15px', fontWeight: 600, color: idx === 0 ? '#534AB7' : '#111' }}>
+                                {r.priceFormatted}{idx === 0 ? ' ✓' : ''}
+                              </span>
+                              {(() => {
+                                const serpItem = !r.isShopping ? (r.item as SerpResult) : null
+                                return serpItem?.oldPrice != null && serpItem.oldPrice > r.price ? (
+                                  <p style={{ fontSize: '11px', color: '#ccc', textDecoration: 'line-through', margin: '1px 0 0' }}>
+                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(serpItem.oldPrice)}
+                                  </p>
+                                ) : null
+                              })()}
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {hiddenCount > 0 && !showAllPrices && (
+                        <div
+                          onClick={() => setShowAllPrices(true)}
+                          className="flex items-center justify-between cursor-pointer"
+                          style={{ padding: '12px 14px' }}
+                        >
+                          <span style={{ fontSize: '13px', color: '#aaa' }}>{hiddenCount} filtered</span>
+                          <span style={{ fontSize: '13px', color: '#534AB7', fontWeight: 600 }}>Show</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Affiliate disclosure */}
+                    <p className="text-xs text-center text-foreground-secondary" style={{ marginTop: '12px', paddingBottom: '20px' }}>
+                      K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ═══ DESKTOP LAYOUT ═══ */}
+            <div className="hidden md:block" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 32px' }}>
+
+              {/* Edge case 2: No results at all */}
+              {storeState === 'done' && allPriced.length === 0 && (
+                <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '14px', color: '#999', marginBottom: '16px' }}>No price results found. Try scanning again or adjusting your search.</p>
                   <button
-                    onClick={() => handleFindBestPrice()}
-                    className="text-sm text-primary font-medium hover:opacity-80 transition"
+                    onClick={handleReset}
+                    style={{ background: '#FFFFFF', color: '#534AB7', fontSize: '14px', fontWeight: 600, borderRadius: '12px', padding: '10px 24px', cursor: 'pointer', border: '1.5px solid #534AB7' }}
                   >
                     Try Again
                   </button>
                 </div>
               )}
-            </div>
 
-            {/* ═══ SCROLLABLE SECTION ═══ */}
-            {hasResults && allPriced.length > 1 && (
-              <div className="flex-1 overflow-y-auto min-h-0 md:overflow-y-visible" style={{ marginTop: typeof window !== 'undefined' && window.innerWidth >= 768 ? '0px' : '12px' }}>
-                <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
-                  {visiblePrices.map((r, idx) => {
-                    const isSelected = idx === selectedPriceIdx
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setSelectedPriceIdx(idx)
-                          setShowHeroChart(false)
-                          const serpItem = !r.isShopping ? (r.item as SerpResult) : null
-                          if (serpItem) {
-                            const id = `${serpItem.engine}-${serpItem.url}`
-                            if (!(id in bestCardByResultId) && !bestCardLoadingIds.has(id)) {
-                              handleBestCard(serpItem, id)
-                            }
-                          }
-                        }}
-                        className="flex items-start justify-between cursor-pointer"
-                        style={{
-                          padding: '12px 14px',
-                          borderBottom: idx < visiblePrices.length - 1 || hiddenCount > 0 ? '0.5px solid #f5f5f5' : 'none',
-                          backgroundColor: isSelected ? '#f4f3fe' : 'transparent',
-                          borderLeft: isSelected ? '3px solid #534AB7' : '3px solid transparent',
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
+              {(storeState !== 'done' || allPriced.length > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+
+                {/* LEFT COLUMN */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                  {/* 1. VERDICT STRIP CARD — skip when picks is null, show fallback */}
+                  {picks === null && storeState === 'done' && allPriced.length > 0 && (
+                    <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '16px', padding: '28px', textAlign: 'center' }}>
+                      <p style={{ fontSize: '14px', color: '#999' }}>{allPriced.length === 1 ? 'Only 1 result found' : 'Not enough results for comparison'}</p>
+                    </div>
+                  )}
+
+                  {picks !== null && (
+                    <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '16px', padding: '28px' }}>
+                      <p style={{ fontSize: '11px', textTransform: 'uppercase', color: '#999', letterSpacing: '0.06em', marginBottom: '16px' }}>
+                        K33pr analysis · {scanResult?.productName} · {allPriced.length} results across {matchResult?.searchMetadata?.enginesSucceeded?.length ?? 0} engines
+                      </p>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: picks.premium !== null ? '1fr 1fr 1fr' : '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                        {/* Sub-card 0 — cheapest */}
+                        {(() => {
+                          const item = picks.cheapest
+                          const isSelected = desktopPickIdx === 0
+                          const itemCardId = `${item.engine}-${item.url}`
+                          const itemCard = bestCardByResultId[itemCardId] ?? null
+                          const itemCardRate = itemCard?.rate ?? 0
+                          const itemNetCost = item.price! * (1 - itemCardRate / 100)
+                          return (
+                            <div
+                              onClick={() => setDesktopPickIdx(0)}
+                              style={{
+                                border: isSelected ? '2px solid #534AB7' : '1px solid #E5E5E3',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                cursor: 'pointer',
+                                background: isSelected ? '#FDFCFE' : '#FFFFFF',
+                                position: 'relative',
+                              }}
+                            >
+                              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#1D9E75', marginBottom: '4px' }}>Lowest net cost</p>
+                              <p style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '2px' }}>{item.retailerDomain.replace(/\.\w+$/, '')}</p>
+                              <p style={{ fontSize: '24px', fontWeight: 700, color: '#1D9E75', marginBottom: '4px' }}>{formatCurrency(itemNetCost)}</p>
+                              <p style={{ fontSize: '11px', color: '#999', lineHeight: 1.4 }}>
+                                {item.oldPrice != null && <span style={{ textDecoration: 'line-through', marginRight: '4px' }}>{formatCurrency(item.oldPrice)}</span>}
+                                {itemCardRate > 0 && <span>{itemCardRate}% card · </span>}
+                                {item.delivery?.[0] && <span>{item.delivery[0]} · </span>}
+                                {item.rating != null && <span>★{item.rating}{item.reviews != null ? ` (${item.reviews.toLocaleString()})` : ''}</span>}
+                              </p>
+                            </div>
+                          )
+                        })()}
+
+                        {/* Sub-card 1 — pick */}
+                        {(() => {
+                          const item = picks.pick
+                          const isSelected = desktopPickIdx === 1
+                          const itemCardId = `${item.engine}-${item.url}`
+                          const itemCard = bestCardByResultId[itemCardId] ?? null
+                          const itemCardRate = itemCard?.rate ?? 0
+                          const itemNetCost = item.price! * (1 - itemCardRate / 100)
+                          return (
+                            <div
+                              onClick={() => setDesktopPickIdx(1)}
+                              style={{
+                                border: isSelected ? '2px solid #534AB7' : '1px solid #E5E5E3',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                cursor: 'pointer',
+                                background: isSelected ? '#FDFCFE' : '#FFFFFF',
+                                position: 'relative',
+                              }}
+                            >
+                              <div style={{ position: 'absolute', top: '-9px', left: '16px', background: '#534AB7', color: '#FFFFFF', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.06em' }}>K33pr pick</div>
+                              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#534AB7', marginBottom: '4px' }}>Best overall</p>
+                              <p style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '2px' }}>{item.retailerDomain.replace(/\.\w+$/, '')}</p>
+                              <p style={{ fontSize: '24px', fontWeight: 700, color: '#534AB7', marginBottom: '4px' }}>{formatCurrency(itemNetCost)}</p>
+                              <p style={{ fontSize: '11px', color: '#999', lineHeight: 1.4 }}>
+                                {item.oldPrice != null && <span style={{ textDecoration: 'line-through', marginRight: '4px' }}>{formatCurrency(item.oldPrice)}</span>}
+                                {itemCardRate > 0 && <span>{itemCardRate}% card · </span>}
+                                {item.delivery?.[0] && <span>{item.delivery[0]} · </span>}
+                                {item.rating != null && <span>★{item.rating}{item.reviews != null ? ` (${item.reviews.toLocaleString()})` : ''}</span>}
+                              </p>
+                            </div>
+                          )
+                        })()}
+
+                        {/* Sub-card 2 — premium */}
+                        {picks.premium !== null && (() => {
+                          const item = picks.premium!
+                          const isSelected = desktopPickIdx === 2
+                          const itemCardId = `${item.engine}-${item.url}`
+                          const itemCard = bestCardByResultId[itemCardId] ?? null
+                          const itemCardRate = itemCard?.rate ?? 0
+                          const itemNetCost = item.price! * (1 - itemCardRate / 100)
+                          return (
+                            <div
+                              onClick={() => setDesktopPickIdx(2)}
+                              style={{
+                                border: isSelected ? '2px solid #534AB7' : '1px solid #E5E5E3',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                cursor: 'pointer',
+                                background: isSelected ? '#FDFCFE' : '#FFFFFF',
+                                position: 'relative',
+                              }}
+                            >
+                              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#999', marginBottom: '4px' }}>Premium</p>
+                              <p style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '2px' }}>{item.retailerDomain.replace(/\.\w+$/, '')}</p>
+                              <p style={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a', marginBottom: '4px' }}>{formatCurrency(itemNetCost)}</p>
+                              <p style={{ fontSize: '11px', color: '#999', lineHeight: 1.4 }}>
+                                {item.oldPrice != null && <span style={{ textDecoration: 'line-through', marginRight: '4px' }}>{formatCurrency(item.oldPrice)}</span>}
+                                {itemCardRate > 0 && <span>{itemCardRate}% card · </span>}
+                                {item.delivery?.[0] && <span>{item.delivery[0]} · </span>}
+                                {item.rating != null && <span>★{item.rating}{item.reviews != null ? ` (${item.reviews.toLocaleString()})` : ''}</span>}
+                              </p>
+                            </div>
+                          )
+                        })()}
+                      </div>
+
+                      {/* Reason bar */}
+                      <div style={{ background: '#F8F8F6', borderRadius: '10px', padding: '14px 20px', fontSize: '13px', color: '#555', lineHeight: 1.6 }}>
+                        <span>
                           {(() => {
-                            const serpItem = !r.isShopping ? (r.item as SerpResult) : null
+                            const name = picks.pick.retailerDomain.replace(/\.\w+$/, '')
+                            const idx = picks.reasonText.indexOf(name)
+                            if (idx === -1) return picks.reasonText
                             return (
                               <>
-                                {serpItem?.seller && serpItem.seller !== cleanDomain(r.domain) && (
-                                  <p style={{ fontSize: '11px', color: '#aaa', margin: '1px 0 0' }}>{serpItem.seller}</p>
-                                )}
-                                <div className="flex items-center gap-2" style={{ marginTop: '4px' }}>
-                                  {serpItem?.delivery && serpItem.delivery.length > 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                                      <span style={{ fontSize: '11px', color: serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
-                                        {truncateDelivery(serpItem.delivery[0])}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {serpItem?.extensions && serpItem.extensions.length > 0 && (
-                                    <span style={{ backgroundColor: '#FAEEDA', color: '#854F0B', fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>
-                                      {serpItem.extensions[0]}
-                                    </span>
-                                  )}
-                                  {serpItem?.rating != null && (
-                                    <div className="flex items-center gap-0.5">
-                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="#EF9F27" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                      <span style={{ fontSize: '11px', color: '#aaa' }}>{serpItem.rating}</span>
-                                    </div>
-                                  )}
-                                  {(() => {
-                                    const pack = serpItem ? detectMultiPack(serpItem) : null
-                                    return pack ? (
-                                      <span style={{ backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>
-                                        {pack}
-                                      </span>
-                                    ) : null
-                                  })()}
-                                </div>
+                                {picks.reasonText.slice(0, idx)}
+                                <strong style={{ color: '#1a1a1a' }}>{name}</strong>
+                                {picks.reasonText.slice(idx + name.length)}
                               </>
                             )
                           })()}
-                        </div>
-                        <div className="flex-shrink-0 text-right">
-                          <span style={{ fontSize: '15px', fontWeight: 600, color: idx === 0 ? '#534AB7' : '#111' }}>
-                            {r.priceFormatted}{idx === 0 ? ' ✓' : ''}
-                          </span>
-                          {(() => {
-                            const serpItem = !r.isShopping ? (r.item as SerpResult) : null
-                            return serpItem?.oldPrice != null && serpItem.oldPrice > r.price ? (
-                              <p style={{ fontSize: '11px', color: '#ccc', textDecoration: 'line-through', margin: '1px 0 0' }}>
-                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(serpItem.oldPrice)}
-                              </p>
-                            ) : null
-                          })()}
-                        </div>
+                        </span>
+                        {timingVerdict !== null && timingKeepa !== null && timingKeepa.percentVsAvg90 !== null && (
+                          <span>{' '}Price is {Math.abs(timingKeepa.percentVsAvg90).toFixed(1)}% {timingKeepa.percentVsAvg90 < 0 ? 'below' : 'above'} the 90-day average, so timing is {timingVerdict === 'good' ? 'good' : timingVerdict === 'fair' ? 'fair' : 'worth watching'} regardless of which you choose.</span>
+                        )}
                       </div>
-                    )
-                  })}
-
-                  {hiddenCount > 0 && !showAllPrices && (
-                    <div
-                      onClick={() => setShowAllPrices(true)}
-                      className="flex items-center justify-between cursor-pointer"
-                      style={{ padding: '12px 14px' }}
-                    >
-                      <span style={{ fontSize: '13px', color: '#aaa' }}>{hiddenCount} filtered</span>
-                      <span style={{ fontSize: '13px', color: '#534AB7', fontWeight: 600 }}>Show</span>
                     </div>
                   )}
+
+                  {/* 2. ACTION BUTTONS ROW */}
+                  {picks !== null && desktopSelectedResult && (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => window.open(desktopSelectedResult.url, '_blank')}
+                        style={{ flex: 1, background: '#534AB7', color: '#FFFFFF', fontSize: '14px', fontWeight: 600, borderRadius: '12px', padding: '14px', cursor: 'pointer', border: 'none' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#473FA0' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#534AB7' }}
+                      >
+                        Buy at {desktopRetailerName} — {formatCurrency(desktopNetCost)} net ↗
+                      </button>
+                      <button
+                        style={{ flex: 1, background: '#FFFFFF', color: '#534AB7', fontSize: '14px', fontWeight: 600, borderRadius: '12px', padding: '14px', cursor: 'pointer', border: '1.5px solid #534AB7' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F8F7FE' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FFFFFF' }}
+                      >
+                        Track for lower
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 3. EXPANDABLE COMMAND CENTER TABLE */}
+                  <div style={{ background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E5E3', padding: 0 }}>
+                    <div
+                      onClick={() => setDesktopTableExpanded(prev => !prev)}
+                      style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #E5E5E3' }}
+                    >
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a1a1a' }}>All {allPriced.length} results — full comparison</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#534AB7' }}>{desktopTableExpanded ? 'Collapse' : 'Expand'}</span>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#FAFAF8', borderBottom: '1px solid #E5E5E3' }}>
+                          <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>Retailer / product</th>
+                          <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Price</th>
+                          <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Card</th>
+                          <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Net cost</th>
+                          <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>Rating</th>
+                          <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>Ship</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(desktopTableExpanded ? allPriced : allPriced.slice(0, 7)).map((item, idx) => {
+                          const isSerpItem = !item.isShopping
+                          const serpItem = isSerpItem ? (item.item as SerpResult) : null
+                          const rowId = serpItem ? `${serpItem.engine}-${serpItem.url}` : `shopping-${item.url}`
+                          const rowCardData = bestCardByResultId[rowId] ?? null
+                          const rowCardRate = rowCardData?.rate ?? 0
+                          const rowNetCost = item.price * (1 - rowCardRate / 100)
+                          const isPick = picks !== null && serpItem !== null && serpItem.engine === picks.pick.engine && serpItem.url === picks.pick.url
+                          const isCheapest = idx === 0
+                          const thumbnail = serpItem?.thumbnail ?? (item.item as ShoppingResult)?.imageUrl ?? null
+
+                          return (
+                            <tr
+                              key={rowId + idx}
+                              onClick={() => setDesktopPickIdx(
+                                picks !== null && serpItem !== null && serpItem.engine === picks.cheapest.engine && serpItem.url === picks.cheapest.url ? 0
+                                  : picks !== null && serpItem !== null && serpItem.engine === picks.pick.engine && serpItem.url === picks.pick.url ? 1
+                                  : 2
+                              )}
+                              style={{
+                                borderBottom: '1px solid #F2F2F0',
+                                cursor: 'pointer',
+                                background: isPick ? '#F8F7FE' : '#FFFFFF',
+                                boxShadow: isPick ? 'inset 3px 0 0 #534AB7' : 'none',
+                                transition: 'background 0.1s',
+                              }}
+                              onMouseEnter={e => { if (!isPick) (e.currentTarget as HTMLTableRowElement).style.background = '#FAFAF8' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = isPick ? '#F8F7FE' : '#FFFFFF' }}
+                            >
+                              <td style={{ padding: '10px 10px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center' }}>
+                                  {thumbnail ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={thumbnail} alt="" style={{ width: 36, height: 36, borderRadius: '6px', background: '#F8F8F6', objectFit: 'contain', flexShrink: 0 }} />
+                                  ) : (
+                                    <div style={{ width: 36, height: 36, borderRadius: '6px', background: '#F8F8F6', flexShrink: 0 }} />
+                                  )}
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a1a1a' }}>{serpItem ? cleanDomain(serpItem.retailerDomain ?? '') : cleanDomain(item.domain)}</span>
+                                      {isPick && (
+                                        <span style={{ fontSize: '9px', fontWeight: 700, background: '#EEEDFE', color: '#534AB7', padding: '1px 6px', borderRadius: '3px', marginLeft: '4px' }}>K33PR PICK</span>
+                                      )}
+                                    </div>
+                                    <p style={{ fontSize: '11px', color: '#999', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px', margin: '1px 0 0' }}>
+                                      {serpItem?.title ?? (item.item as ShoppingResult)?.title ?? ''}
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap' }}>
+                                      {serpItem?.extensions?.slice(0, 2).map((ext, ei) => (
+                                        <span key={ei} style={{ fontSize: '9px', background: '#FAEEDA', color: '#854F0B', padding: '1px 4px', borderRadius: '3px' }}>{ext}</span>
+                                      ))}
+                                      {serpItem?.in_stock === true && (
+                                        <span style={{ fontSize: '9px', background: '#E1F5EE', color: '#085041', padding: '1px 4px', borderRadius: '3px' }}>In stock</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '10px 10px', textAlign: 'right', verticalAlign: 'middle' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: isCheapest ? '#534AB7' : '#1a1a1a' }}>{item.priceFormatted}</span>
+                                {serpItem?.oldPrice != null && serpItem.oldPrice > item.price && (
+                                  <p style={{ fontSize: '10px', color: '#ccc', textDecoration: 'line-through', margin: '1px 0 0' }}>{formatCurrency(serpItem.oldPrice)}</p>
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 10px', textAlign: 'right', verticalAlign: 'middle' }}>
+                                {rowCardData ? (
+                                  <div>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: rowCardRate >= 5 ? '#1D9E75' : '#1a1a1a' }}>{rowCardRate}%</span>
+                                    <p style={{ fontSize: '9px', color: '#999', margin: '1px 0 0' }}>{rowCardData.cardName}</p>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#ddd' }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 10px', textAlign: 'right', verticalAlign: 'middle' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: '#1D9E75' }}>{formatCurrency(rowNetCost)}</span>
+                              </td>
+                              <td style={{ padding: '10px 10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                {serpItem?.rating != null ? (
+                                  <span style={{ fontSize: '11px', color: '#999' }}>
+                                    <span style={{ color: '#EF9F27' }}>★</span>{serpItem.rating}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#ddd' }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                {serpItem?.delivery?.[0] ? (
+                                  <span style={{ fontSize: '11px', color: serpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#999', fontWeight: serpItem.delivery[0].toLowerCase().includes('free') ? 500 : 400 }}>
+                                    {serpItem.delivery[0].toLowerCase().includes('free') ? 'Free' : serpItem.delivery[0]}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#ddd' }}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+
+                    {!desktopTableExpanded && allPriced.length > 7 && (
+                      <div
+                        onClick={() => setDesktopTableExpanded(true)}
+                        style={{ padding: '10px 20px', textAlign: 'center', borderTop: '1px solid #F2F2F0', cursor: 'pointer' }}
+                      >
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#534AB7' }}>Show {allPriced.length - 7} more</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. AFFILIATE DISCLOSURE */}
+                  <p style={{ fontSize: '11px', color: '#bbb', textAlign: 'center', marginTop: '8px' }}>
+                    K33pr may earn a commission when you purchase through links. This does not affect the price you pay.
+                  </p>
                 </div>
 
-                {/* Affiliate disclosure */}
-                <p className="text-xs text-center text-foreground-secondary" style={{ marginTop: '12px', paddingBottom: '20px' }}>
-                  K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
-                </p>
+                {/* RIGHT COLUMN (sidebar) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                  {/* 1. BUY TIMING CARD */}
+                  {timingVerdict !== null && timingKeepa !== null && (
+                    <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '14px', padding: '16px' }}>
+                      <p style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', letterSpacing: '0.06em', marginBottom: '8px' }}>Buy timing</p>
+                      <p style={{ fontSize: '16px', fontWeight: 700, color: getBuyTimingColor(timingVerdict), marginBottom: '4px' }}>{getBuyTimingLabel(timingVerdict)}</p>
+                      <p style={{ fontSize: '12px', color: '#777', lineHeight: 1.5, marginBottom: '10px' }}>
+                        {timingKeepa.percentVsAvg90 !== null && `${Math.abs(timingKeepa.percentVsAvg90).toFixed(1)}% ${timingKeepa.percentVsAvg90 < 0 ? 'below' : 'above'} 90-day average.`}
+                      </p>
+                      {timingKeepa.priceHistory90Days.length > 1 && (
+                        <ResponsiveContainer width="100%" height={100}>
+                          <LineChart data={timingKeepa.priceHistory90Days.map(p => ({ date: p.timestamp, price: p.price }))}>
+                            <Line type="monotone" dataKey="price" stroke="#534AB7" strokeWidth={2} dot={false} />
+                            <XAxis dataKey="date" hide={true} />
+                            <YAxis hide={true} />
+                            <Tooltip formatter={(value) => {
+                              const num = typeof value === 'number' ? value : Number(value)
+                              return [formatCurrency(num), 'Price']
+                            }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', marginTop: '10px' }}>
+                        <div style={{ flex: 1, background: '#F8F8F6', borderRadius: '8px', padding: '8px 10px' }}>
+                          <p style={{ fontSize: '10px', color: '#999', margin: 0 }}>All-time low</p>
+                          <p style={{ fontSize: '14px', fontWeight: 700, color: '#1D9E75', marginTop: '1px' }}>{timingKeepa.allTimeLow !== null ? formatCurrency(timingKeepa.allTimeLow) : '—'}</p>
+                        </div>
+                        <div style={{ flex: 1, background: '#F8F8F6', borderRadius: '8px', padding: '8px 10px' }}>
+                          <p style={{ fontSize: '10px', color: '#999', margin: 0 }}>90d average</p>
+                          <p style={{ fontSize: '14px', fontWeight: 700, color: '#1a1a1a', marginTop: '1px' }}>{timingKeepa.avg90 !== null ? formatCurrency(timingKeepa.avg90) : '—'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. BEST CARD CARD */}
+                  <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '14px', padding: '16px' }}>
+                    <p style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', letterSpacing: '0.06em', marginBottom: '8px' }}>Best card for this purchase</p>
+                    {desktopCardData ? (
+                      <div>
+                        <p style={{ fontSize: '15px', fontWeight: 700, color: '#1a1a1a' }}>{desktopCardData.cardName}</p>
+                        <p style={{ fontSize: '12px', color: '#999', marginTop: '3px' }}>
+                          {desktopCardData.rate}% · saves {desktopSelectedResult ? formatCurrency(desktopSelectedResult.price! * (desktopCardData.rate / 100)) : '—'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '12px', color: '#777' }}>
+                        Add your cards in{' '}
+                        <span
+                          style={{ color: '#534AB7', cursor: 'pointer' }}
+                          onClick={() => router.push('/settings')}
+                        >
+                          Settings
+                        </span>
+                        {' '}for cashback recommendations
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 3. SAVINGS MATH CARD */}
+                  {desktopSelectedResult && (
+                    <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '14px', padding: '16px' }}>
+                      <p style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', letterSpacing: '0.06em', marginBottom: '8px' }}>Savings breakdown</p>
+                      {(() => {
+                        const highestPrice = allPriced.length > 0 ? Math.max(...allPriced.map(p => p.price)) : desktopSelectedResult.price!
+                        const vsRetail = highestPrice - desktopSelectedResult.price!
+                        const cardSavingsAmt = desktopSelectedResult.price! * (desktopCardRate / 100)
+                        const vsAvg = (timingKeepa !== null && timingKeepa.avg90 != null) ? timingKeepa.avg90 - desktopSelectedResult.price! : null
+
+                        return (
+                          <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '12px' }}>
+                              <span style={{ color: '#555' }}>vs typical retail ({formatCurrency(highestPrice)})</span>
+                              <span style={{ color: '#1D9E75' }}>−{formatCurrency(vsRetail)}</span>
+                            </div>
+                            {desktopCardData && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '12px' }}>
+                                <span style={{ color: '#555' }}>Card cashback ({desktopCardRate}%)</span>
+                                <span style={{ color: '#1D9E75' }}>−{formatCurrency(cardSavingsAmt)}</span>
+                              </div>
+                            )}
+                            {vsAvg !== null && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '12px' }}>
+                                <span style={{ color: '#555' }}>vs 90-day average</span>
+                                <span style={{ color: vsAvg >= 0 ? '#1D9E75' : '#D85A30' }}>{vsAvg >= 0 ? '−' : '+'}{formatCurrency(Math.abs(vsAvg))}</span>
+                              </div>
+                            )}
+                            <div style={{ borderTop: '1px solid #E5E5E3', marginTop: '6px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#1a1a1a' }}>You pay</span>
+                              <span style={{ fontSize: '22px', fontWeight: 700, color: '#1D9E75' }}>{formatCurrency(desktopNetCost)}</span>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* 4. ENGINES CARD */}
+                  <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '14px', padding: '16px' }}>
+                    <p style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', letterSpacing: '0.06em', marginBottom: '8px' }}>Search engines</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {(matchResult?.searchMetadata?.enginesQueried ?? []).map(engine => {
+                        const succeeded = (matchResult?.searchMetadata?.enginesSucceeded ?? []).includes(engine)
+                        return (
+                          <span
+                            key={engine}
+                            style={{
+                              fontSize: '10px',
+                              padding: '2px 7px',
+                              borderRadius: '3px',
+                              fontWeight: 500,
+                              background: succeeded ? '#E1F5EE' : '#F8F8F6',
+                              color: succeeded ? '#085041' : '#bbb',
+                            }}
+                          >
+                            {engine}{succeeded ? ' ✓' : ' (error)'}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                </div>
               </div>
-            )}
-          </div>
+              )}
+            </div>
+          </>
         )
       })()}
     </div>

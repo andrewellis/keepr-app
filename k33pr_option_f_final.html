@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K33pr — Version F (Final) with Command Center Table</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #FFFFFF; color: #1a1a1a;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Nav ── */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px; background: #fff;
+    border-bottom: 1px solid #E5E5E3;
+  }
+  .nav-logo { font-size: 18px; font-weight: 700; color: #534AB7; }
+  .nav-search {
+    width: 360px; padding: 8px 14px; border-radius: 10px;
+    border: 1px solid #E5E5E3; font-size: 15px; color: #1a1a1a;
+    background: #F8F8F6; outline: none;
+  }
+  .nav-search:focus { border-color: #534AB7; }
+  .nav-links { display: flex; gap: 24px; align-items: center; }
+  .nav-links a { font-size: 15px; color: #1a1a1a; text-decoration: none; }
+  .nav-links a.signin { color: #534AB7; font-weight: 600; }
+
+  /* ── Layout ── */
+  .main {
+    max-width: 1100px; margin: 0 auto; padding: 24px 32px;
+    display: grid; grid-template-columns: 1fr 340px; gap: 24px;
+    align-items: start;
+  }
+  .main-content { display: flex; flex-direction: column; gap: 16px; }
+  .sidebar { display: flex; flex-direction: column; gap: 14px; }
+
+  /* ── Shared ── */
+  .card {
+    background: #fff; border: 1px solid #E5E5E3;
+    border-radius: 16px; overflow: hidden;
+  }
+  .tag {
+    font-size: 9px; padding: 2px 7px; border-radius: 3px;
+    font-weight: 600; display: inline-block; vertical-align: middle;
+  }
+  .tag-deal { background: #FAEEDA; color: #854F0B; }
+  .tag-stock { background: #E1F5EE; color: #085041; }
+  .tag-prime { background: #E6F1FB; color: #0C447C; }
+
+  /* ── Verdict strip ── */
+  .verdict-card { padding: 28px; }
+  .verdict-eyebrow {
+    font-size: 11px; color: #999; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 16px;
+  }
+  .verdict-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px; margin-bottom: 20px;
+  }
+  .verdict-option {
+    border: 1px solid #E5E5E3; border-radius: 12px; padding: 16px;
+    cursor: pointer; transition: all 0.15s; position: relative;
+  }
+  .verdict-option:hover { border-color: #534AB7; }
+  .verdict-option.selected { border: 2px solid #534AB7; background: #FDFCFE; }
+  .verdict-option-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  .verdict-retailer { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+  .verdict-price-row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+  .verdict-price { font-size: 24px; font-weight: 700; }
+  .verdict-net-label { font-size: 11px; color: #999; }
+  .verdict-detail { font-size: 11px; color: #999; margin-top: 8px; line-height: 1.5; }
+  .pick-tag {
+    position: absolute; top: -9px; left: 16px;
+    background: #534AB7; color: #fff;
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px;
+  }
+  .reason-bar {
+    background: #F8F8F6; border-radius: 10px; padding: 14px 20px;
+    font-size: 13px; color: #555; line-height: 1.6;
+  }
+  .reason-bar strong { color: #1a1a1a; }
+
+  /* ── Actions ── */
+  .actions-row { display: flex; gap: 10px; }
+  .btn {
+    flex: 1; padding: 14px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; text-align: center;
+    cursor: pointer; border: none;
+  }
+  .btn-primary { background: #534AB7; color: #fff; }
+  .btn-primary:hover { background: #473FA0; }
+  .btn-outline { background: #fff; color: #534AB7; border: 1.5px solid #534AB7; }
+  .btn-outline:hover { background: #F8F7FE; }
+
+  /* ── Expandable table section ── */
+  .expand-header {
+    padding: 14px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; border-bottom: 1px solid #E5E5E3;
+  }
+  .expand-title { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+  .expand-toggle { font-size: 12px; color: #534AB7; font-weight: 600; }
+
+  /* ── Command center table ── */
+  .results-table { width: 100%; border-collapse: collapse; }
+  .results-table thead th {
+    font-size: 10px; color: #999; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 8px 10px; text-align: left;
+    background: #FAFAF8; border-bottom: 1px solid #E5E5E3;
+    font-weight: 600; white-space: nowrap;
+  }
+  .results-table thead th.r { text-align: right; }
+  .results-table thead th.c { text-align: center; }
+
+  .results-table tbody tr {
+    border-bottom: 1px solid #F2F2F0;
+    cursor: pointer; transition: background 0.1s;
+  }
+  .results-table tbody tr:hover { background: #FAFAF8; }
+  .results-table tbody tr:last-child { border-bottom: none; }
+  .results-table tbody tr.row-pick {
+    background: #F8F7FE;
+    box-shadow: inset 3px 0 0 #534AB7;
+  }
+  .results-table td { padding: 10px 10px; vertical-align: middle; font-size: 13px; }
+  .results-table td.r { text-align: right; }
+  .results-table td.c { text-align: center; }
+
+  .row-product { display: flex; gap: 10px; align-items: center; }
+  .row-thumb {
+    width: 36px; height: 36px; border-radius: 6px;
+    background: #F8F8F6; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #ccc;
+  }
+  .row-info { min-width: 0; }
+  .row-retailer { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+  .row-title {
+    font-size: 11px; color: #999; margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 220px;
+  }
+  .row-tags { display: flex; gap: 4px; margin-top: 3px; }
+
+  .price-main { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .price-best { color: #534AB7; }
+  .price-old { font-size: 10px; color: #ccc; text-decoration: line-through; display: block; margin-top: 1px; }
+  .card-pct { font-size: 12px; font-weight: 600; color: #1a1a1a; }
+  .card-name { font-size: 9px; color: #999; display: block; margin-top: 1px; }
+  .net-price { font-size: 14px; font-weight: 600; color: #1D9E75; }
+  .rating-cell { display: inline-flex; align-items: center; gap: 3px; }
+  .rating-star { color: #EF9F27; font-size: 13px; }
+  .rating-num { font-size: 11px; color: #999; }
+  .delivery-free { font-size: 11px; color: #1D9E75; font-weight: 500; }
+  .delivery-na { font-size: 11px; color: #ddd; }
+  .pick-badge {
+    font-size: 9px; font-weight: 700; background: #EEEDFE;
+    color: #534AB7; padding: 1px 6px; border-radius: 3px;
+    margin-left: 4px; vertical-align: middle;
+  }
+
+  .show-more {
+    padding: 10px 20px; text-align: center;
+    border-top: 1px solid #F2F2F0;
+  }
+  .show-more span { font-size: 12px; color: #534AB7; font-weight: 600; cursor: pointer; }
+
+  .disclosure { font-size: 11px; color: #bbb; text-align: center; margin-top: 8px; }
+
+  /* ── Sidebar ── */
+  .side-card {
+    background: #fff; border: 1px solid #E5E5E3;
+    border-radius: 14px; padding: 16px;
+  }
+  .side-label {
+    font-size: 10px; color: #999; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 8px;
+  }
+  .timing-verdict { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .timing-sub { font-size: 12px; color: #777; line-height: 1.5; }
+  .timing-chart {
+    width: 100%; height: 100px; background: #F8F8F6; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #ccc; margin: 10px 0;
+  }
+  .timing-stats { display: flex; gap: 8px; }
+  .timing-stat { flex: 1; background: #F8F8F6; border-radius: 8px; padding: 8px 10px; }
+  .timing-stat-label { font-size: 10px; color: #999; }
+  .timing-stat-val { font-size: 14px; font-weight: 700; margin-top: 1px; }
+
+  .card-rec-name { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+  .card-rec-sub { font-size: 12px; color: #999; margin-top: 3px; }
+  .card-rec-tip {
+    margin-top: 10px; padding: 8px 10px; background: #F8F8F6;
+    border-radius: 8px; font-size: 11px; color: #777; line-height: 1.5;
+  }
+
+  .savings-row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .savings-label { font-size: 12px; color: #999; }
+  .savings-val { font-size: 12px; font-weight: 600; }
+  .savings-total {
+    border-top: 1px solid #E5E5E3; margin-top: 6px; padding-top: 8px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .savings-total-label { font-size: 14px; font-weight: 700; }
+  .savings-total-val { font-size: 22px; font-weight: 700; color: #1D9E75; }
+
+  .engines { display: flex; flex-wrap: wrap; gap: 4px; }
+  .engine-tag { font-size: 10px; padding: 2px 7px; border-radius: 3px; font-weight: 500; }
+  .engine-ok { background: #E1F5EE; color: #085041; }
+  .engine-err { background: #F8F8F6; color: #bbb; }
+</style>
+</head>
+<body>
+
+<!-- ══════ NAV ══════ -->
+<div class="nav">
+  <span class="nav-logo">K33pr</span>
+  <input class="nav-search" type="text" placeholder="Search any product..." value="logitech mx master 4" />
+  <div class="nav-links">
+    <a href="#">How it works</a>
+    <a href="#">FAQ</a>
+    <a href="#">Blog</a>
+    <a href="#" class="signin">Sign in</a>
+  </div>
+</div>
+
+<!-- ══════ MAIN ══════ -->
+<div class="main">
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="main-content">
+
+    <!-- Verdict strip -->
+    <div class="card verdict-card">
+      <div class="verdict-eyebrow">K33pr analysis · Logitech MX Master 4 · 18 results across 5 engines</div>
+
+      <div class="verdict-grid">
+        <div class="verdict-option" id="opt-cheap">
+          <div class="verdict-option-label" style="color:#1D9E75;">Lowest net cost</div>
+          <div class="verdict-retailer">Techinn.com</div>
+          <div class="verdict-price-row">
+            <span class="verdict-price" style="color:#1D9E75;">$77.41</span>
+            <span class="verdict-net-label">net</span>
+          </div>
+          <div class="verdict-detail">
+            <span style="text-decoration:line-through;color:#ccc;">$108.00</span> $78.99 · Citi DC 2%<br>
+            Unknown shipping · ★ 4.1 (352)
+          </div>
+        </div>
+
+        <div class="verdict-option selected" id="opt-pick">
+          <div class="pick-tag">K33pr pick</div>
+          <div class="verdict-option-label" style="color:#534AB7;">Best overall</div>
+          <div class="verdict-retailer">Walmart</div>
+          <div class="verdict-price-row">
+            <span class="verdict-price" style="color:#534AB7;">$84.55</span>
+            <span class="verdict-net-label">net</span>
+          </div>
+          <div class="verdict-detail">
+            $89.00 · Chase FF 5% · Free shipping<br>
+            ★ 4.6 · 891 reviews · <span class="tag tag-stock">In stock</span>
+          </div>
+        </div>
+
+        <div class="verdict-option" id="opt-premium">
+          <div class="verdict-option-label" style="color:#999;">Premium</div>
+          <div class="verdict-retailer">Amazon</div>
+          <div class="verdict-price-row">
+            <span class="verdict-price">$95.00</span>
+            <span class="verdict-net-label">net</span>
+          </div>
+          <div class="verdict-detail">
+            $99.99 · Prime Visa 5% · Free 2-day<br>
+            ★ 4.5 · 2,431 reviews · <span class="tag tag-prime">Prime</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reason-bar">
+        <strong>Why Walmart?</strong> Only $7.14 more than Techinn.com, but free shipping from a trusted retailer with ★ 4.6 from 891 reviews. Your Chase Freedom Flex earns 5% here. Techinn.com has no return policy data and unknown shipping costs. <strong>The $10.45 question:</strong> Amazon's 2-day delivery and hassle-free returns cost $10.45 more — worth it if you value speed over savings. Price is 11.5% below the 90-day average, so timing is good regardless of which you choose.
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-row">
+      <button class="btn btn-primary" id="buy-btn">Buy at Walmart — $84.55 net ↗</button>
+      <button class="btn btn-outline">Track for lower</button>
+    </div>
+
+    <!-- Expandable command center table -->
+    <div class="card" style="padding:0;">
+      <div class="expand-header" id="expand-toggle">
+        <span class="expand-title">All 18 results — full comparison</span>
+        <span class="expand-toggle" id="expand-text">Expand ▾</span>
+      </div>
+
+      <div id="table-section">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Retailer / product</th>
+              <th class="r">Price</th>
+              <th class="r">Card</th>
+              <th class="r">Net cost</th>
+              <th class="c">Rating</th>
+              <th class="c">Ship</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Techinn — cheapest -->
+            <tr>
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">Techinn.com</div>
+                    <div class="row-title">Logitech MX Master 4 Wireless Mouse</div>
+                    <div class="row-tags">
+                      <span class="tag tag-deal">26% OFF</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="r">
+                <span class="price-main price-best">$78.99</span>
+                <span class="price-old">$108.00</span>
+              </td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$77.41</span></td>
+              <td class="c">
+                <span class="rating-cell"><span class="rating-star">★</span><span class="rating-num">4.1</span></span>
+              </td>
+              <td class="c"><span class="delivery-na">—</span></td>
+            </tr>
+
+            <!-- NPCRetro2 -->
+            <tr>
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">NPCRetro2</div>
+                    <div class="row-title">Logitech MX Master 4 Advanced Mouse Graphite</div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$85.00</span></td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$83.30</span></td>
+              <td class="c"><span class="delivery-na">—</span></td>
+              <td class="c"><span class="delivery-na">—</span></td>
+            </tr>
+
+            <!-- Walmart — K33pr pick -->
+            <tr class="row-pick">
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">Walmart <span class="pick-badge">K33PR PICK</span></div>
+                    <div class="row-title">Logitech MX Master 4 Wireless Mouse — BTP Beauty</div>
+                    <div class="row-tags">
+                      <span class="tag tag-stock">In stock</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$89.00</span></td>
+              <td class="r">
+                <span class="card-pct" style="color:#1D9E75;">5%</span>
+                <span class="card-name">Chase FF</span>
+              </td>
+              <td class="r"><span class="net-price" style="font-size:15px;">$84.55</span></td>
+              <td class="c">
+                <span class="rating-cell"><span class="rating-star">★</span><span class="rating-num">4.6</span></span>
+              </td>
+              <td class="c"><span class="delivery-free">Free</span></td>
+            </tr>
+
+            <!-- eBay -->
+            <tr>
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">eBay</div>
+                    <div class="row-title">Logitech MX Master 4 Wireless Mouse NEW SEALED</div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$92.50</span></td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$90.65</span></td>
+              <td class="c"><span class="delivery-na">—</span></td>
+              <td class="c"><span class="delivery-na">—</span></td>
+            </tr>
+
+            <!-- Newegg -->
+            <tr>
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">Newegg</div>
+                    <div class="row-title">Logitech MX Master 4 Advanced Wireless Mouse</div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$94.99</span></td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$93.09</span></td>
+              <td class="c">
+                <span class="rating-cell"><span class="rating-star">★</span><span class="rating-num">4.4</span></span>
+              </td>
+              <td class="c"><span class="delivery-free">Free</span></td>
+            </tr>
+
+            <!-- Amazon -->
+            <tr>
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">Amazon</div>
+                    <div class="row-title">Logitech MX Master 4 Wireless Performance Mouse</div>
+                    <div class="row-tags">
+                      <span class="tag tag-prime">Prime</span>
+                      <span class="tag tag-stock">In stock</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$99.99</span></td>
+              <td class="r">
+                <span class="card-pct" style="color:#1D9E75;">5%</span>
+                <span class="card-name">Prime Visa</span>
+              </td>
+              <td class="r"><span class="net-price">$95.00</span></td>
+              <td class="c">
+                <span class="rating-cell"><span class="rating-star">★</span><span class="rating-num">4.5</span></span>
+              </td>
+              <td class="c"><span class="delivery-free">Free 2-day</span></td>
+            </tr>
+
+            <!-- Best Buy -->
+            <tr>
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">Best Buy</div>
+                    <div class="row-title">Logitech MX Master 4 Advanced Wireless Mouse</div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$99.99</span></td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$98.00</span></td>
+              <td class="c">
+                <span class="rating-cell"><span class="rating-star">★</span><span class="rating-num">4.5</span></span>
+              </td>
+              <td class="c"><span class="delivery-free">Free</span></td>
+            </tr>
+
+            <!-- B&H -->
+            <tr id="extra-rows-start" style="display:none;">
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">B&H Photo</div>
+                    <div class="row-title">Logitech MX Master 4 Wireless Mouse Graphite</div>
+                    <div class="row-tags"><span class="tag tag-stock">In stock</span></div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$99.99</span></td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$97.99</span></td>
+              <td class="c">
+                <span class="rating-cell"><span class="rating-star">★</span><span class="rating-num">4.5</span></span>
+              </td>
+              <td class="c"><span class="delivery-free">Free</span></td>
+            </tr>
+
+            <!-- Target -->
+            <tr class="extra-row" style="display:none;">
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">Target</div>
+                    <div class="row-title">Logitech MX Master 4 Wireless Mouse</div>
+                    <div class="row-tags"><span class="tag tag-stock">In stock</span></div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$99.99</span></td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$97.99</span></td>
+              <td class="c">
+                <span class="rating-cell"><span class="rating-star">★</span><span class="rating-num">4.3</span></span>
+              </td>
+              <td class="c"><span class="delivery-free">Free</span></td>
+            </tr>
+
+            <!-- Office Depot -->
+            <tr class="extra-row" style="display:none;">
+              <td>
+                <div class="row-product">
+                  <div class="row-thumb">img</div>
+                  <div class="row-info">
+                    <div class="row-retailer">Office Depot</div>
+                    <div class="row-title">Logitech MX Master 4 Advanced Mouse</div>
+                  </div>
+                </div>
+              </td>
+              <td class="r"><span class="price-main">$104.99</span></td>
+              <td class="r">
+                <span class="card-pct">2%</span>
+                <span class="card-name">Citi DC</span>
+              </td>
+              <td class="r"><span class="net-price">$102.89</span></td>
+              <td class="c"><span class="delivery-na">—</span></td>
+              <td class="c"><span class="delivery-na">—</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="show-more" id="show-more-bar">
+          <span id="show-more-text">Show 3 more + 8 filtered ▾</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="disclosure">K33pr may earn a commission when you purchase through links. This does not affect the price you pay.</div>
+  </div>
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+
+    <!-- Buy timing -->
+    <div class="side-card">
+      <div class="side-label">Buy timing</div>
+      <div class="timing-verdict" style="color:#1D9E75;">Good time to buy</div>
+      <div class="timing-sub">11.5% below 90-day average. Last time at this level, price rebounded in 8 days.</div>
+      <div class="timing-chart">Keepa Recharts line chart</div>
+      <div class="timing-stats">
+        <div class="timing-stat">
+          <div class="timing-stat-label">All-time low</div>
+          <div class="timing-stat-val" style="color:#1D9E75;">$72.40</div>
+        </div>
+        <div class="timing-stat">
+          <div class="timing-stat-label">90d average</div>
+          <div class="timing-stat-val">$89.22</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Best card -->
+    <div class="side-card">
+      <div class="side-label">Best card for this purchase</div>
+      <div class="card-rec-name">Chase Freedom Flex</div>
+      <div class="card-rec-sub">5% at Walmart · saves $4.45</div>
+      <div class="card-rec-tip">
+        If Amazon: use Prime Visa (5%) — saves $5.00<br>
+        All other retailers: Citi Double Cash (2%)
+      </div>
+    </div>
+
+    <!-- Savings math -->
+    <div class="side-card">
+      <div class="side-label">Savings breakdown</div>
+      <div class="savings-row">
+        <span class="savings-label">vs typical retail ($99.99)</span>
+        <span class="savings-val" style="color:#1D9E75;">−$10.99</span>
+      </div>
+      <div class="savings-row">
+        <span class="savings-label">Card cashback (5%)</span>
+        <span class="savings-val" style="color:#1D9E75;">−$4.45</span>
+      </div>
+      <div class="savings-row">
+        <span class="savings-label">vs 90-day average</span>
+        <span class="savings-val" style="color:#1D9E75;">−$4.67</span>
+      </div>
+      <div class="savings-total">
+        <span class="savings-total-label">You pay</span>
+        <span class="savings-total-val">$84.55</span>
+      </div>
+    </div>
+
+    <!-- Engines -->
+    <div class="side-card">
+      <div class="side-label">Search engines</div>
+      <div class="engines">
+        <span class="engine-tag engine-ok">Google Shopping ✓</span>
+        <span class="engine-tag engine-ok">Amazon ✓</span>
+        <span class="engine-tag engine-ok">Bing Shopping ✓</span>
+        <span class="engine-tag engine-ok">Best Buy ✓</span>
+        <span class="engine-tag engine-err">Walmart (timeout)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var options = document.querySelectorAll('.verdict-option');
+  var buyBtn = document.getElementById('buy-btn');
+  var info = {
+    'opt-cheap': { r: 'Techinn.com', n: '$77.41' },
+    'opt-pick': { r: 'Walmart', n: '$84.55' },
+    'opt-premium': { r: 'Amazon', n: '$95.00' },
+  };
+  options.forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      options.forEach(function(o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+      var d = info[opt.id];
+      if (d) buyBtn.textContent = 'Buy at ' + d.r + ' \u2014 ' + d.n + ' net \u2191';
+    });
+  });
+
+  var expanded = false;
+  var extraStart = document.getElementById('extra-rows-start');
+  var extraRows = document.querySelectorAll('.extra-row');
+  var expandText = document.getElementById('expand-text');
+  var showMoreBar = document.getElementById('show-more-bar');
+  var showMoreText = document.getElementById('show-more-text');
+
+  function toggle() {
+    expanded = !expanded;
+    extraStart.style.display = expanded ? '' : 'none';
+    extraRows.forEach(function(r) { r.style.display = expanded ? '' : 'none'; });
+    expandText.textContent = expanded ? 'Collapse \u25B4' : 'Expand \u25BE';
+    showMoreBar.style.display = expanded ? 'none' : '';
+  }
+
+  document.getElementById('expand-toggle').addEventListener('click', toggle);
+  showMoreBar.addEventListener('click', toggle);
+</script>
+
+</body>
+</html>

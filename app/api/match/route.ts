@@ -31,6 +31,8 @@ interface SearchMetadata {
   detectedRetailer: string
   enginesUsed: number
   resultsFound: number
+  enginesQueried: string[]
+  enginesSucceeded: string[]
 }
 
 /**
@@ -239,6 +241,8 @@ export async function POST(req: NextRequest) {
       detectedRetailer: '',
       enginesUsed: 0,
       resultsFound: 0,
+      enginesQueried: [] as string[],
+      enginesSucceeded: [] as string[],
     }
 
     try {
@@ -271,6 +275,8 @@ export async function POST(req: NextRequest) {
           detectedRetailer: '',
           enginesUsed: serpSearchResult.enginesQueried.length,
           resultsFound: dedupedSerpResults.length,
+          enginesQueried: serpSearchResult.enginesQueried,
+          enginesSucceeded: serpSearchResult.enginesSucceeded,
         }
       }
 
