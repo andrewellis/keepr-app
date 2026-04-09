@@ -267,6 +267,26 @@ export default function ScanClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get('resume')])
 
+  useEffect(() => {
+    const textQuery = searchParams.get('q')
+    if (!textQuery) return
+
+    const syntheticResult: ScanResult = {
+      productName: textQuery,
+      category: 'General',
+      confidence: 1,
+      searchTerms: [textQuery],
+      error: null,
+    }
+
+    setScanResult(syntheticResult)
+    setScanState('result')
+    handleFindBestPrice(syntheticResult)
+
+    window.history.replaceState({}, '', '/scan')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Save to search history after successful match results
   const saveToHistory = useCallback(async (
     scan: ScanResult,

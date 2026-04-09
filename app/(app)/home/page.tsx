@@ -4,6 +4,7 @@ import { signout } from '@/app/auth/actions'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 import ScanBar from './ScanBar'
 import RecentScans from './RecentScans'
+import DesktopSearchBar from './DesktopSearchBar'
 
 type StoredPayload = {
   shoppingResults?: { priceValue: number; price: string; merchant: string }[]
@@ -65,20 +66,20 @@ export default async function HomePage() {
   // Anonymous visitor — show landing page
   if (!user) {
     return (
-      <div className="bg-background">
+      <div className="bg-background max-w-5xl mx-auto">
         {/* Hero section */}
         <section className="px-5 pt-16 pb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight mb-4 md:text-center">
             Scan any product.<br />
             Find the best price.<br />
             Earn rewards.
           </h1>
-          <p className="text-base text-foreground-secondary leading-relaxed mb-4">
+          <p className="text-base md:text-lg text-foreground-secondary leading-relaxed mb-4 md:text-center md:max-w-2xl md:mx-auto">
             K33pr compares prices across retailers and shows you where to buy for the
             most money back. Visit k33pr.com, point your camera at any product, and
             get started.
           </p>
-          <p className="mb-8">
+          <p className="mb-8 md:text-center">
             <Link
               href="/blog/how-to-stack-cashback"
               className="text-sm font-medium hover:underline transition"
@@ -89,7 +90,7 @@ export default async function HomePage() {
           </p>
           <Link
             href="/scan"
-            className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block"
+            className="w-full md:w-auto md:mx-auto md:px-16 bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block"
           >
             Start Scanning
           </Link>
@@ -99,21 +100,8 @@ export default async function HomePage() {
               Sign in
             </Link>
           </p>
+          <DesktopSearchBar />
         </section>
-
-        {/* Product screenshot */}
-        <div className="px-5 py-8">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/results-example.png"
-            alt="K33pr results showing product identification, price comparison, and credit card recommendation"
-            className="w-full max-w-[700px] mx-auto rounded-lg shadow-sm"
-            style={{ border: '1px solid #E5E5E3' }}
-          />
-          <p className="text-center text-sm mt-3" style={{ color: '#666666' }}>
-            Scan any product. See prices, savings, and your best card — all in one place.
-          </p>
-        </div>
 
         {/* How it works summary */}
         <section className="px-5 pb-12">
@@ -168,7 +156,7 @@ export default async function HomePage() {
         {/* Value proposition */}
         <section className="px-5 pb-12">
           <h2 className="text-xl font-bold text-foreground mb-6">Why K33pr?</h2>
-          <div className="space-y-4">
+          <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
             <div className="bg-surface border border-border rounded-2xl p-5">
               <h3 className="text-base font-semibold text-foreground mb-1.5">
                 Real savings, real money
@@ -202,7 +190,7 @@ export default async function HomePage() {
         </section>
 
         {/* Footer links */}
-        <section className="px-5 pb-4">
+        <section className="px-5 pb-4 md:pb-8">
           <div className="flex items-center justify-center gap-4">
             <Link href="/how-it-works" className="text-xs text-foreground-secondary hover:text-primary transition">
               How It Works

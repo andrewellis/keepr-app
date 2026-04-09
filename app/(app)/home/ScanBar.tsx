@@ -31,14 +31,20 @@ export default function ScanBar() {
           className="flex-1 bg-transparent text-sm text-foreground outline-none min-w-0"
           onKeyDown={e => {
             if (e.key === 'Enter' && query.trim() !== '') {
-              router.push('/scan')
+              router.push(`/scan?q=${encodeURIComponent(query.trim())}`)
             }
           }}
         />
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: '#534AB7', cursor: 'pointer' }}
-          onClick={() => router.push('/scan')}
+          onClick={() => {
+            if (query.trim() !== '') {
+              router.push(`/scan?q=${encodeURIComponent(query.trim())}`)
+            } else {
+              router.push('/scan')
+            }
+          }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
