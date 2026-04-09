@@ -13,6 +13,14 @@ const MAJOR_RETAILERS = new Set<string>([
   'macys.com',
   'nordstrom.com',
   'ebay.com',
+  'abt.com',
+  'cdw.com',
+  'crutchfield.com',
+  'dell.com',
+  'electronics.sony.com',
+  'pcrichard.com',
+  'sony.com',
+  'sweetwater.com',
 ])
 
 export function getRetailerTrust(domain: string): RetailerTrust {
