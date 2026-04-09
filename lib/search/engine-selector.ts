@@ -37,19 +37,19 @@ const ENGINE_MAP: Record<ProductCategory, Record<'free' | 'paid', SearchEngine[]
   },
   home_improvement: {
     free: ['google_shopping', 'home_depot', 'amazon'],
-    paid: ['google_shopping', 'home_depot', 'amazon', 'walmart'],
+    paid: ['google_shopping', 'home_depot', 'amazon'],
   },
   furniture: {
-    free: ['google_shopping', 'walmart', 'amazon'],
-    paid: ['google_shopping', 'walmart', 'amazon', 'bing_shopping'],
+    free: ['google_shopping', 'amazon'],
+    paid: ['google_shopping', 'amazon', 'bing_shopping'],
   },
   appliances: {
-    free: ['google_shopping', 'amazon', 'walmart'],
-    paid: ['google_shopping', 'amazon', 'walmart', 'home_depot'],
+    free: ['google_shopping', 'amazon'],
+    paid: ['google_shopping', 'amazon', 'home_depot'],
   },
   general: {
-    free: ['google_shopping', 'amazon', 'walmart'],
-    paid: ['google_shopping', 'amazon', 'walmart', 'bing_shopping'],
+    free: ['google_shopping', 'amazon'],
+    paid: ['google_shopping', 'amazon', 'bing_shopping'],
   },
 };
 
