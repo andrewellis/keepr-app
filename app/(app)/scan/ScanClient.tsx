@@ -1131,9 +1131,26 @@ export default function ScanClient() {
                       <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
                         <div style={{ padding: '14px 14px 10px' }}>
                           <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
-                            <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                              {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
-                            </p>
+                            <div>
+                              {(() => {
+                                const matchingPick =
+                                  picks !== null && picks.pick.url === selected.url ? picks.pick
+                                  : picks !== null && picks.cheapest.url === selected.url ? picks.cheapest
+                                  : picks !== null && picks.premium !== null && picks.premium.url === selected.url ? picks.premium
+                                  : null
+                                return matchingPick ? (
+                                  <>
+                                    <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, color: '#534AB7', backgroundColor: '#F0EEFF', borderRadius: 6, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, marginBottom: 4 }}>
+                                      {matchingPick.label}
+                                    </span>
+                                    <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{matchingPick.reason}</p>
+                                  </>
+                                ) : null
+                              })()}
+                              <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
+                              </p>
+                            </div>
                             <button
                               onClick={async () => {
                                 const shareData = {
@@ -1412,7 +1429,21 @@ export default function ScanClient() {
                             }}
                           >
                             <div className="flex-1 min-w-0">
-                              <span style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
+                              <div className="flex items-center gap-1.5" style={{ flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#111' : '#555' }}>{cleanDomain(r.domain)}</span>
+                                {(() => {
+                                  const rowPickLabel =
+                                    picks !== null && picks.pick.url === r.url ? picks.pick.label
+                                    : picks !== null && picks.cheapest.url === r.url ? picks.cheapest.label
+                                    : picks !== null && picks.premium !== null && picks.premium.url === r.url ? picks.premium.label
+                                    : null
+                                  return rowPickLabel ? (
+                                    <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 600, color: '#534AB7', backgroundColor: '#F0EEFF', borderRadius: 6, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2 }}>
+                                      {rowPickLabel}
+                                    </span>
+                                  ) : null
+                                })()}
+                              </div>
                               {(() => {
                                 const serpItem = !r.isShopping ? (r.item as SerpResult) : null
                                 return (
