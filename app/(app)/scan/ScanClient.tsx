@@ -19,6 +19,7 @@ import { selectPicks } from '@/lib/search/pick-selector'
 import type { PickSet } from '@/lib/search/pick-selector'
 import { getRetailerTrust } from '@/lib/search/retailer-trust'
 import { getBuyTiming, getBuyTimingColor, getBuyTimingLabel } from '@/lib/keepa/buy-timing'
+import CameraViewfinder from '@/components/CameraViewfinder'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -284,6 +285,22 @@ export default function ScanClient() {
     const textQuery = searchParams.get('q')
     if (!textQuery) return
 
+    setPreviewUrl(null)
+    setCurrentFile(null)
+    setErrorMsg(null)
+    setStoreState('idle')
+    setProducts([])
+    setShoppingResults([])
+    setDisplayedSerpResults([])
+    setMatchResult(null)
+    setExpandedResultId(null)
+    setTrackedIds(new Set())
+    setBestCardByResultId({})
+    setBestCardLoadingIds(new Set())
+    setKeepaDataByAsin({})
+    setKeepaLoadingAsins(new Set())
+    setKeepaRequestedAsins(new Set())
+
     const syntheticResult: ScanResult = {
       productName: textQuery,
       category: 'General',
@@ -296,9 +313,9 @@ export default function ScanClient() {
     setScanState('result')
     handleFindBestPrice(syntheticResult)
 
-    window.history.replaceState({}, '', '/scan')
+    router.replace('/scan')
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [searchParams])
 
   // Save to search history after successful match results
   const saveToHistory = useCallback(async (
@@ -357,8 +374,21 @@ export default function ScanClient() {
     libraryInputRef.current?.click()
   }
 
-  async function handleProcess() {
-    if (!currentFile) return
+  function handleCameraFrameCapture(file: File) {
+    setCurrentFile(file)
+    handleProcess(file)
+  }
+
+  function handleLibraryFileSelect(file: File) {
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    setCurrentFile(file)
+    setScanState('preview')
+  }
+
+  async function handleProcess(fileOverride?: File) {
+    const file = fileOverride || currentFile
+    if (!file) return
     setScanState('processing')
 
     // Check network connectivity
@@ -369,9 +399,9 @@ export default function ScanClient() {
     }
 
     try {
-      const compressed = await compressImage(currentFile)
+      const compressed = await compressImage(file)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`Image compressed: ${currentFile.size} → ${compressed.size} bytes`)
+        console.log(`Image compressed: ${file.size} → ${compressed.size} bytes`)
       }
 
       const formData = new FormData()
@@ -687,7 +717,7 @@ export default function ScanClient() {
       )}
 
       {!isResuming && scanState !== 'result' && (
-        <h1 className="text-2xl font-bold text-foreground mb-6">
+        <h1 className={`text-2xl font-bold text-foreground mb-6 ${scanState === 'idle' ? 'hidden md:block' : ''}`}>
           {scanState === 'processing' ? 'Identifying...' : 'Scan Product'}
         </h1>
       )}
@@ -717,90 +747,88 @@ export default function ScanClient() {
       )}
 
       {!isResuming && scanState === 'idle' && (
-        <div className="space-y-3">
-          <button
-            onClick={handleCameraCapture}
-            className="w-full bg-primary rounded-2xl p-6 flex flex-col items-center gap-3 hover:opacity-90 active:scale-[0.98] transition"
-          >
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <div className="text-center">
-              <p className="text-white font-semibold text-base">{isMobile ? 'Take a Photo' : 'Upload a Photo'}</p>
-              <p className="text-white/70 text-xs mt-0.5">Photograph the item</p>
-            </div>
-          </button>
-
-          {isMobile && (
-            <div className="text-center">
-              <button
-                onClick={handleLibraryUpload}
-                className="text-sm hover:underline transition"
-                style={{ color: '#534AB7' }}
-              >
-                Upload from Library
-              </button>
-            </div>
-          )}
-
-          <div className="bg-surface border border-border rounded-2xl p-4 mt-2">
-            <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2">Tips for best results</p>
-            <ul className="space-y-1.5">
-              {[
-                'Lay the item flat on a neutral surface',
-                'Ensure the tag or label is clearly visible',
-                'Avoid shadows and glare',
-              ].map((tip) => (
-                <li key={tip} className="flex items-start gap-2 text-xs text-foreground-secondary">
-                  <span className="text-primary mt-0.5">•</span>
-                  {tip}
-                </li>
-              ))}
-            </ul>
+        <>
+          {/* Mobile: live camera viewfinder */}
+          <div className="md:hidden" style={{ margin: '0 -20px -96px', minHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+            <CameraViewfinder
+              onCapture={handleCameraFrameCapture}
+              onLibrarySelect={handleLibraryFileSelect}
+            />
           </div>
 
-          {/* Recent Searches */}
-          {historyLoaded && searchHistory.length > 0 && (
-            <div className="mt-4">
-              <p className="text-base font-semibold mb-3" style={{ color: '#1a1a1a' }}>Recent Searches</p>
-              <div className="space-y-2">
-                {searchHistory.map((entry) => {
-                  const resultCount = (entry.results_payload?.results ?? []).length
-                  return (
-                    <button
-                      key={entry.id}
-                      onClick={() => handleLoadHistoryEntry(entry)}
-                      className="w-full text-left rounded-lg px-4 py-3 border transition hover:border-primary"
-                      style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
-                    >
-                      <p className="text-sm font-medium" style={{ color: '#1a1a1a' }}>
-                        {entry.product_name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {entry.category && (
-                          <p className="text-xs" style={{ color: '#666666' }}>{entry.category}</p>
-                        )}
-                        {entry.category && (
-                          <span className="text-xs" style={{ color: '#E5E5E3' }}>·</span>
-                        )}
-                        <p className="text-xs" style={{ color: '#666666' }}>
-                          {resultCount} result{resultCount !== 1 ? 's' : ''}
-                        </p>
-                        <span className="text-xs" style={{ color: '#E5E5E3' }}>·</span>
-                        <p className="text-xs" style={{ color: '#666666' }}>
-                          {formatRelativeTime(entry.created_at)}
-                        </p>
-                      </div>
-                    </button>
-                  )
-                })}
+          {/* Desktop: keep existing upload UI */}
+          <div className="hidden md:block space-y-3">
+            <button
+              onClick={handleCameraCapture}
+              className="w-full bg-primary rounded-2xl p-6 flex flex-col items-center gap-3 hover:opacity-90 active:scale-[0.98] transition"
+            >
+              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
               </div>
+              <div className="text-center">
+                <p className="text-white font-semibold text-base">Upload a Photo</p>
+                <p className="text-white/70 text-xs mt-0.5">Photograph the item</p>
+              </div>
+            </button>
+
+            <div className="bg-surface border border-border rounded-2xl p-4 mt-2">
+              <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider mb-2">Tips for best results</p>
+              <ul className="space-y-1.5">
+                {[
+                  'Lay the item flat on a neutral surface',
+                  'Ensure the tag or label is clearly visible',
+                  'Avoid shadows and glare',
+                ].map((tip) => (
+                  <li key={tip} className="flex items-start gap-2 text-xs text-foreground-secondary">
+                    <span className="text-primary mt-0.5">•</span>
+                    {tip}
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
-        </div>
+
+            {historyLoaded && searchHistory.length > 0 && (
+              <div className="mt-4">
+                <p className="text-base font-semibold mb-3" style={{ color: '#1a1a1a' }}>Recent Searches</p>
+                <div className="space-y-2">
+                  {searchHistory.map((entry) => {
+                    const resultCount = (entry.results_payload?.results ?? []).length
+                    return (
+                      <button
+                        key={entry.id}
+                        onClick={() => handleLoadHistoryEntry(entry)}
+                        className="w-full text-left rounded-lg px-4 py-3 border transition hover:border-primary"
+                        style={{ backgroundColor: '#F8F8F6', borderColor: '#E5E5E3' }}
+                      >
+                        <p className="text-sm font-medium" style={{ color: '#1a1a1a' }}>
+                          {entry.product_name}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {entry.category && (
+                            <p className="text-xs" style={{ color: '#666666' }}>{entry.category}</p>
+                          )}
+                          {entry.category && (
+                            <span className="text-xs" style={{ color: '#E5E5E3' }}>·</span>
+                          )}
+                          <p className="text-xs" style={{ color: '#666666' }}>
+                            {resultCount} result{resultCount !== 1 ? 's' : ''}
+                          </p>
+                          <span className="text-xs" style={{ color: '#E5E5E3' }}>·</span>
+                          <p className="text-xs" style={{ color: '#666666' }}>
+                            {formatRelativeTime(entry.created_at)}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {scanState === 'preview' && previewUrl && (
@@ -817,7 +845,7 @@ export default function ScanClient() {
               Retake
             </button>
             <button
-              onClick={handleProcess}
+              onClick={() => handleProcess()}
               className="flex-1 bg-primary rounded-xl py-3.5 text-sm font-semibold text-white hover:opacity-90 transition"
             >
               Identify Product
@@ -827,35 +855,82 @@ export default function ScanClient() {
       )}
 
       {scanState === 'processing' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingBottom: 80, gap: 12 }}>
-          {/* Scanner box with corner brackets */}
-          <div style={{ width: 120, height: 120, borderRadius: 14, background: '#fff', border: '0.5px solid #e5e5e5', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <div style={{ width: 90, height: 90, background: '#f0f0f0', borderRadius: 7 }} />
-            {/* Four corner brackets */}
-            <div style={{ position: 'absolute', top: 5, left: 5, width: 12, height: 12, borderTop: '2px solid #534AB7', borderLeft: '2px solid #534AB7', borderRadius: '2px 0 0 0' }} />
-            <div style={{ position: 'absolute', top: 5, right: 5, width: 12, height: 12, borderTop: '2px solid #534AB7', borderRight: '2px solid #534AB7', borderRadius: '0 2px 0 0' }} />
-            <div style={{ position: 'absolute', bottom: 5, left: 5, width: 12, height: 12, borderBottom: '2px solid #534AB7', borderLeft: '2px solid #534AB7', borderRadius: '0 0 0 2px' }} />
-            <div style={{ position: 'absolute', bottom: 5, right: 5, width: 12, height: 12, borderBottom: '2px solid #534AB7', borderRight: '2px solid #534AB7', borderRadius: '0 0 2px 0' }} />
-            {/* Scanning line animation */}
-            <div style={{ position: 'absolute', top: '50%', left: 5, right: 5, height: 1, background: '#534AB7', opacity: 0.5 }} className="animate-pulse" />
-          </div>
-          {/* Text */}
-          <div style={{ textAlign: 'center', marginTop: 12 }}>
-            <p style={{ fontSize: 14, fontWeight: 500, color: '#111', marginBottom: 4 }}>Identifying product...</p>
-            <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
-              <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0s' }} />
-              <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0.15s' }} />
-              <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0.3s' }} />
+        <>
+          <div className="md:hidden">
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingBottom: 80, gap: 12 }}>
+              {/* Scanner box with corner brackets */}
+              <div style={{ width: 120, height: 120, borderRadius: 14, background: '#fff', border: '0.5px solid #e5e5e5', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <div style={{ width: 90, height: 90, background: '#f0f0f0', borderRadius: 7 }} />
+                {/* Four corner brackets */}
+                <div style={{ position: 'absolute', top: 5, left: 5, width: 12, height: 12, borderTop: '2px solid #534AB7', borderLeft: '2px solid #534AB7', borderRadius: '2px 0 0 0' }} />
+                <div style={{ position: 'absolute', top: 5, right: 5, width: 12, height: 12, borderTop: '2px solid #534AB7', borderRight: '2px solid #534AB7', borderRadius: '0 2px 0 0' }} />
+                <div style={{ position: 'absolute', bottom: 5, left: 5, width: 12, height: 12, borderBottom: '2px solid #534AB7', borderLeft: '2px solid #534AB7', borderRadius: '0 0 0 2px' }} />
+                <div style={{ position: 'absolute', bottom: 5, right: 5, width: 12, height: 12, borderBottom: '2px solid #534AB7', borderRight: '2px solid #534AB7', borderRadius: '0 0 2px 0' }} />
+                {/* Scanning line animation */}
+                <div style={{ position: 'absolute', top: '50%', left: 5, right: 5, height: 1, background: '#534AB7', opacity: 0.5 }} className="animate-pulse" />
+              </div>
+              {/* Text */}
+              <div style={{ textAlign: 'center', marginTop: 12 }}>
+                <p style={{ fontSize: 14, fontWeight: 500, color: '#111', marginBottom: 4 }}>Identifying product...</p>
+                <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+                  <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0s' }} />
+                  <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0.15s' }} />
+                  <span className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#534AB7', display: 'inline-block', animationDelay: '0.3s' }} />
+                </div>
+              </div>
+              {/* Progress bar card */}
+              <div style={{ width: '100%', background: '#fff', borderRadius: 9, border: '0.5px solid #ebebeb', padding: '7px 10px', marginTop: 8 }}>
+                <p style={{ fontSize: 11, color: '#aaa', marginBottom: 3 }}>Vision API → Claude AI</p>
+                <div style={{ background: '#f0f0f0', borderRadius: 3, height: 2, overflow: 'hidden' }}>
+                  <div className="animate-pulse" style={{ height: 2, background: '#534AB7', borderRadius: 3, width: '60%' }} />
+                </div>
+              </div>
             </div>
           </div>
-          {/* Progress bar card */}
-          <div style={{ width: '100%', background: '#fff', borderRadius: 9, border: '0.5px solid #ebebeb', padding: '7px 10px', marginTop: 8 }}>
-            <p style={{ fontSize: 11, color: '#aaa', marginBottom: 3 }}>Vision API → Claude AI</p>
-            <div style={{ background: '#f0f0f0', borderRadius: 3, height: 2, overflow: 'hidden' }}>
-              <div className="animate-pulse" style={{ height: 2, background: '#534AB7', borderRadius: 3, width: '60%' }} />
+          <div className="hidden md:block">
+            <style>{`
+              @keyframes k33prShimmer {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+              }
+            `}</style>
+            <div style={{ maxWidth: 520, margin: '0 auto', background: '#FFFFFF', borderRadius: 16, border: '1px solid #E5E5E3', overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E5E3' }}>
+                <div style={{ background: '#F8F8F6', borderRadius: 12, padding: '10px 14px', border: '1px solid #E5E5E3', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                  </svg>
+                  <span style={{ fontSize: 14, color: '#1a1a1a' }}>{scanResult?.productName ?? 'Searching...'}</span>
+                </div>
+              </div>
+              <div style={{ padding: '40px 32px 48px' }}>
+                <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                  <p style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>Searching 5 engines</p>
+                  <p style={{ fontSize: 13, color: '#888', marginTop: 4 }}>Letting retailers fight it out for your money</p>
+                </div>
+                <div style={{ height: 4, background: '#F8F8F6', borderRadius: 2, marginBottom: 28, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: '60%', background: 'linear-gradient(90deg, #534AB7, #7B73D4, #534AB7)', backgroundSize: '200% 100%', borderRadius: 2, animation: 'k33prShimmer 1.5s infinite' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {(['Google Shopping', 'Amazon', 'Walmart', 'Bing Shopping', 'Best Buy'] as const).map((engine) => (
+                    <div key={engine} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: '#FFFFFF', border: '1px solid #E5E5E3' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 8, background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="4" fill="none" stroke="#534AB7" strokeWidth="2.5" strokeDasharray="8 17" strokeLinecap="round">
+                            <animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="0.8s" repeatCount="indefinite" />
+                          </circle>
+                        </svg>
+                      </div>
+                      <span style={{ fontSize: 13, color: '#1a1a1a', flex: 1 }}>{engine}</span>
+                      <span style={{ fontSize: 12, color: '#534AB7' }}>searching...</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {scanState === 'error' && (
