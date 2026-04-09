@@ -1509,6 +1509,39 @@ export default function ScanClient() {
 
               <div style={{ height: '24px' }} />
 
+              {storeState === 'loading' && (
+                <div style={{ maxWidth: '520px', margin: '0 auto' }}>
+                  <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E5E5E3', overflow: 'hidden' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E5E3' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#F8F8F6', borderRadius: '12px', padding: '10px 14px', border: '1px solid #E5E5E3' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        <span style={{ fontSize: '14px', color: '#1a1a1a' }}>{scanResult?.productName ?? 'Searching...'}</span>
+                      </div>
+                    </div>
+                    <div style={{ padding: '40px 32px 48px' }}>
+                      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+                        <p style={{ fontSize: '15px', fontWeight: 500, color: '#1a1a1a', margin: 0 }}>Searching 5 engines</p>
+                        <p style={{ fontSize: '13px', color: '#888', marginTop: '4px', margin: 0 }}>Letting retailers fight it out for your money</p>
+                      </div>
+                      <div style={{ height: '4px', background: '#F8F8F6', borderRadius: '2px', marginBottom: '28px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: '60%', background: '#534AB7', borderRadius: '2px' }} className="animate-pulse" />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {['Google Shopping', 'Amazon', 'Walmart', 'Bing Shopping', 'Best Buy'].map((engine) => (
+                          <div key={engine} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', background: '#FFFFFF', border: '1px solid #E5E5E3' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="#534AB7" strokeWidth="2.5" strokeDasharray="8 17" strokeLinecap="round"><animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg>
+                            </div>
+                            <span style={{ fontSize: '13px', color: '#1a1a1a', flex: 1 }}>{engine}</span>
+                            <span style={{ fontSize: '12px', color: '#534AB7' }}>searching...</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {(storeState !== 'done' || allPriced.length > 0) && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
 
