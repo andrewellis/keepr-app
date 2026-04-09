@@ -262,53 +262,64 @@ export default async function HomePage() {
   void signout
 
   return (
-    <div className="bg-background flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
-      <div className="flex-shrink-0">
-        <ScanBar />
-        <header className="pt-2 pb-3 px-5 flex items-center justify-between">
-          <div>
-            <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              GOOD DAY
-            </p>
-            <p style={{ fontSize: '22px', fontWeight: 500, color: '#111' }}>{firstName}</p>
-          </div>
-          <div className="text-right">
-            <p style={{ fontSize: '11px', color: '#aaa' }}>{today}</p>
-            <p style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500 }}>
-              {trackedCount ?? 0} tracked
-            </p>
-          </div>
-        </header>
-        <div className="bg-white border border-border rounded-2xl mx-5 mt-3 p-4">
-          <p style={{ fontSize: '12px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
-            TOTAL SAVINGS
-          </p>
-          <p style={{ fontSize: '28px', fontWeight: 500, color: '#534AB7', letterSpacing: '-0.02em', marginBottom: '16px' }}>
-            $0.00
-          </p>
-          <div className="flex" style={{ borderTop: '1.5px solid #f0f0f0', paddingTop: '12px' }}>
-            <div className="flex-1 text-center">
-              <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS WEEK</p>
-              <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
+    <>
+      {/* Mobile: existing dashboard */}
+      <div className="md:hidden bg-background flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
+        <div className="flex-shrink-0">
+          <ScanBar />
+          <header className="pt-2 pb-3 px-5 flex items-center justify-between">
+            <div>
+              <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                GOOD DAY
+              </p>
+              <p style={{ fontSize: '22px', fontWeight: 500, color: '#111' }}>{firstName}</p>
             </div>
-            <div className="flex-1 text-center">
-              <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS MONTH</p>
-              <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
+            <div className="text-right">
+              <p style={{ fontSize: '11px', color: '#aaa' }}>{today}</p>
+              <p style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500 }}>
+                {trackedCount ?? 0} tracked
+              </p>
             </div>
-            <div className="flex-1 text-center">
-              <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ALL TIME</p>
-              <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
+          </header>
+          <div className="bg-white border border-border rounded-2xl mx-5 mt-3 p-4">
+            <p style={{ fontSize: '12px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+              TOTAL SAVINGS
+            </p>
+            <p style={{ fontSize: '28px', fontWeight: 500, color: '#534AB7', letterSpacing: '-0.02em', marginBottom: '16px' }}>
+              $0.00
+            </p>
+            <div className="flex" style={{ borderTop: '1.5px solid #f0f0f0', paddingTop: '12px' }}>
+              <div className="flex-1 text-center">
+                <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS WEEK</p>
+                <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
+              </div>
+              <div className="flex-1 text-center">
+                <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS MONTH</p>
+                <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
+              </div>
+              <div className="flex-1 text-center">
+                <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ALL TIME</p>
+                <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
+              </div>
             </div>
           </div>
         </div>
+        <div className="flex-1 overflow-y-auto min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <RecentScans scans={(recentScans ?? []).map(scan => ({ id: scan.id, product_name: scan.product_name, created_at: scan.created_at, topResults: getTopResults(scan.results_payload) }))} />
+          <div style={{ height: '80px' }} />
+        </div>
       </div>
 
-      {/* Scrollable section */}
-      <div className="flex-1 overflow-y-auto min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <RecentScans scans={(recentScans ?? []).map(scan => ({ id: scan.id, product_name: scan.product_name, created_at: scan.created_at, topResults: getTopResults(scan.results_payload) }))} />
-        <div style={{ height: '80px' }} />
+      {/* Desktop: centered logo + search prompt */}
+      <div className="hidden md:flex flex-col items-center justify-center" style={{ minHeight: 'calc(100vh - 65px)' }}>
+        <div className="flex flex-col items-center" style={{ marginTop: '-60px' }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: '#534AB7' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
+          <h1 style={{ fontSize: '28px', fontWeight: 600, color: '#1a1a1a', marginBottom: '12px' }}>What are you looking for?</h1>
+          <p style={{ fontSize: '15px', color: '#999' }}>Search for any product in the bar above</p>
+        </div>
       </div>
-
-    </div>
+    </>
   )
 }

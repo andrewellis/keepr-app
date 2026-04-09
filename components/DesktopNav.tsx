@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function DesktopNav() {
+export default function DesktopNav({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [query, setQuery] = useState('')
   const router = useRouter()
 
@@ -24,7 +24,16 @@ export default function DesktopNav() {
         <Link href="/how-it-works" className="text-[15px] text-muted-foreground hover:text-foreground transition-colors">How it works</Link>
         <Link href="/faq" className="text-[15px] text-muted-foreground hover:text-foreground transition-colors">FAQ</Link>
         <Link href="/blog" className="text-[15px] text-muted-foreground hover:text-foreground transition-colors">Blog</Link>
-        <Link href="/login" className="text-[15px] font-medium" style={{ color: '#534AB7' }}>Sign in</Link>
+        {isLoggedIn ? (
+          <>
+            <Link href="/dashboard" className="text-[15px] text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
+            <Link href="/settings" className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:border-foreground transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground"><circle cx="12" cy="8" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
+            </Link>
+          </>
+        ) : (
+          <Link href="/login" className="text-[15px] font-medium" style={{ color: '#534AB7' }}>Sign in</Link>
+        )}
       </div>
     </header>
   )
