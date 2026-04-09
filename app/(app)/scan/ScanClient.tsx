@@ -1542,7 +1542,7 @@ export default function ScanClient() {
                 </div>
               )}
 
-              {(storeState !== 'done' || allPriced.length > 0) && (
+              {storeState !== 'loading' && (storeState !== 'done' || allPriced.length > 0) && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
 
                 {/* LEFT COLUMN */}
