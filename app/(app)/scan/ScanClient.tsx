@@ -166,6 +166,15 @@ function formatCurrency(value: number): string {
 
 export default function ScanClient() {
   const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)')
+    setIsMobileViewport(mql.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobileViewport(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
   const searchParams = useSearchParams()
   const router = useRouter()
   const { notifyScanSaved } = useScanSaved()
@@ -750,10 +759,12 @@ export default function ScanClient() {
         <>
           {/* Mobile: live camera viewfinder */}
           <div className="md:hidden" style={{ margin: '0 -20px -96px', minHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            <CameraViewfinder
-              onCapture={handleCameraFrameCapture}
-              onLibrarySelect={handleLibraryFileSelect}
-            />
+            {isMobileViewport && (
+              <CameraViewfinder
+                onCapture={handleCameraFrameCapture}
+                onLibrarySelect={handleLibraryFileSelect}
+              />
+            )}
           </div>
 
           {/* Desktop: keep existing upload UI */}
