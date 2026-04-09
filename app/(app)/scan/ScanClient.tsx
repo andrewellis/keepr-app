@@ -1427,6 +1427,7 @@ export default function ScanClient() {
                 {/* LEFT COLUMN */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+                  <div style={{ position: 'sticky', top: 58, zIndex: 10, background: '#FFFFFF', paddingBottom: '16px' }}>
                   {/* 1. VERDICT STRIP CARD — skip when picks is null, show fallback */}
                   {picks === null && storeState === 'done' && allPriced.length > 0 && (
                     <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '16px', padding: '28px', textAlign: 'center' }}>
@@ -1585,6 +1586,7 @@ export default function ScanClient() {
                       </button>
                     </div>
                   )}
+                  </div>
 
                   {/* 3. EXPANDABLE COMMAND CENTER TABLE */}
                   <div style={{ background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E5E3', padding: 0 }}>
