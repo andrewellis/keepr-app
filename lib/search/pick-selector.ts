@@ -72,8 +72,8 @@ export function selectPicks(
     )
   }
 
-  const pickName = pickEntry.result.retailerDomain.replace(/\.\w+$/, '')
-  const cheapestName = cheapestEntry.result.retailerDomain.replace(/\.\w+$/, '')
+  const pickName = pickEntry.result.retailerDomain ? pickEntry.result.retailerDomain.replace(/\.\w+$/, '') : (pickEntry.result.seller ?? 'this retailer')
+  const cheapestName = cheapestEntry.result.retailerDomain ? cheapestEntry.result.retailerDomain.replace(/\.\w+$/, '') : (cheapestEntry.result.seller ?? 'the cheapest option')
 
   let reasonText = 'Why ' + pickName + '? '
 
