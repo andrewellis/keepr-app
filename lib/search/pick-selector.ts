@@ -2,10 +2,9 @@ import type { SerpResult } from './serp-multi-search'
 import { getRetailerTrust } from './retailer-trust'
 
 export interface PickSet {
-  cheapest: SerpResult & { netCost: number }
-  pick: SerpResult & { netCost: number }
-  premium: (SerpResult & { netCost: number }) | null
-  reasonText: string
+  cheapest: SerpResult & { netCost: number; label: string; reason: string };
+  pick: SerpResult & { netCost: number; label: string; reason: string };
+  premium: (SerpResult & { netCost: number; label: string; reason: string }) | null;
 }
 
 export function selectPicks(
@@ -56,54 +55,74 @@ export function selectPicks(
     return { result, netCost, priceScore, trustScore, deliveryScore, ratingScore, cashbackScore, composite }
   })
 
-  const cheapestEntry = scored.reduce((a, b) => a.netCost <= b.netCost ? a : b)
-
   const sortedByComposite = [...scored].sort((a, b) => b.composite - a.composite)
-  let pickEntry = sortedByComposite[0]
-  if (pickEntry.result === cheapestEntry.result) {
-    pickEntry = sortedByComposite[1]
+  const bestComposite = sortedByComposite[0]
+
+  const sortedByNetCost = [...scored].sort((a, b) => a.netCost - b.netCost)
+  const absoluteCheapest = sortedByNetCost[0]
+
+  let pickEntry: typeof scored[0]
+  let cheapestEntry: typeof scored[0]
+
+  if (bestComposite.result === absoluteCheapest.result) {
+    pickEntry = bestComposite
+    cheapestEntry = sortedByNetCost[1]
+  } else {
+    pickEntry = bestComposite
+    cheapestEntry = absoluteCheapest
   }
 
   const remaining = scored.filter(e => e.result !== cheapestEntry.result && e.result !== pickEntry.result)
   let premiumEntry: typeof scored[0] | null = null
-  if (remaining.length > 0) {
-    premiumEntry = remaining.reduce((a, b) =>
-      (a.trustScore + a.deliveryScore) >= (b.trustScore + b.deliveryScore) ? a : b
-    )
+  for (const e of remaining) {
+    if (getRetailerTrust(e.result.retailerDomain) === 'major') {
+      if (
+        premiumEntry === null ||
+        (e.trustScore + e.deliveryScore) > (premiumEntry.trustScore + premiumEntry.deliveryScore)
+      ) {
+        premiumEntry = e
+      }
+    }
   }
 
-  const pickName = pickEntry.result.retailerDomain ? pickEntry.result.retailerDomain.replace(/\.\w+$/, '') : (pickEntry.result.seller ?? 'this retailer')
-  const cheapestName = cheapestEntry.result.retailerDomain ? cheapestEntry.result.retailerDomain.replace(/\.\w+$/, '') : (cheapestEntry.result.seller ?? 'the cheapest option')
-
-  let reasonText = 'Why ' + pickName + '? '
-
-  if (pickEntry.netCost > cheapestEntry.netCost) {
-    reasonText += 'Only $' + (pickEntry.netCost - cheapestEntry.netCost).toFixed(2) + ' more than ' + cheapestName + ', but '
+  function cleanDomain(domain: string | undefined | null): string {
+    if (!domain) return ''
+    return domain.replace(/\.\w+$/, '')
   }
 
-  const pickDeliveryLower = (pickEntry.result.delivery ?? []).map(d => d.toLowerCase())
-  if (pickDeliveryLower.some(d => d.includes('free'))) {
-    reasonText += 'free shipping'
+  function buildPickReason(e: typeof scored[0]): string {
+    let reason = ''
+    if (e.result.rating) {
+      reason += '★ ' + e.result.rating
+    }
+    if (e.result.reviews) {
+      reason += (reason ? ' ' : '') + '(' + e.result.reviews.toLocaleString() + ' reviews)'
+    }
+    const deliveryLower = (e.result.delivery ?? []).map(d => d.toLowerCase())
+    if (deliveryLower.some(d => d.includes('free'))) {
+      reason += (reason ? ' · ' : '') + 'Free shipping'
+    }
+    if (getRetailerTrust(e.result.retailerDomain) === 'major') {
+      reason += (reason ? ' · ' : '') + 'Trusted retailer'
+    }
+    if (!reason) {
+      reason = cleanDomain(e.result.retailerDomain)
+    }
+    return reason
   }
 
-  if (getRetailerTrust(pickEntry.result.retailerDomain) === 'major') {
-    reasonText += ' from a trusted retailer'
-  }
+  const cheapestLabel = 'Lowest Price'
+  const cheapestReason = '$' + cheapestEntry.netCost.toFixed(2) + ' total · ' + cleanDomain(cheapestEntry.result.retailerDomain)
 
-  if (pickEntry.result.rating) {
-    reasonText += ' with ★ ' + pickEntry.result.rating
-  }
+  const pickLabel = 'Best Overall'
+  const pickReason = buildPickReason(pickEntry)
 
-  if (pickEntry.result.reviews) {
-    reasonText += ' from ' + pickEntry.result.reviews.toLocaleString() + ' reviews'
-  }
-
-  reasonText += '.'
+  const premiumLabel = 'Premium Pick'
+  const premiumReason = premiumEntry ? buildPickReason(premiumEntry) : ''
 
   return {
-    cheapest: { ...cheapestEntry.result, netCost: cheapestEntry.netCost },
-    pick: { ...pickEntry.result, netCost: pickEntry.netCost },
-    premium: premiumEntry ? { ...premiumEntry.result, netCost: premiumEntry.netCost } : null,
-    reasonText,
+    cheapest: { ...cheapestEntry.result, netCost: cheapestEntry.netCost, label: cheapestLabel, reason: cheapestReason },
+    pick: { ...pickEntry.result, netCost: pickEntry.netCost, label: pickLabel, reason: pickReason },
+    premium: premiumEntry ? { ...premiumEntry.result, netCost: premiumEntry.netCost, label: premiumLabel, reason: premiumReason } : null,
   }
 }
