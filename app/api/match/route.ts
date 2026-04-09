@@ -7,6 +7,7 @@ import { attachClickIds } from '@/lib/clicks/generate'
 import { getShoppingResults } from '@/lib/shopping/serpapi'
 import { multiEngineSearch } from '@/lib/search/serp-multi-search'
 import { dedupeResults } from '@/lib/search/dedupe-results'
+import { fetchImmersiveProduct } from '@/lib/search/immersive-product'
 import { crossPollinate } from '@/lib/price-tracker/cross-pollinate'
 import type { MultiSearchOptions } from '@/lib/search/serp-multi-search'
 
@@ -228,6 +229,26 @@ export async function POST(req: NextRequest) {
       shoppingOutcome.status === 'fulfilled' ? shoppingOutcome.value : []
     const serpSearchResult =
       serpOutcome.status === 'fulfilled' ? serpOutcome.value : null
+
+    if (serpSearchResult !== null && serpSearchResult.results.length > 0) {
+      const tokenResult = serpSearchResult.results.find(
+        (r) => (r as { immersiveProductToken?: string }).immersiveProductToken
+      )
+      if (tokenResult) {
+        const token = (tokenResult as { immersiveProductToken?: string }).immersiveProductToken!
+        try {
+          const immersiveResult = await fetchImmersiveProduct(token, 6000)
+          if (immersiveResult && immersiveResult.stores.length > 0) {
+            serpSearchResult.results.push(...immersiveResult.stores)
+            if (!serpSearchResult.enginesSucceeded.includes('google_immersive_product')) {
+              serpSearchResult.enginesSucceeded.push('google_immersive_product')
+            }
+          }
+        } catch (immersiveErr) {
+          console.error('[match] immersive product fetch failed (non-fatal):', immersiveErr)
+        }
+      }
+    }
 
     // ── Post-search processing (wrapped in try/catch so errors never break the response) ──
     let dedupedSerpResults: ReturnType<typeof dedupeResults> = []
