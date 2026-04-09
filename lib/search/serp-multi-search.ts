@@ -127,6 +127,7 @@ function parseWalmart(data: Record<string, unknown>): SerpResult[] {
 
 function parseBingShopping(data: Record<string, unknown>): SerpResult[] {
   const items = (data.shopping_results as Record<string, unknown>[]) ?? [];
+  if (items.length > 0) console.log('[BING_DIAG]', JSON.stringify(Object.keys(items[0])), JSON.stringify(items[0], null, 2))
   return items
     .filter(item => item.external_link)
     .map(item => {
