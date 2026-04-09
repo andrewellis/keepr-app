@@ -22,7 +22,7 @@ export async function fetchImmersiveProduct(
   const response = await serpApiFetch({
     engine: 'google_immersive_product',
     query: '',
-    extraParams: { page_token: pageToken },
+    extraParams: { page_token: pageToken, more_stores: 'true' },
     timeoutMs,
   });
 
