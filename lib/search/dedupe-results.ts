@@ -63,16 +63,29 @@ export function dedupeResults(results: SerpResult[], productName?: string): Serp
     .filter((p): p is number => p !== null && p > 0)
   prices.sort((a, b) => a - b)
   const medianPrice = prices.length > 0 ? prices[Math.floor(prices.length / 2)] : 0
-  const priceFloor = medianPrice > 0 ? medianPrice * 0.15 : 0
+  const priceFloor = medianPrice > 0 ? medianPrice * 0.25 : 0
 
   const valid = priceFloor > 0
     ? sizeFiltered.filter(r => r.price === null || r.price >= priceFloor)
     : sizeFiltered
 
+  const conditionFiltered = valid.filter(r => {
+    if (!r.condition) return true
+    const c = r.condition.toLowerCase()
+    return !['refurbished', 'renewed', 'pre-owned', 'used', 'for parts'].some(term => c.includes(term))
+  })
+
+  const outlierFiltered = conditionFiltered.filter(r => {
+    if (r.price === null || medianPrice <= 0) return true
+    if (r.price >= medianPrice * 0.5) return true
+    const reviewCount = typeof r.reviews === 'number' ? r.reviews : 0
+    return reviewCount >= 10
+  })
+
   // Existing dedup logic continues unchanged below using valid instead of the old valid
   const kept: SerpResult[] = []
 
-  for (const candidate of valid) {
+  for (const candidate of outlierFiltered) {
     const candidateWords = normalizeTitle(candidate.title)
     let isDuplicate = false
 
