@@ -1728,7 +1728,7 @@ export default function ScanClient() {
                 </div>
 
                 {/* RIGHT COLUMN (sidebar) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', position: 'sticky', top: 58, maxHeight: 'calc(100vh - 74px)', overflowY: 'auto' }}>
 
                   {/* 1. BUY TIMING CARD */}
                   {timingVerdict !== null && timingKeepa !== null && (
