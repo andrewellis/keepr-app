@@ -66,7 +66,7 @@ export default async function HomePage() {
     return (
       <div className="bg-background max-w-5xl mx-auto">
         {/* Hero section */}
-        <section className="px-5 pt-16 pb-12 md:pt-20 md:pb-16">
+        <section className="px-5 pt-16 pb-12 md:pt-12 md:pb-16">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-4 md:text-center md:text-[40px] md:leading-[1.15]">
             Scan any product.<br />
             Find the best price.<br />
@@ -77,7 +77,7 @@ export default async function HomePage() {
             most money back. Visit k33pr.com, point your camera at any product, and
             get started.
           </p>
-          <p className="mb-8 md:text-center">
+          <p className="mb-8 md:text-center md:hidden">
             <Link
               href="/blog/how-to-stack-cashback"
               className="text-sm font-medium hover:underline transition"
@@ -88,26 +88,32 @@ export default async function HomePage() {
           </p>
           <Link
             href="/scan"
-            className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block md:w-auto md:px-16 md:mx-auto"
+            className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block md:hidden"
           >
             Start Scanning
           </Link>
-          <p className="text-sm text-foreground-secondary mt-6 text-center">
+          <p className="text-sm text-foreground-secondary mt-6 text-center md:hidden">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline">
               Sign in
             </Link>
           </p>
+          <p className="hidden md:block text-sm text-foreground-secondary text-center mt-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg bg-surface">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5 3.5L5.5 10.5L3 7.5" stroke="#534AB7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Try it — search in the nav bar above
+            </span>
+          </p>
         </section>
 
         {/* How it works summary */}
         <section className="px-5 pb-12">
-          <h2 className="text-xl font-bold text-foreground mb-6">How It Works</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-foreground mb-6 md:text-center">How It Works</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-3 md:gap-4">
             {/* Step 1 */}
             <div className="bg-surface border border-border rounded-2xl p-5">
-              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center mb-3">
-                <span className="text-primary font-bold text-sm">1</span>
+              <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center mb-3">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="14" height="14" rx="2" stroke="white" strokeWidth="1.5"/><circle cx="10" cy="10" r="3" stroke="white" strokeWidth="1.5"/></svg>
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1.5">Scan</h3>
               <p className="text-sm text-foreground-secondary leading-relaxed">
@@ -118,8 +124,8 @@ export default async function HomePage() {
 
             {/* Step 2 */}
             <div className="bg-surface border border-border rounded-2xl p-5">
-              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center mb-3">
-                <span className="text-primary font-bold text-sm">2</span>
+              <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center mb-3">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 10h14M7 6l-4 4 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M13 6l4 4-4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1.5">Compare</h3>
               <p className="text-sm text-foreground-secondary leading-relaxed">
@@ -130,8 +136,8 @@ export default async function HomePage() {
 
             {/* Step 3 */}
             <div className="bg-surface border border-border rounded-2xl p-5">
-              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center mb-3">
-                <span className="text-primary font-bold text-sm">3</span>
+              <div className="w-11 h-11 rounded-xl bg-primary flex items-center justify-center mb-3">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="7" stroke="white" strokeWidth="1.5"/><path d="M10 6v4l3 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1.5">Earn</h3>
               <p className="text-sm text-foreground-secondary leading-relaxed">
@@ -140,7 +146,7 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 md:text-center">
             <Link
               href="/how-it-works"
               className="text-sm text-primary font-medium hover:underline transition"
@@ -152,35 +158,35 @@ export default async function HomePage() {
 
         {/* Value proposition */}
         <section className="px-5 pb-12">
-          <h2 className="text-xl font-bold text-foreground mb-6">Why K33pr?</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-foreground mb-6 md:text-center">Why K33pr?</h2>
           <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-3 md:gap-4 gap-3">
             <div className="bg-surface border border-border rounded-2xl p-5">
-              <h3 className="text-base font-semibold text-foreground mb-1.5">
-                Real savings, real money
-              </h3>
-              <p className="text-sm text-foreground-secondary leading-relaxed">
-                Unlike coupon sites that give you points or gift cards, K33pr pays you
-                real cash via PayPal or Venmo.
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />
+                <h3 className="text-base font-semibold text-foreground">Real savings, real money</h3>
+              </div>
+              <p className="text-sm text-foreground-secondary leading-relaxed pl-5">
+                K33pr pays you real cash via PayPal or Venmo — not points, not gift cards, not store credit.
               </p>
             </div>
 
             <div className="bg-surface border border-border rounded-2xl p-5">
-              <h3 className="text-base font-semibold text-foreground mb-1.5">
-                Multi-retailer comparison
-              </h3>
-              <p className="text-sm text-foreground-secondary leading-relaxed">
-                We don&apos;t just check one store. K33pr searches across Amazon, Target,
-                Macy&apos;s, Nordstrom, and more to find where you save the most.
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />
+                <h3 className="text-base font-semibold text-foreground">Multi-retailer comparison</h3>
+              </div>
+              <p className="text-sm text-foreground-secondary leading-relaxed pl-5">
+                Searches Amazon, Target, Walmart, Macy&apos;s, Nordstrom, and more in a single scan to find where you save the most.
               </p>
             </div>
 
             <div className="bg-surface border border-border rounded-2xl p-5">
-              <h3 className="text-base font-semibold text-foreground mb-1.5">
-                No browser extension required
-              </h3>
-              <p className="text-sm text-foreground-secondary leading-relaxed">
-                K33pr works right in your browser. No desktop extension, no toolbar,
-                no tracking your browsing. Just visit k33pr.com and start scanning.
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />
+                <h3 className="text-base font-semibold text-foreground">No browser extension</h3>
+              </div>
+              <p className="text-sm text-foreground-secondary leading-relaxed pl-5">
+                Works right in your browser at k33pr.com. No desktop extension, no toolbar, no tracking your browsing.
               </p>
             </div>
           </div>

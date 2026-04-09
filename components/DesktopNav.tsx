@@ -9,7 +9,7 @@ export default function DesktopNav() {
   const router = useRouter()
 
   return (
-    <header className="hidden md:flex items-center justify-between px-8 py-3 border-b border-border bg-background">
+    <header className="hidden md:flex items-center justify-between px-8 py-4 border-b border-border bg-background sticky top-0 z-50">
       <Link href="/home" className="flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#534AB7' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
