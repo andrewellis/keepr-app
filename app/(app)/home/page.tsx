@@ -4,8 +4,6 @@ import { signout } from '@/app/auth/actions'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 import ScanBar from './ScanBar'
 import RecentScans from './RecentScans'
-import DesktopSearchBar from './DesktopSearchBar'
-
 type StoredPayload = {
   shoppingResults?: { priceValue: number; price: string; merchant: string }[]
   serpResults?: { price: number | null; retailerDomain: string | null }[]
@@ -68,13 +66,13 @@ export default async function HomePage() {
     return (
       <div className="bg-background max-w-5xl mx-auto">
         {/* Hero section */}
-        <section className="px-5 pt-16 pb-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight mb-4 md:text-center">
+        <section className="px-5 pt-16 pb-12 md:pt-20 md:pb-16">
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-4 md:text-center md:text-[40px] md:leading-[1.15]">
             Scan any product.<br />
             Find the best price.<br />
             Earn rewards.
           </h1>
-          <p className="text-base md:text-lg text-foreground-secondary leading-relaxed mb-4 md:text-center md:max-w-2xl md:mx-auto">
+          <p className="text-base md:text-lg text-foreground-secondary leading-relaxed mb-4 md:text-center md:max-w-[560px] md:mx-auto">
             K33pr compares prices across retailers and shows you where to buy for the
             most money back. Visit k33pr.com, point your camera at any product, and
             get started.
@@ -90,7 +88,7 @@ export default async function HomePage() {
           </p>
           <Link
             href="/scan"
-            className="w-full md:w-auto md:mx-auto md:px-16 bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block"
+            className="w-full bg-primary rounded-xl py-3.5 text-sm font-semibold text-white text-center hover:opacity-90 transition block md:w-auto md:px-16 md:mx-auto"
           >
             Start Scanning
           </Link>
@@ -100,13 +98,12 @@ export default async function HomePage() {
               Sign in
             </Link>
           </p>
-          <DesktopSearchBar />
         </section>
 
         {/* How it works summary */}
         <section className="px-5 pb-12">
           <h2 className="text-xl font-bold text-foreground mb-6">How It Works</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-3 md:gap-4">
             {/* Step 1 */}
             <div className="bg-surface border border-border rounded-2xl p-5">
               <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center mb-3">
@@ -156,7 +153,7 @@ export default async function HomePage() {
         {/* Value proposition */}
         <section className="px-5 pb-12">
           <h2 className="text-xl font-bold text-foreground mb-6">Why K33pr?</h2>
-          <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
+          <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-3 md:gap-4 gap-3">
             <div className="bg-surface border border-border rounded-2xl p-5">
               <h3 className="text-base font-semibold text-foreground mb-1.5">
                 Real savings, real money
@@ -191,7 +188,7 @@ export default async function HomePage() {
 
         {/* Footer links */}
         <section className="px-5 pb-4 md:pb-8">
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 md:justify-center">
             <Link href="/how-it-works" className="text-xs text-foreground-secondary hover:text-primary transition">
               How It Works
             </Link>
