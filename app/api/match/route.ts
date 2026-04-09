@@ -240,7 +240,6 @@ export async function POST(req: NextRequest) {
           const immersiveResult = await fetchImmersiveProduct(token, 6000)
           if (immersiveResult && immersiveResult.stores.length > 0) {
             serpSearchResult.results.push(...immersiveResult.stores)
-            console.log(`[IMMERSIVE_DIAG] stores returned: ${immersiveResult.stores.length}, query: ${productName}`)
             if (!serpSearchResult.enginesSucceeded.includes('google_immersive_product')) {
               serpSearchResult.enginesSucceeded.push('google_immersive_product')
             }
