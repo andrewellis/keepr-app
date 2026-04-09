@@ -142,6 +142,11 @@ function parseBingShopping(data: Record<string, unknown>): SerpResult[] {
         url: String(item.external_link ?? ''),
         thumbnail: thumbnails?.[0] ?? THUMBNAIL_PLACEHOLDER,
         retailerDomain: String(item.seller ?? extractDomain(String(item.external_link ?? ''))),
+        rating: typeof item.rating === 'number' ? item.rating : undefined,
+        reviews: typeof item.reviews === 'string' ? parseInt(String(item.reviews).replace(/[^0-9]/g, ''), 10) || undefined : typeof item.reviews === 'number' ? item.reviews : undefined,
+        oldPrice: typeof item.extracted_old_price === 'number' ? item.extracted_old_price : undefined,
+        delivery: item.free_shipping === true ? ['Free shipping'] : undefined,
+        seller: typeof item.seller === 'string' ? item.seller : undefined,
       };
     });
 }
