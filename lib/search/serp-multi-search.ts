@@ -102,7 +102,6 @@ function parseAmazon(data: Record<string, unknown>): SerpResult[] {
 
 function parseWalmart(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
-  if (items.length > 0) console.log('[WALMART_RAW]', JSON.stringify(items[0], null, 2))
   return items
     .filter(item => {
       const offer = item.primary_offer as Record<string, unknown> | undefined;
@@ -144,7 +143,6 @@ function parseBingShopping(data: Record<string, unknown>): SerpResult[] {
 
 function parseEbay(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
-  if (items.length > 0) console.log('[EBAY_RAW]', JSON.stringify(items[0], null, 2))
   return items
     .filter(item => {
       const condition = String(item.condition ?? '').toLowerCase();
@@ -166,7 +164,6 @@ function parseEbay(data: Record<string, unknown>): SerpResult[] {
 
 function parseHomeDepot(data: Record<string, unknown>): SerpResult[] {
   const items = (data.products as Record<string, unknown>[]) ?? [];
-  if (items.length > 0) console.log('[HOMEDEPOT_RAW]', JSON.stringify(items[0], null, 2))
   return items.map(item => {
     const priceObj = item.price as Record<string, unknown> | undefined;
     return {
@@ -183,7 +180,6 @@ function parseHomeDepot(data: Record<string, unknown>): SerpResult[] {
 
 function parseBestBuy(data: Record<string, unknown>): SerpResult[] {
   const items = (data.organic_results as Record<string, unknown>[]) ?? [];
-  if (items.length > 0) console.log('[BESTBUY_RAW]', JSON.stringify(items[0], null, 2))
   return items
     .filter(item => item.link)
     .map(item => {
@@ -280,6 +276,21 @@ export async function multiEngineSearch(
       enginesSucceeded.push(outcome.value.engine);
     }
   }
+
+  console.log('[ENGINE_DIAG]', JSON.stringify({
+    queried: engines,
+    succeeded: enginesSucceeded,
+    failed: engines.filter(e => !enginesSucceeded.includes(e)),
+    resultCounts: enginesSucceeded.reduce((acc, eng) => {
+      acc[eng] = allResults.filter(r => r.engine === eng).length;
+      return acc;
+    }, {} as Record<string, number>),
+    sampleFields: enginesSucceeded.reduce((acc, eng) => {
+      const sample = allResults.find(r => r.engine === eng);
+      if (sample) acc[eng] = { rating: sample.rating, reviews: sample.reviews, delivery: sample.delivery, seller: sample.seller, in_stock: sample.in_stock };
+      return acc;
+    }, {} as Record<string, unknown>),
+  }))
 
   // Write to L1 cache
   await setCached('multi', cacheKey, allResults, L1_TTL_SECONDS);
