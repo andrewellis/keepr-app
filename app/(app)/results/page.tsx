@@ -415,14 +415,14 @@ function ResultsContent() {
         </>
       )}
 
-      {/* How cashback works — expandable section */}
+        {/* How savings work — expandable section */}
       {fetchState === 'done' && results.length > 0 && (
         <div className="mt-4">
           <button
             onClick={() => setHowItWorksOpen(!howItWorksOpen)}
             className="flex items-center gap-2 text-sm font-medium text-primary hover:opacity-80 transition"
           >
-            <span>How does cashback work?</span>
+              <span>How do savings work?</span>
             <svg
               className={`w-4 h-4 transition-transform duration-200 ${howItWorksOpen ? 'rotate-180' : ''}`}
               fill="none"
@@ -441,7 +441,7 @@ function ResultsContent() {
                 product category — the percentages shown above are typical rates.
               </p>
               <p className="text-sm text-foreground-secondary leading-relaxed">
-                Your total savings = K33pr cashback + your credit card&apos;s cashback rate.
+                Your total savings = K33pr savings + your credit card&apos;s cashback rate.
               </p>
               <Link
                 href="/how-it-works"

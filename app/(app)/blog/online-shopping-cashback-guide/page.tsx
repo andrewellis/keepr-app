@@ -40,7 +40,7 @@ export default function OnlineShoppingCashbackGuidePage() {
               typically 1-6% depending on how well the card matches the purchase type.
             </p>
             <p>
-              <strong className="text-foreground">Affiliate cashback programs</strong>{' '}
+              <strong className="text-foreground">Affiliate rewards programs</strong>{' '}
               work by routing purchases through a referral link. The retailer pays a
               commission to the referring site, which passes some or all of it back to the
               user. K33pr operates this way — keeping $0.20 per transaction and returning
@@ -63,7 +63,7 @@ export default function OnlineShoppingCashbackGuidePage() {
             What actually stacks and what doesn&apos;t
           </h2>
           <p>
-            Credit card rewards and affiliate cashback always stack — they&apos;re paid by
+            Credit card rewards and affiliate rewards always stack — they&apos;re paid by
             different parties. Card rewards come from your bank. Affiliate commissions come
             from the retailer&apos;s marketing budget. There&apos;s no conflict.
           </p>

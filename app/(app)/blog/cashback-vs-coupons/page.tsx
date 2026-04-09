@@ -104,7 +104,7 @@ export default function CashbackVsCouponsPage() {
             Where K33pr fits
           </h2>
           <p>
-            K33pr surfaces affiliate cashback rates across multiple retailers so you can
+            K33pr surfaces affiliate savings rates across multiple retailers so you can
             see the best available return before you click. It doesn&apos;t currently
             surface coupon codes — affiliate commission rates are the primary savings lever
             the site optimizes for. Stacking those rates with your credit card cashback is

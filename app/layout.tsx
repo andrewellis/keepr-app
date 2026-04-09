@@ -18,7 +18,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: 'K33pr',
-  description: 'Scan products. Earn cashback.',
+  description: 'Scan products. Save more.',
   manifest: '/manifest.json',
 }
 

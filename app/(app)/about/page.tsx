@@ -9,7 +9,7 @@ export default function AboutPage() {
         <p className="text-sm text-foreground-secondary leading-relaxed">
           K33pr is a product comparison website operated by GRMtek LLC, a Florida limited
           liability company. The site helps shoppers find the best total return on purchases
-          by combining affiliate cashback with credit card rewards.
+          by combining affiliate savings with credit card rewards.
         </p>
 
         {/* How it works */}
@@ -18,7 +18,7 @@ export default function AboutPage() {
           <p className="text-sm text-foreground-secondary leading-relaxed">
             K33pr uses image recognition to identify products from photos. Once a product
             is identified, the site searches across multiple retailers and calculates the
-            total cashback available through each — combining the affiliate commission K33pr
+            total savings available through each — combining the affiliate commission K33pr
             earns with the cashback rate on the user&apos;s saved credit cards. The retailer
             with the highest combined return is ranked first.
           </p>

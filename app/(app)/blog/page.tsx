@@ -2,9 +2,9 @@ import Link from 'next/link'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 
 export const metadata = {
-  title: 'K33pr Blog | Tips and Guides for Cashback',
+  title: 'K33pr Blog | Tips and Guides for Saving More',
   description:
-    'Tips and guides for getting the most cashback on every purchase.',
+    'Tips and guides for saving the most on every purchase.',
 }
 
 const articles = [
@@ -12,7 +12,7 @@ const articles = [
     title: 'How to Stack Cashback: Affiliate Commissions + Credit Card Rewards',
     date: 'March 1, 2026',
     description:
-      'Learn how to combine affiliate cashback with credit card rewards on the same purchase for a higher total return.',
+      'Learn how to combine affiliate savings with credit card rewards on the same purchase for a higher total return.',
     href: '/blog/how-to-stack-cashback',
   },
   {
@@ -43,7 +43,7 @@ export default function BlogIndexPage() {
     <div className="bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-2">K33pr Blog</h1>
       <p className="text-sm text-foreground-secondary mb-10">
-        Tips and guides for getting the most cashback on every purchase.
+        Tips and guides for saving the most on every purchase.
       </p>
 
       <div className="space-y-4">

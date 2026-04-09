@@ -43,7 +43,7 @@ export default function HowItWorksPage() {
             </p>
             <p>
               Results are ranked by total return to you: the combination of affiliate
-              cashback we pass to you plus your credit card&apos;s cashback rate.
+              savings we pass to you plus your credit card&apos;s cashback rate.
             </p>
           </div>
         </section>
@@ -62,7 +62,7 @@ export default function HowItWorksPage() {
               Complete your purchase normally.
             </p>
             <p>
-              When the retailer confirms your purchase, we calculate your cashback and
+              When the retailer confirms your purchase, we calculate your earnings and
               add it to your K33pr balance.
             </p>
           </div>
@@ -113,7 +113,7 @@ export default function HowItWorksPage() {
             className="text-sm font-medium hover:underline transition"
             style={{ color: '#534AB7' }}
           >
-            Learn how to stack cashback for maximum savings →
+            Learn how to stack savings →
           </Link>
         </div>
       </div>

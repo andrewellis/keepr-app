@@ -5,10 +5,10 @@ const faqItems = [
   {
     question: 'What is K33pr?',
     answer:
-      'K33pr is a product scanner website that helps you find the best price across multiple retailers and earn cashback on your purchases. Scan any product with your camera, compare prices, and buy through K33pr to earn real money back.',
+      'K33pr is a product scanner website that helps you find the best price across multiple retailers and earn money back on your purchases. Scan any product with your camera, compare prices, and buy through K33pr to earn real money back.',
   },
   {
-    question: 'How does cashback work?',
+    question: 'How do rewards work?',
     answer:
       'When you buy a product through a K33pr link, the retailer pays us an affiliate commission. We keep $0.20 to cover costs and send the rest to you. The commission rate varies by retailer and product category, typically between 1% and 8% of the purchase price.',
   },
@@ -40,12 +40,12 @@ const faqItems = [
   {
     question: 'How long until I get paid after a purchase?',
     answer:
-      'Retailers typically confirm purchases within 1–4 weeks. Once confirmed, your cashback is added to your balance. When your balance hits $5.00, we send your payout.',
+      'Retailers typically confirm purchases within 1–4 weeks. Once confirmed, your earnings are added to your balance. When your balance hits $5.00, we send your payout.',
   },
   {
     question: "What's the credit card cashback rate in Settings?",
     answer:
-      "That's your credit card's cashback percentage. K33pr uses it to calculate your total savings — the affiliate cashback we pay you plus what your credit card gives you. It helps you see the true cost of each purchase.",
+      "That's your credit card's cashback percentage. K33pr uses it to calculate your total savings — the affiliate rewards we pay you plus what your credit card gives you. It helps you see the true cost of each purchase.",
   },
   {
     question: 'Do you sell my data?',

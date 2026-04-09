@@ -100,7 +100,7 @@ export default function HowToStackCashbackPage() {
             <thead>
               <tr className="bg-[#F8F8F6] border-b border-[#E5E5E3]">
                 <th className="text-left px-4 py-3 font-semibold text-[#1a1a1a]">Retailer</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#1a1a1a]">K33pr Cashback</th>
+                <th className="text-left px-4 py-3 font-semibold text-[#1a1a1a]">K33pr Savings</th>
                 <th className="text-left px-4 py-3 font-semibold text-[#1a1a1a]">Card Cashback</th>
                 <th className="text-left px-4 py-3 font-semibold text-[#1a1a1a]">Total Return</th>
               </tr>
@@ -157,7 +157,7 @@ export default function HowToStackCashbackPage() {
       <div className="mt-12 mb-6 px-1">
         <p className="text-xs text-center leading-relaxed text-foreground-secondary">
           K33pr earns affiliate commissions when you purchase through our links. This is
-          how we fund your cashback.
+          how we fund your savings.
         </p>
       </div>
 

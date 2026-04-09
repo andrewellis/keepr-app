@@ -85,10 +85,10 @@ export default function BestCardsForAmazonPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-foreground mb-3">
-            Stacking with affiliate cashback
+            Stacking with affiliate savings
           </h2>
           <p>
-            Card cashback and affiliate cashback are paid by different parties and
+            Card cashback and affiliate savings are paid by different parties and
             don&apos;t cancel each other out. If K33pr earns a 3% commission on an Amazon
             purchase and you pay with the Chase Amazon Prime Visa, you&apos;re collecting
             3% from K33pr and 5% from Chase on the same transaction — 8% total return on

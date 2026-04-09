@@ -71,7 +71,7 @@ export default async function HomePage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-4">
             Scan any product.<br />
             Find the best price.<br />
-            Earn cashback.
+            Earn rewards.
           </h1>
           <p className="text-base text-foreground-secondary leading-relaxed mb-4">
             K33pr compares prices across retailers and shows you where to buy for the
@@ -84,7 +84,7 @@ export default async function HomePage() {
               className="text-sm font-medium hover:underline transition"
               style={{ color: '#534AB7' }}
             >
-              Learn how to stack cashback for maximum savings →
+              Learn how to stack savings →
             </Link>
           </p>
           <Link
@@ -111,7 +111,7 @@ export default async function HomePage() {
             style={{ border: '1px solid #E5E5E3' }}
           />
           <p className="text-center text-sm mt-3" style={{ color: '#666666' }}>
-            Scan any product. See prices, cashback, and your best card — all in one place.
+            Scan any product. See prices, savings, and your best card — all in one place.
           </p>
         </div>
 
@@ -150,7 +150,7 @@ export default async function HomePage() {
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1.5">Earn</h3>
               <p className="text-sm text-foreground-secondary leading-relaxed">
-                Buy through K33pr and earn cashback on every purchase. We send your
+                Buy through K33pr and earn rewards on every purchase. We send your
                 earnings via PayPal or Venmo.
               </p>
             </div>
@@ -171,7 +171,7 @@ export default async function HomePage() {
           <div className="space-y-4">
             <div className="bg-surface border border-border rounded-2xl p-5">
               <h3 className="text-base font-semibold text-foreground mb-1.5">
-                Real cashback, real money
+                Real savings, real money
               </h3>
               <p className="text-sm text-foreground-secondary leading-relaxed">
                 Unlike coupon sites that give you points or gift cards, K33pr pays you
