@@ -192,39 +192,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Footer links */}
-        <section className="px-5 pb-4 md:pb-8">
-          <div className="flex items-center justify-center gap-4 md:justify-center">
-            <Link href="/how-it-works" className="text-xs text-foreground-secondary hover:text-primary transition">
-              How It Works
-            </Link>
-            <span className="text-xs text-foreground-secondary">·</span>
-            <Link href="/faq" className="text-xs text-foreground-secondary hover:text-primary transition">
-              FAQ
-            </Link>
-            <span className="text-xs text-foreground-secondary">·</span>
-            <Link href="/privacy" className="text-xs text-foreground-secondary hover:text-primary transition">
-              Privacy Policy
-            </Link>
-            <span className="text-xs text-foreground-secondary">·</span>
-            <Link href="/terms" className="text-xs text-foreground-secondary hover:text-primary transition">
-              Terms of Service
-            </Link>
-            <span className="text-xs text-foreground-secondary">·</span>
-            <Link href="/payment-terms" className="text-xs text-foreground-secondary hover:text-primary transition">
-              Payment Terms
-            </Link>
-            <span className="text-xs text-foreground-secondary">·</span>
-            <Link href="/about" className="text-xs text-foreground-secondary hover:text-primary transition">
-              About
-            </Link>
-            <span className="text-xs text-foreground-secondary">·</span>
-            <Link href="/blog" className="text-xs text-foreground-secondary hover:text-primary transition">
-              Blog
-            </Link>
-          </div>
-        </section>
-
         {/* Affiliate disclosure */}
         <section className="px-5 pb-8">
           <AffiliateDisclosure />
