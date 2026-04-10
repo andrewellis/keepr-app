@@ -1663,6 +1663,9 @@ export default function ScanClient() {
                                 {item.delivery?.[0] && <span>{item.delivery[0]} · </span>}
                                 {item.rating != null && <span>★{item.rating}{item.reviews != null ? ` (${item.reviews.toLocaleString()})` : ''}</span>}
                               </p>
+                              {(item.retailerDomain === 'amazon.com' || item.engine === 'amazon') && (
+                                <span style={{ fontSize: '9px', background: '#FEF2F2', color: '#991B1B', padding: '1px 4px', borderRadius: '3px' }}>No cashback — Amazon policy</span>
+                              )}
                             </div>
                           )
                         })()}
@@ -1697,6 +1700,9 @@ export default function ScanClient() {
                                 {item.delivery?.[0] && <span>{item.delivery[0]} · </span>}
                                 {item.rating != null && <span>★{item.rating}{item.reviews != null ? ` (${item.reviews.toLocaleString()})` : ''}</span>}
                               </p>
+                              {(item.retailerDomain === 'amazon.com' || item.engine === 'amazon') && (
+                                <span style={{ fontSize: '9px', background: '#FEF2F2', color: '#991B1B', padding: '1px 4px', borderRadius: '3px' }}>No cashback — Amazon policy</span>
+                              )}
                             </div>
                           )
                         })()}
@@ -1730,6 +1736,9 @@ export default function ScanClient() {
                                 {item.delivery?.[0] && <span>{item.delivery[0]} · </span>}
                                 {item.rating != null && <span>★{item.rating}{item.reviews != null ? ` (${item.reviews.toLocaleString()})` : ''}</span>}
                               </p>
+                              {(item.retailerDomain === 'amazon.com' || item.engine === 'amazon') && (
+                                <span style={{ fontSize: '9px', background: '#FEF2F2', color: '#991B1B', padding: '1px 4px', borderRadius: '3px' }}>No cashback — Amazon policy</span>
+                              )}
                             </div>
                           )
                         })()}
@@ -1842,6 +1851,9 @@ export default function ScanClient() {
                                       ))}
                                       {serpItem?.in_stock === true && (
                                         <span style={{ fontSize: '9px', background: '#E1F5EE', color: '#085041', padding: '1px 4px', borderRadius: '3px' }}>In stock</span>
+                                      )}
+                                      {(serpItem?.retailerDomain === 'amazon.com' || serpItem?.engine === 'amazon') && (
+                                        <span style={{ fontSize: '9px', background: '#FEF2F2', color: '#991B1B', padding: '1px 4px', borderRadius: '3px' }}>No cashback — Amazon policy</span>
                                       )}
                                     </div>
                                   </div>
