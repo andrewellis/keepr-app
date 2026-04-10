@@ -10,9 +10,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ScanSavedProvider>
-      <div className="min-h-screen bg-background pb-16 md:pb-0">
+      <div className="min-h-screen bg-background pb-16 md:pb-0 flex flex-col">
         <DesktopNav isLoggedIn={!!user} />
-        <main>{children}</main>
+        <main className="flex-1">{children}</main>
         <SiteFooter />
         <div className="md:hidden">
           <BottomNav />
