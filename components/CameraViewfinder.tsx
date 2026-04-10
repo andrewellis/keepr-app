@@ -14,14 +14,19 @@ export default function CameraViewfinder({ onCapture, onLibrarySelect }: CameraV
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [status, setStatus] = useState<'loading' | 'active' | 'denied' | 'unsupported'>('loading')
+  const statusRef = useRef<'loading' | 'active' | 'denied' | 'unsupported'>('loading')
   const [torchOn, setTorchOn] = useState(false)
   const [torchAvailable, setTorchAvailable] = useState(false)
 
-  useEffect(() => {
+  function startCamera() {
     if (!navigator.mediaDevices?.getUserMedia) {
+      statusRef.current = 'unsupported'
       setStatus('unsupported')
       return
     }
+
+    statusRef.current = 'loading'
+    setStatus('loading')
 
     const videoEl = videoRef.current
 
@@ -40,6 +45,7 @@ export default function CameraViewfinder({ onCapture, onLibrarySelect }: CameraV
           videoEl.srcObject = stream
           videoEl.play().catch(() => {})
         }
+        statusRef.current = 'active'
         setStatus('active')
 
         const tracks = stream.getVideoTracks()
@@ -53,13 +59,30 @@ export default function CameraViewfinder({ onCapture, onLibrarySelect }: CameraV
       })
       .catch((err: unknown) => {
         if (err instanceof Error && err.name === 'NotAllowedError') {
+          statusRef.current = 'denied'
           setStatus('denied')
         } else {
+          statusRef.current = 'unsupported'
           setStatus('unsupported')
         }
       })
+  }
+
+  useEffect(() => {
+    startCamera()
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && statusRef.current === 'denied') {
+        startCamera()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    const videoEl = videoRef.current
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop())
         streamRef.current = null
@@ -150,6 +173,12 @@ export default function CameraViewfinder({ onCapture, onLibrarySelect }: CameraV
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 5 }}>
             <p style={{ color: 'white', fontSize: 14 }}>Camera access denied</p>
             <button
+              onClick={() => startCamera()}
+              style={{ background: '#534AB7', color: 'white', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+            >
+              Retry Camera Access
+            </button>
+            <button
               onClick={() => fileInputRef.current?.click()}
               style={{ background: '#534AB7', color: 'white', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
             >
@@ -162,6 +191,12 @@ export default function CameraViewfinder({ onCapture, onLibrarySelect }: CameraV
         {status === 'unsupported' && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 5 }}>
             <p style={{ color: 'white', fontSize: 14 }}>Camera not available on this browser</p>
+            <button
+              onClick={() => startCamera()}
+              style={{ background: '#534AB7', color: 'white', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+            >
+              Retry Camera Access
+            </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               style={{ background: '#534AB7', color: 'white', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
