@@ -212,6 +212,7 @@ export default function ScanClient() {
   const [keepaRequestedAsins, setKeepaRequestedAsins] = useState<Set<string>>(new Set())
 
   const [selectedPriceIdx, setSelectedPriceIdx] = useState<number>(0)
+  const [mobileManualSelect, setMobileManualSelect] = useState<boolean>(false)
   const [showAllPrices, setShowAllPrices] = useState(false)
   const [showHeroChart, setShowHeroChart] = useState(false)
   const [userDismissedChart, setUserDismissedChart] = useState(false)
@@ -224,6 +225,7 @@ export default function ScanClient() {
     setShowAllPrices(false)
     setShowHeroChart(false)
     setUserDismissedChart(false)
+    setMobileManualSelect(false)
   }, [storeState])
 
   // Search history state
@@ -1105,10 +1107,10 @@ export default function ScanClient() {
           ? (safeMobilePickIdx === 0 ? picks.cheapest : safeMobilePickIdx === 1 ? picks.pick : (picks.premium ?? picks.pick))
           : null
 
-        const mobileSelected = mobileSelectedFromPick
+        const mobileSelected = (!mobileManualSelect && mobileSelectedFromPick)
           ? { price: mobileSelectedFromPick.price!, priceFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(mobileSelectedFromPick.price!), domain: mobileSelectedFromPick.retailerDomain, url: mobileSelectedFromPick.url, isShopping: false, item: mobileSelectedFromPick as SerpResult }
           : selected
-        const mobileSelectedSerpItem = mobileSelectedFromPick ?? selectedSerpItem
+        const mobileSelectedSerpItem = (!mobileManualSelect && mobileSelectedFromPick) ? mobileSelectedFromPick : selectedSerpItem
         const mobileSelectedId = mobileSelectedSerpItem ? `${mobileSelectedSerpItem.engine}-${mobileSelectedSerpItem.url}` : null
         const mobileCardKey = mobileSelectedId ?? ''
         const mobileCardData = mobileCardKey ? (bestCardByResultId[mobileCardKey] ?? null) : null
@@ -1139,7 +1141,7 @@ export default function ScanClient() {
                       className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
                       style={{ backgroundColor: '#534AB7' }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4" fill="white"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                     </button>
                   </div>
 
@@ -1192,7 +1194,7 @@ export default function ScanClient() {
                         return (
                           <button
                             key={idx}
-                            onClick={() => setMobilePickIdx(idx)}
+                            onClick={() => { setMobilePickIdx(idx); setMobileManualSelect(false) }}
                             style={{
                               flex: 1,
                               padding: '7px 4px',
@@ -1493,6 +1495,7 @@ export default function ScanClient() {
                             key={idx}
                             onClick={() => {
                               setSelectedPriceIdx(idx)
+                              setMobileManualSelect(true)
                               setShowHeroChart(false)
                               const serpItem = !r.isShopping ? (r.item as SerpResult) : null
                               if (serpItem) {
