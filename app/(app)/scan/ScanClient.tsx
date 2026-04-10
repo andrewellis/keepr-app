@@ -180,6 +180,7 @@ export default function ScanClient() {
   const { notifyScanSaved } = useScanSaved()
 
   const resumeId = searchParams.get('resume')
+  const loadedResumeIdRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isResuming, setIsResuming] = useState(!!resumeId)
   const [scanState, setScanState] = useState<ScanState>('idle')
@@ -258,6 +259,7 @@ export default function ScanClient() {
     if (!resumeId) return
 
     let isMounted = true
+    if (resumeId === loadedResumeIdRef.current) return
 
     const supabase = createClient()
     supabase
@@ -663,6 +665,7 @@ export default function ScanClient() {
   }
 
   function handleLoadHistoryEntry(entry: SearchHistoryEntry) {
+    loadedResumeIdRef.current = entry.id
     const matchResults = entry.results_payload as MatchResults
     setScanResult({
       productName: entry.product_name,
