@@ -74,15 +74,21 @@ export function selectPicks(
 
   const remaining = scored.filter(e => e.result !== cheapestEntry.result && e.result !== pickEntry.result)
   let premiumEntry: typeof scored[0] | null = null
+  let fallbackEntry: typeof scored[0] | null = null
   for (const e of remaining) {
+    const score = e.trustScore + e.deliveryScore + e.ratingScore
     if (getRetailerTrust(e.result.retailerDomain) === 'major') {
-      if (
-        premiumEntry === null ||
-        (e.trustScore + e.deliveryScore) > (premiumEntry.trustScore + premiumEntry.deliveryScore)
-      ) {
+      if (premiumEntry === null || score > (premiumEntry.trustScore + premiumEntry.deliveryScore + premiumEntry.ratingScore)) {
         premiumEntry = e
       }
+    } else {
+      if (fallbackEntry === null || score > (fallbackEntry.trustScore + fallbackEntry.deliveryScore + fallbackEntry.ratingScore)) {
+        fallbackEntry = e
+      }
     }
+  }
+  if (premiumEntry === null) {
+    premiumEntry = fallbackEntry
   }
 
   function hasFreeShipping(entry: typeof scored[0]): boolean {
@@ -130,9 +136,10 @@ export function selectPicks(
   }
 
   function buildPremiumReason(entry: typeof scored[0], scoredArr: typeof scored): string {
+    const isMajor = getRetailerTrust(entry.result.retailerDomain) === 'major'
     let reason = entry.result.rating && entry.result.rating >= 4.5
-      ? 'Highest rated option from a major retailer'
-      : 'Top-rated at a major retailer'
+      ? (isMajor ? 'Highest rated option from a major retailer' : 'Highest rated option across all results')
+      : (isMajor ? 'Top-rated at a major retailer' : 'Top-rated option from the remaining results')
     if (hasFreeShipping(entry)) {
       reason += ' · Free shipping'
     }
