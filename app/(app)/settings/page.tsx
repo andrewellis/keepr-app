@@ -42,6 +42,7 @@ export default async function SettingsPage() {
 
   return (
     <div style={{ backgroundColor: '#f8f8f8', minHeight: '100vh', paddingBottom: 100, paddingTop: 8 }}>
+      <div style={{ maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', width: '100%' }}>
 
       {/* PROFILE — no section label */}
       <div style={card}>
@@ -138,6 +139,7 @@ export default async function SettingsPage() {
         v0.3.0
       </div>
 
+      </div>
     </div>
   )
 }
