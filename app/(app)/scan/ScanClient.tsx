@@ -1748,20 +1748,20 @@ export default function ScanClient() {
                       </button>
                     </div>
                   )}
+                  </div>
 
                   {/* 3. EXPANDABLE COMMAND CENTER TABLE */}
-                  <div
-                    onClick={() => setDesktopTableExpanded(prev => !prev)}
-                    style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #E5E5E3', background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '16px 16px 0 0', marginTop: '16px' }}
-                  >
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a1a1a' }}>All {allPriced.length} results — full comparison</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#534AB7' }}>{desktopTableExpanded ? 'Collapse' : 'Expand'}</span>
-                  </div>
-                  </div>
+                  <div style={{ background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E5E3', padding: 0 }}>
+                    <div
+                      onClick={() => setDesktopTableExpanded(prev => !prev)}
+                      style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #E5E5E3' }}
+                    >
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a1a1a' }}>All {allPriced.length} results — full comparison</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#534AB7' }}>{desktopTableExpanded ? 'Collapse' : 'Expand'}</span>
+                    </div>
 
-                  <div style={{ background: '#FFFFFF', borderRadius: '0 0 16px 16px', overflow: 'auto', border: '1px solid #E5E5E3', borderTop: 'none', padding: 0, maxHeight: 'calc(100vh - 480px)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
+                      <thead>
                         <tr style={{ background: '#FAFAF8', borderBottom: '1px solid #E5E5E3' }}>
                           <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>Retailer / product</th>
                           <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Price</th>
