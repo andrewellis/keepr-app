@@ -67,7 +67,8 @@ export default async function PayoutSettingsPage() {
   }
 
   return (
-    <div className="bg-background px-5 pt-12 pb-24">
+    <div className="bg-background px-5 pt-12 pb-24 min-h-screen">
+      <div className="w-full max-w-[480px] mx-auto">
       <Link
         href="/settings"
         className="inline-flex items-center gap-1 text-sm text-foreground-secondary hover:text-primary transition mb-6"
@@ -198,6 +199,7 @@ export default async function PayoutSettingsPage() {
           is linked to Venmo, you&apos;ll receive it there automatically. Payouts are processed
           within 90 days of a confirmed purchase.
         </p>
+      </div>
       </div>
     </div>
   )
