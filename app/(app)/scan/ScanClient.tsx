@@ -283,6 +283,30 @@ export default function ScanClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get('resume')])
 
+  const handlePopState = () => {
+    const url = new URL(window.location.href)
+    const resumeId = url.searchParams.get('resume')
+    if (!resumeId) return
+
+    const supabase = createClient()
+    supabase
+      .from('scan_history')
+      .select('id, product_name, category, results_payload, created_at')
+      .eq('id', resumeId)
+      .single()
+      .then(({ data, error }: { data: SearchHistoryEntry | null; error: unknown }) => {
+        if (!error && data && data.results_payload) {
+          handleLoadHistoryEntry(data)
+        }
+      })
+  }
+
+  useEffect(() => {
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     const textQuery = searchParams.get('q')
     if (!textQuery) return
