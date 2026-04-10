@@ -2,7 +2,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-6">Privacy Policy</h1>
-      <p className="text-xs text-foreground-secondary mb-8">Last updated: March 30, 2026</p>
+      <p className="text-xs text-foreground-secondary mb-8">Last updated: April 10, 2026</p>
 
       <div className="space-y-6 text-sm text-foreground-secondary leading-relaxed">
         <section>
@@ -44,7 +44,23 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-foreground mb-2">5. Data Retention</h2>
+          <h2 className="text-base font-semibold text-foreground mb-2">5. Cookies and Tracking Technologies</h2>
+          <p className="mb-2">K33pr uses a limited set of cookies and browser-based tracking for the following purposes:</p>
+          <p className="mb-1">— <span className="text-foreground font-medium">Authentication cookies:</span> Managed by Supabase to keep you signed in across sessions.</p>
+          <p className="mb-1">— <span className="text-foreground font-medium">Affiliate tracking parameters:</span> When you click an affiliate link, a unique click identifier is appended to the URL. This allows affiliate networks (such as Amazon Associates, CJ Affiliate, Rakuten, Impact, and Awin) to attribute purchases to K33pr. These identifiers are stored in the affiliate network&apos;s cookies, not by K33pr directly.</p>
+          <p className="mb-1">— <span className="text-foreground font-medium">Local storage:</span> We use browser local storage to maintain anonymous session identifiers for users who have not created an account.</p>
+          <p className="mt-2">K33pr does not use advertising cookies, analytics cookies, or third-party tracking pixels. We do not participate in cross-site tracking or retargeting.</p>
+        </section>
+
+        <section>
+          <h2 className="text-base font-semibold text-foreground mb-2">6. GDPR and CCPA Compliance</h2>
+          <p className="mb-2"><span className="text-foreground font-medium">For users in the European Economic Area (GDPR):</span> Our legal basis for processing your data is contract performance (to provide the K33pr service) and legitimate interest (to operate affiliate tracking necessary for our business model). You have the right to access, rectify, erase, restrict processing, and port your data. You may also withdraw consent at any time where consent is the basis for processing. To exercise these rights, contact us at privacy@grmtek.com.</p>
+          <p className="mb-2"><span className="text-foreground font-medium">For California residents (CCPA):</span> You have the right to know what personal information we collect, request deletion of your data, and opt out of the sale of personal information. K33pr does not sell personal information. To submit a request, contact us at privacy@grmtek.com. We will verify your identity before processing any request and respond within 45 days.</p>
+          <p><span className="text-foreground font-medium">For all users:</span> You may contact us at any time at <a href="mailto:privacy@grmtek.com" className="text-primary hover:opacity-80">privacy@grmtek.com</a> to request access to, correction of, or deletion of your personal data.</p>
+        </section>
+
+        <section>
+          <h2 className="text-base font-semibold text-foreground mb-2">7. Data Retention</h2>
           <p>
             Account and transaction data is retained as long as your account is active. If you delete
             your account, your profile data will be removed. Transaction records may be retained for
@@ -54,23 +70,16 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-foreground mb-2">6. Your Rights</h2>
+          <h2 className="text-base font-semibold text-foreground mb-2">8. Your Rights</h2>
           <p className="mb-2">You have the right to:</p>
           <p className="mb-1">— Access the personal data we hold about you</p>
           <p className="mb-1">— Request correction of inaccurate data</p>
           <p className="mb-1">— Request deletion of your account and associated data</p>
           <p className="mb-1">— Opt out of any future marketing communications</p>
-          <p className="mt-2">
-            If you are a California resident, you have additional rights under the California Consumer
-            Privacy Act (CCPA), including the right to know what personal information we collect and
-            the right to request deletion. If you are located in the European Economic Area, you have
-            rights under the General Data Protection Regulation (GDPR), including the right to data
-            portability. To exercise any of these rights, contact us at the email address below.
-          </p>
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-foreground mb-2">7. Security</h2>
+          <h2 className="text-base font-semibold text-foreground mb-2">9. Security</h2>
           <p>
             We use industry-standard security measures including HTTPS encryption, row-level database
             security, and secure authentication. API keys and secrets are stored in environment
@@ -80,7 +89,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-foreground mb-2">8. Children&apos;s Privacy</h2>
+          <h2 className="text-base font-semibold text-foreground mb-2">10. Children&apos;s Privacy</h2>
           <p>
             K33pr is not intended for use by children under the age of 13. We do not knowingly
             collect personal information from children under 13. If we discover that we have collected
@@ -89,7 +98,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-foreground mb-2">9. Changes to This Policy</h2>
+          <h2 className="text-base font-semibold text-foreground mb-2">11. Changes to This Policy</h2>
           <p>
             We may update this Privacy Policy from time to time. We will notify registered users of
             material changes via the email address associated with their account. The &ldquo;last updated&rdquo;
@@ -98,7 +107,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-base font-semibold text-foreground mb-2">10. Contact Us</h2>
+          <h2 className="text-base font-semibold text-foreground mb-2">12. Contact Us</h2>
           <p>
             For privacy-related questions or requests, contact GRMtek LLC at:
             <br />
