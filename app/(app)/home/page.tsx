@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signout } from '@/app/auth/actions'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
-import ScanBar from './ScanBar'
 import RecentScans from './RecentScans'
 type StoredPayload = {
   shoppingResults?: { priceValue: number; price: string; merchant: string }[]
@@ -233,7 +232,6 @@ export default async function HomePage() {
       {/* Mobile: existing dashboard */}
       <div className="md:hidden bg-background flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
         <div className="flex-shrink-0">
-          <ScanBar />
           <header className="pt-2 pb-3 px-5 flex items-center justify-between">
             <div>
               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
