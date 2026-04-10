@@ -9,18 +9,22 @@ export const metadata = {
 
 export default function CashbackVsCouponsPage() {
   return (
-    <div className="min-h-screen bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
+    <div className="bg-background px-5 pt-12 pb-24 max-w-[600px] mx-auto md:pt-16">
       <div className="mb-6">
-        <Link href="/blog" className="text-sm hover:underline transition" style={{ color: '#534AB7' }}>
-          ← Back to Blog
+        <Link href="/blog" className="text-xs md:text-sm text-primary font-medium hover:underline transition">
+          ← Back to blog
         </Link>
       </div>
-      <h1 className="text-2xl font-bold text-foreground mb-2">
+      <h1 className="text-xl md:text-[26px] font-bold text-foreground mb-2">
         Cashback vs. Coupons: Which Saves You More?
       </h1>
-      <p className="text-sm text-foreground-secondary mb-10">March 28, 2026</p>
+      <div className="flex items-center gap-2 mb-8">
+        <span className="text-xs text-foreground-secondary">March 28, 2026</span>
+        <span className="text-xs text-foreground-secondary">&middot;</span>
+        <span className="text-xs text-foreground-secondary">4 min read</span>
+      </div>
 
-      <div className="space-y-8 text-sm text-foreground-secondary leading-relaxed">
+      <div className="space-y-8 text-sm md:text-[14px] text-foreground-secondary leading-relaxed">
         <p>
           There&apos;s a version of this debate that gets religious. Coupon people think
           cashback is lazy. Cashback people think hunting for codes is a waste of time.
@@ -29,7 +33,7 @@ export default function CashbackVsCouponsPage() {
         </p>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">
+          <h2 className="text-base md:text-[16px] font-semibold text-foreground mb-3">
             How coupons work
           </h2>
           <p>
@@ -46,7 +50,7 @@ export default function CashbackVsCouponsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">
+          <h2 className="text-base md:text-[16px] font-semibold text-foreground mb-3">
             How cashback works
           </h2>
           <p>
@@ -64,7 +68,7 @@ export default function CashbackVsCouponsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">
+          <h2 className="text-base md:text-[16px] font-semibold text-foreground mb-3">
             Which saves more
           </h2>
           <p>
@@ -82,7 +86,7 @@ export default function CashbackVsCouponsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">
+          <h2 className="text-base md:text-[16px] font-semibold text-foreground mb-3">
             The case for combining them
           </h2>
           <p>
@@ -100,7 +104,7 @@ export default function CashbackVsCouponsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-foreground mb-3">
+          <h2 className="text-base md:text-[16px] font-semibold text-foreground mb-3">
             Where K33pr fits
           </h2>
           <p>
@@ -119,13 +123,26 @@ export default function CashbackVsCouponsPage() {
           </p>
         </section>
 
-        <div className="pt-2">
-          <Link
-            href="/scan"
-            className="text-sm font-medium hover:underline transition"
-            style={{ color: '#534AB7' }}
-          >
-            Try K33pr — scan a product to see your total return →
+        <Link href="/scan" className="block p-5 bg-primary rounded-xl mb-8 mt-8 hover:opacity-90 transition">
+          <p className="text-sm font-medium text-white mb-1">Try it yourself</p>
+          <p className="text-xs text-white/75">Scan a product to see your total return across retailers →</p>
+        </Link>
+      </div>
+
+      <div className="border-t border-border pt-6 mt-4">
+        <p className="text-[11px] text-foreground-secondary uppercase tracking-wider mb-4">More from the blog</p>
+        <div className="space-y-3 md:grid md:grid-cols-3 md:gap-3 md:space-y-0">
+          <Link href="/blog/how-to-stack-cashback" className="block bg-surface border border-border rounded-lg p-3.5 hover:border-primary transition">
+            <p className="text-[13px] font-medium text-foreground mb-1">How to stack cashback</p>
+            <p className="text-[11px] text-foreground-secondary leading-snug">Combine affiliate savings with credit card rewards.</p>
+          </Link>
+          <Link href="/blog/best-cards-for-amazon" className="block bg-surface border border-border rounded-lg p-3.5 hover:border-primary transition">
+            <p className="text-[13px] font-medium text-foreground mb-1">Best cards for Amazon</p>
+            <p className="text-[11px] text-foreground-secondary leading-snug">Top cards and how to pick the right one.</p>
+          </Link>
+          <Link href="/blog/online-shopping-cashback-guide" className="block bg-surface border border-border rounded-lg p-3.5 hover:border-primary transition">
+            <p className="text-[13px] font-medium text-foreground mb-1">Online shopping cashback guide</p>
+            <p className="text-[11px] text-foreground-secondary leading-snug">Maximize cashback across retailers in 2026.</p>
           </Link>
         </div>
       </div>

@@ -2,69 +2,98 @@ import Link from 'next/link'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 
 export const metadata = {
-  title: 'K33pr Blog | Tips and Guides for Saving More',
-  description:
-    'Tips and guides for saving the most on every purchase.',
+  title: 'Blog | K33pr',
+  description: 'Practical guides and tips for getting more back on purchases you\u2019re already making.',
 }
 
 const articles = [
   {
-    title: 'How to Stack Cashback: Affiliate Commissions + Credit Card Rewards',
-    date: 'March 1, 2026',
-    description:
-      'Learn how to combine affiliate savings with credit card rewards on the same purchase for a higher total return.',
+    title: 'How to stack cashback: affiliate commissions + credit card rewards',
+    date: 'Mar 1, 2026',
+    readTime: '4 min read',
+    description: 'Affiliate cashback and credit card rewards are paid by different parties \u2014 you can collect both on the same purchase.',
     href: '/blog/how-to-stack-cashback',
+    featured: true,
   },
   {
-    title: 'Which Credit Cards Give the Most Cashback on Amazon Purchases?',
-    date: 'March 10, 2026',
-    description:
-      'A breakdown of the top cards for Amazon shopping and how to pick the right one for your spending habits.',
+    title: 'Which credit cards give the most cashback on Amazon?',
+    date: 'Mar 10, 2026',
+    readTime: '4 min read',
+    description: 'Top cards for Amazon shopping and how to pick the right one for your spending.',
     href: '/blog/best-cards-for-amazon',
   },
   {
-    title: 'How to Get the Most Out of Online Shopping Cashback in 2026',
-    date: 'March 20, 2026',
-    description:
-      'A practical guide to maximizing cashback across retailers, cards, and affiliate programs.',
+    title: 'Online shopping cashback guide for 2026',
+    date: 'Mar 20, 2026',
+    readTime: '5 min read',
+    description: 'Maximize cashback across retailers, cards, and affiliate programs.',
     href: '/blog/online-shopping-cashback-guide',
   },
   {
-    title: 'Cashback vs. Coupons: Which Saves You More?',
-    date: 'March 28, 2026',
-    description:
-      'Coupons and cashback both reduce what you pay — but they work differently and one usually wins.',
+    title: 'Cashback vs. coupons: which saves you more?',
+    date: 'Mar 28, 2026',
+    readTime: '4 min read',
+    description: 'They work differently and one usually wins over time.',
     href: '/blog/cashback-vs-coupons',
   },
 ]
 
 export default function BlogIndexPage() {
-  return (
-    <div className="bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-foreground mb-2">K33pr Blog</h1>
-      <p className="text-sm text-foreground-secondary mb-10">
-        Tips and guides for saving the most on every purchase.
-      </p>
+  const featured = articles.find((a) => a.featured)
+  const rest = articles.filter((a) => !a.featured)
 
-      <div className="space-y-4">
-        {articles.map((article) => (
-          <Link
-            key={article.href}
-            href={article.href}
-            className="block bg-[#F8F8F6] border border-[#E5E5E3] rounded-2xl p-5 hover:border-[#534AB7] transition"
-          >
-            <p className="text-xs text-[#666666] mb-1">{article.date}</p>
-            <h2 className="text-base font-semibold text-[#1a1a1a] mb-2 leading-snug">
-              {article.title}
-            </h2>
-            <p className="text-sm text-[#666666] leading-relaxed">
-              {article.description}
-            </p>
-            <p className="text-sm font-medium mt-3" style={{ color: '#534AB7' }}>
-              Read more →
-            </p>
+  return (
+    <div className="bg-background px-5 pt-12 pb-24 max-w-[720px] mx-auto md:pt-16">
+      <p className="text-[11px] font-medium text-primary tracking-wider uppercase mb-2 md:text-center">Blog</p>
+      <h1 className="text-2xl font-medium text-foreground mb-1.5 leading-tight md:text-[28px] md:text-center">Guides and tips</h1>
+      <p className="text-sm text-foreground-secondary mb-8 leading-relaxed md:text-center">Practical advice for getting more back on purchases you&apos;re already making.</p>
+
+      <div className="space-y-4 md:space-y-3">
+        {featured && (
+          <Link href={featured.href} className="block bg-surface border border-border rounded-xl p-4 md:p-6 relative overflow-hidden hover:border-primary transition">
+            <div className="absolute top-0 left-0 w-[3px] h-full bg-primary rounded-l" />
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] text-primary font-medium hidden md:inline">Featured</span>
+              <span className="text-[11px] text-foreground-secondary hidden md:inline">&middot;</span>
+              <span className="text-[11px] text-foreground-secondary">{featured.date}</span>
+              <span className="text-[11px] text-foreground-secondary">&middot;</span>
+              <span className="text-[11px] text-foreground-secondary">{featured.readTime}</span>
+            </div>
+            <h2 className="text-sm md:text-base font-medium text-foreground mb-1.5 leading-snug">{featured.title}</h2>
+            <p className="text-xs md:text-[13px] text-foreground-secondary leading-relaxed mb-2.5">{featured.description}</p>
+            <p className="text-xs md:text-[13px] text-primary font-medium">Read →</p>
           </Link>
-        ))}
+        )}
+
+        <div className="md:hidden space-y-4">
+          {rest.map((article) => (
+            <Link key={article.href} href={article.href} className="block bg-surface border border-border rounded-xl p-4 hover:border-primary transition">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] text-foreground-secondary">{article.date}</span>
+                <span className="text-[11px] text-foreground-secondary">&middot;</span>
+                <span className="text-[11px] text-foreground-secondary">{article.readTime}</span>
+              </div>
+              <h2 className="text-sm font-medium text-foreground mb-1.5 leading-snug">{article.title}</h2>
+              <p className="text-xs text-foreground-secondary leading-relaxed mb-2.5">{article.description}</p>
+              <p className="text-xs text-primary font-medium">Read →</p>
+            </Link>
+          ))}
+        </div>
+
+        <div className="hidden md:grid grid-cols-3 gap-3">
+          {rest.map((article) => (
+            <Link key={article.href} href={article.href} className="block bg-surface border border-border rounded-xl p-4 hover:border-primary transition">
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <span className="text-[11px] text-foreground-secondary">{article.date}</span>
+                <span className="text-[11px] text-foreground-secondary">&middot;</span>
+                <span className="text-[11px] text-foreground-secondary">{article.readTime.replace(' read', '')}</span>
+              </div>
+              <h2 className="text-sm font-medium text-foreground mb-1.5 leading-snug">{article.title}</h2>
+              <p className="text-xs text-foreground-secondary leading-relaxed mb-3">{article.description}</p>
+              <p className="text-xs text-primary font-medium">Read →</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <AffiliateDisclosure />

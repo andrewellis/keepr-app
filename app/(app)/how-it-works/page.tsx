@@ -1,124 +1,110 @@
 import Link from 'next/link'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 
+export const metadata = {
+  title: 'How It Works | K33pr',
+  description: 'How K33pr finds the best price across retailers and pays you cashback on every purchase.',
+}
+
+const steps = [
+  {
+    num: 1,
+    title: 'Scan or search',
+    desc: 'Point your camera at any product or type a name. Image recognition identifies it in seconds.',
+  },
+  {
+    num: 2,
+    title: 'Compare across retailers',
+    desc: 'K33pr searches Amazon, Walmart, eBay, Best Buy, Home Depot, and Google Shopping simultaneously. Results ranked by net cost to you.',
+  },
+  {
+    num: 3,
+    title: 'Card savings calculated',
+    desc: "Add your credit cards once. K33pr factors in your card\u2019s cashback rate per category so you see the true net cost at each retailer.",
+  },
+  {
+    num: 4,
+    title: 'Buy and earn',
+    desc: 'Tap to go directly to the retailer. Complete your purchase normally. The retailer confirms, we calculate your earnings.',
+  },
+]
+
 export default function HowItWorksPage() {
   return (
-    <div className="bg-background px-5 pt-12 pb-24 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-foreground mb-8">How K33pr Works</h1>
+    <div className="bg-background px-5 pt-12 pb-24 max-w-[720px] mx-auto md:pt-16">
+      <p className="text-[11px] font-medium text-primary tracking-wider uppercase mb-2 md:text-center">How it works</p>
+      <h1 className="text-2xl font-medium text-foreground mb-1.5 leading-tight md:text-[28px] md:text-center">Find the best price. Get paid.</h1>
+      <p className="text-sm text-foreground-secondary mb-8 leading-relaxed md:text-center md:max-w-[460px] md:mx-auto">K33pr searches retailers, compares prices, and sends you the difference.</p>
 
-      <div className="space-y-10">
-        {/* Step 1 */}
-        <section>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-bold text-sm">1</span>
+      {/* Mobile: vertical timeline */}
+      <div className="md:hidden relative pl-9 space-y-7 mb-8">
+        <div className="absolute left-[14px] top-[18px] bottom-[18px] w-[1.5px] bg-border" />
+        {steps.map((s) => (
+          <div key={s.num} className="relative">
+            <div className="absolute -left-9 top-0 w-[30px] h-[30px] rounded-full bg-primary flex items-center justify-center">
+              <span className="text-white text-xs font-medium">{s.num}</span>
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Scan a Product</h2>
+            <p className="text-sm font-medium text-foreground mb-1 pt-1">{s.title}</p>
+            <p className="text-[13px] text-foreground-secondary leading-relaxed">{s.desc}</p>
           </div>
-          <div className="space-y-3 text-sm text-foreground-secondary leading-relaxed pl-[52px]">
-            <p>
-              Visit k33pr.com and tap Scan. Point your camera at any product — a shoe,
-              a gadget, a book, anything. Our image recognition identifies the product
-              in seconds.
-            </p>
-            <p>
-              Scan products at home that you want to repurchase, compare prices on, or
-              find a better deal for.
-            </p>
+        ))}
+        <div className="relative">
+          <div className="absolute -left-9 top-0 w-[30px] h-[30px] rounded-full bg-primary flex items-center justify-center">
+            <span className="text-white text-xs font-medium">5</span>
           </div>
-        </section>
-
-        {/* Step 2 */}
-        <section>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-bold text-sm">2</span>
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">Compare Retailers</h2>
-          </div>
-          <div className="space-y-3 text-sm text-foreground-secondary leading-relaxed pl-[52px]">
-            <p>
-              K33pr searches across multiple retailers — Amazon, Target, Macy&apos;s,
-              Nordstrom, Nike, and more — to find where the product is available.
-            </p>
-            <p>
-              Results are ranked by total return to you: the combination of affiliate
-              savings we pass to you plus your credit card&apos;s cashback rate.
-            </p>
-          </div>
-        </section>
-
-        {/* Step 3 */}
-        <section>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-bold text-sm">3</span>
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">Buy and Earn</h2>
-          </div>
-          <div className="space-y-3 text-sm text-foreground-secondary leading-relaxed pl-[52px]">
-            <p>
-              Tap the retailer link to go directly to the product on their site.
-              Complete your purchase normally.
-            </p>
-            <p>
-              When the retailer confirms your purchase, we calculate your earnings and
-              add it to your K33pr balance.
-            </p>
-          </div>
-        </section>
-
-        {/* Step 4 */}
-        <section>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-bold text-sm">4</span>
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">Get Paid</h2>
-          </div>
-          <div className="space-y-3 text-sm text-foreground-secondary leading-relaxed pl-[52px]">
-            <p>
-              Once your balance reaches $5.00, we send your earnings via PayPal or
-              Venmo. Set up your payout destination in Settings and the money comes
-              to you.
-            </p>
-          </div>
-        </section>
-
-        {/* How We Make Money */}
-        <section className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-foreground mb-3">How We Make Money</h2>
-          <p className="text-sm text-foreground-secondary leading-relaxed">
-            K33pr earns affiliate commissions from retailers when you buy through our
-            links. We keep a flat $0.20 per transaction to cover operating costs and
-            pass the rest of the commission directly to you. That&apos;s it — no
-            subscriptions, no premium tiers, no selling your data.
-          </p>
-        </section>
-
-        {/* FAQ link */}
-        <div>
-          <Link
-            href="/faq"
-            className="text-sm text-primary font-medium hover:underline transition"
-          >
-            Have more questions? Check our FAQ →
-          </Link>
-        </div>
-
-        {/* Blog link */}
-        <div>
-          <Link
-            href="/blog/how-to-stack-cashback"
-            className="text-sm font-medium hover:underline transition"
-            style={{ color: '#534AB7' }}
-          >
-            Learn how to stack savings →
-          </Link>
+          <p className="text-sm font-medium text-foreground mb-1 pt-1">Get paid</p>
+          <p className="text-[13px] text-foreground-secondary leading-relaxed">Balance hits $5 — we send your earnings via PayPal or Venmo. No minimum purchase count.</p>
         </div>
       </div>
 
-      {/* Affiliate disclosure */}
+      {/* Desktop: 2x2 grid + full-width step 5 */}
+      <div className="hidden md:block mb-10">
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {steps.map((s) => (
+            <div key={s.num} className="bg-surface border border-border rounded-xl p-5">
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-medium">{s.num}</span>
+                </div>
+                <p className="text-sm font-medium text-foreground">{s.title}</p>
+              </div>
+              <p className="text-[13px] text-foreground-secondary leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+        <div className="bg-surface border border-border rounded-xl p-5 flex items-center gap-4">
+          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-medium">5</span>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground mb-0.5">Get paid</p>
+            <p className="text-[13px] text-foreground-secondary leading-relaxed">Balance hits $5 — we send your earnings via PayPal or Venmo. No minimum purchase count.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* How we make money */}
+      <div className="border-t border-border pt-8 md:text-center">
+        <h2 className="text-base font-medium text-foreground mb-2 md:text-[15px]">How we make money</h2>
+        <p className="text-[13px] text-foreground-secondary leading-relaxed mb-6 md:max-w-[500px] md:mx-auto">Retailers pay K33pr an affiliate commission when you buy through our links. We keep a flat fee and pass the rest to you.</p>
+        <div className="flex gap-3 md:max-w-[340px] md:mx-auto">
+          <div className="flex-1 bg-surface border border-border rounded-xl py-4 text-center">
+            <p className="text-lg font-medium text-primary">$0.20</p>
+            <p className="text-[11px] text-foreground-secondary mt-1">K33pr keeps</p>
+          </div>
+          <div className="flex-1 bg-surface border border-border rounded-xl py-4 text-center">
+            <p className="text-lg font-medium text-foreground">The rest</p>
+            <p className="text-[11px] text-foreground-secondary mt-1">Goes to you</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 md:text-center">
+        <Link href="/faq" className="text-sm text-primary font-medium hover:underline transition">
+          Have questions? Read the FAQ →
+        </Link>
+      </div>
+
       <AffiliateDisclosure />
     </div>
   )
