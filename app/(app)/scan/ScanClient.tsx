@@ -216,6 +216,7 @@ export default function ScanClient() {
   const [showHeroChart, setShowHeroChart] = useState(false)
   const [userDismissedChart, setUserDismissedChart] = useState(false)
   const [desktopPickIdx, setDesktopPickIdx] = useState<number>(1)
+  const [mobilePickIdx, setMobilePickIdx] = useState<number>(1)
   const [desktopTableExpanded, setDesktopTableExpanded] = useState(false)
 
   useEffect(() => {
@@ -1099,6 +1100,24 @@ export default function ScanClient() {
         const desktopNetCost = desktopSelectedResult ? desktopSelectedResult.price! * (1 - desktopCardRate / 100) : 0
         const desktopRetailerName = desktopSelectedResult ? desktopSelectedResult.retailerDomain.replace(/\.\w+$/, '') : ''
 
+        const safeMobilePickIdx = (mobilePickIdx === 2 && !picks?.premium) ? 1 : mobilePickIdx
+        const mobileSelectedFromPick = picks !== null
+          ? (safeMobilePickIdx === 0 ? picks.cheapest : safeMobilePickIdx === 1 ? picks.pick : (picks.premium ?? picks.pick))
+          : null
+
+        const mobileSelected = mobileSelectedFromPick
+          ? { price: mobileSelectedFromPick.price!, priceFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(mobileSelectedFromPick.price!), domain: mobileSelectedFromPick.retailerDomain, url: mobileSelectedFromPick.url, isShopping: false, item: mobileSelectedFromPick as SerpResult }
+          : selected
+        const mobileSelectedSerpItem = mobileSelectedFromPick ?? selectedSerpItem
+        const mobileSelectedId = mobileSelectedSerpItem ? `${mobileSelectedSerpItem.engine}-${mobileSelectedSerpItem.url}` : null
+        const mobileCardKey = mobileSelectedId ?? ''
+        const mobileCardData = mobileCardKey ? (bestCardByResultId[mobileCardKey] ?? null) : null
+        const mobileCardRate = mobileCardData?.rate ?? 0
+        const mobileCardSavings = mobileSelected ? mobileSelected.price * (mobileCardRate / 100) : 0
+        const mobileNetCost = mobileSelected ? mobileSelected.price - mobileCardSavings : 0
+        const mobileNetCostFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(mobileNetCost)
+        const mobileCardSavingsFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(mobileCardSavings)
+
         return (
           <>
             {/* ═══ MOBILE LAYOUT ═══ */}
@@ -1162,28 +1181,54 @@ export default function ScanClient() {
                     </p>
                   )}
 
+                  {picks !== null && storeState === 'done' && (
+                    <div style={{ display: 'flex', background: '#F0EEFF', borderRadius: '10px', padding: '3px', marginBottom: '8px' }}>
+                      {[
+                        { idx: 0, label: 'Cheapest' },
+                        { idx: 1, label: 'Best overall' },
+                        ...(picks.premium !== null ? [{ idx: 2, label: 'Premium' }] : []),
+                      ].map(({ idx, label }) => {
+                        const isActive = safeMobilePickIdx === idx
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setMobilePickIdx(idx)}
+                            style={{
+                              flex: 1,
+                              padding: '7px 4px',
+                              fontSize: '11px',
+                              fontWeight: isActive ? 600 : 500,
+                              color: isActive ? '#FFFFFF' : '#534AB7',
+                              backgroundColor: isActive ? '#534AB7' : 'transparent',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              boxShadow: isActive ? '0 1px 3px rgba(83,74,183,0.25)' : 'none',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+
                   {/* Hero card */}
-                  {hasResults && selected && (
+                  {hasResults && mobileSelected && (
                     <>
                       <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
                         <div style={{ padding: '14px 14px 10px' }}>
                           <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
                             <div>
-                              {(() => {
-                                const matchingPick =
-                                  picks !== null && picks.pick.url === selected.url ? picks.pick
-                                  : picks !== null && picks.cheapest.url === selected.url ? picks.cheapest
-                                  : picks !== null && picks.premium !== null && picks.premium.url === selected.url ? picks.premium
-                                  : null
-                                return matchingPick ? (
-                                  <>
-                                    <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, color: '#534AB7', backgroundColor: '#F0EEFF', borderRadius: 6, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, marginBottom: 4 }}>
-                                      {matchingPick.label}
-                                    </span>
-                                    <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{matchingPick.reason}</p>
-                                  </>
-                                ) : null
-                              })()}
+                              {mobileSelectedFromPick ? (
+                                <>
+                                  <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, color: '#534AB7', backgroundColor: '#F0EEFF', borderRadius: 6, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, marginBottom: 4 }}>
+                                    {mobileSelectedFromPick.label}
+                                  </span>
+                                  <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{mobileSelectedFromPick.reason}</p>
+                                </>
+                              ) : null}
                               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                 {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
                               </p>
@@ -1192,7 +1237,7 @@ export default function ScanClient() {
                               onClick={async () => {
                                 const shareData = {
                                   title: scanResult.productName ?? 'K33pr Price Check',
-                                  text: `${scanResult.productName} — ${selected.priceFormatted} at ${cleanDomain(selected.domain)}`,
+                                  text: `${scanResult.productName} — ${mobileSelected.priceFormatted} at ${cleanDomain(mobileSelected.domain)}`,
                                   url: window.location.href,
                                 }
                                 try {
@@ -1211,15 +1256,15 @@ export default function ScanClient() {
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                             <div className="flex items-baseline gap-2">
-                              <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>{selected.priceFormatted}</p>
-                              {selectedSerpItem?.oldPrice != null && selectedSerpItem.oldPrice > selected.price && (
+                              <p style={{ fontSize: '28px', fontWeight: 500, color: '#111', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>{mobileSelected.priceFormatted}</p>
+                              {mobileSelectedSerpItem?.oldPrice != null && mobileSelectedSerpItem.oldPrice > mobileSelected.price && (
                                 <span style={{ fontSize: '14px', color: '#bbb', textDecoration: 'line-through' }}>
-                                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedSerpItem.oldPrice)}
+                                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(mobileSelectedSerpItem.oldPrice)}
                                 </span>
                               )}
                             </div>
                             {(() => {
-                              const selectedAsinInline = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
+                              const selectedAsinInline = mobileSelectedSerpItem ? extractAsinFromUrl(mobileSelectedSerpItem.url) : null
                               const kdInline = selectedAsinInline ? keepaDataByAsin[selectedAsinInline] ?? null : null
                               const isKeepaLoadingInline = selectedAsinInline ? keepaLoadingAsins.has(selectedAsinInline) : false
                               if (selectedAsinInline && kdInline && !isKeepaLoadingInline) {
@@ -1245,16 +1290,16 @@ export default function ScanClient() {
                             })()}
                           </div>
 
-                          {selectedSerpItem?.extensions && selectedSerpItem.extensions.length > 0 && (
+                          {mobileSelectedSerpItem?.extensions && mobileSelectedSerpItem.extensions.length > 0 && (
                             <div style={{ marginTop: '4px' }}>
                               <span style={{ backgroundColor: '#FAEEDA', color: '#854F0B', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
-                                {selectedSerpItem.extensions[0]}
+                                {mobileSelectedSerpItem.extensions[0]}
                               </span>
                             </div>
                           )}
 
                           {(() => {
-                            const pack = selectedSerpItem ? detectMultiPack(selectedSerpItem) : null
+                            const pack = mobileSelectedSerpItem ? detectMultiPack(mobileSelectedSerpItem) : null
                             return pack ? (
                               <div style={{ marginTop: '4px', display: 'inline-block' }}>
                                 <span style={{ backgroundColor: '#FCEBEB', color: '#791F1F', fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '3px' }}>
@@ -1264,35 +1309,35 @@ export default function ScanClient() {
                             ) : null
                           })()}
 
-                          {cardRate > 0 && (
+                          {mobileCardRate > 0 && (
                             <div>
                               <div className="flex items-center gap-1" style={{ marginTop: '4px', marginBottom: '6px' }}>
-                                <span style={{ fontSize: '15px', fontWeight: 500, color: '#1D9E75' }}>{netCostFormatted} net</span>
+                                <span style={{ fontSize: '15px', fontWeight: 500, color: '#1D9E75' }}>{mobileNetCostFormatted} net</span>
                                 <span style={{ fontSize: '9px', backgroundColor: '#E1F5EE', color: '#085041', borderRadius: '3px', padding: '1px 5px' }}>after card savings</span>
                               </div>
                               <div className="flex items-center justify-between" style={{ backgroundColor: '#f8f8f8', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px' }}>
-                                <span style={{ fontSize: '11px', color: '#888' }}>{selectedCardData!.cardName} ({cardRate}%)</span>
-                                <span style={{ fontSize: '11px', fontWeight: 500, color: '#1D9E75' }}>−{cardSavingsFormatted}</span>
+                                <span style={{ fontSize: '11px', color: '#888' }}>{mobileCardData!.cardName} ({mobileCardRate}%)</span>
+                                <span style={{ fontSize: '11px', fontWeight: 500, color: '#1D9E75' }}>−{mobileCardSavingsFormatted}</span>
                               </div>
                             </div>
                           )}
 
                           {(() => {
-                            const selectedAsinLocal = selectedSerpItem ? extractAsinFromUrl(selectedSerpItem.url) : null
+                            const selectedAsinLocal = mobileSelectedSerpItem ? extractAsinFromUrl(mobileSelectedSerpItem.url) : null
                             const kdLocal = selectedAsinLocal ? keepaDataByAsin[selectedAsinLocal] ?? null : null
 
                             return (
                               <>
-                                <div style={{ marginTop: cardRate > 0 ? '0px' : '6px' }}>
+                                <div style={{ marginTop: mobileCardRate > 0 ? '0px' : '6px' }}>
                                   <p style={{ fontSize: '12px', color: '#aaa', margin: 0 }}>
-                                    {cleanDomain(selected.domain)}
-                                    {selectedSerpItem?.seller && selectedSerpItem.seller !== cleanDomain(selected.domain) ? ` · ${selectedSerpItem.seller}` : ''}
+                                    {cleanDomain(mobileSelected.domain)}
+                                    {mobileSelectedSerpItem?.seller && mobileSelectedSerpItem.seller !== cleanDomain(mobileSelected.domain) ? ` · ${mobileSelectedSerpItem.seller}` : ''}
                                   </p>
-                                  {selectedSerpItem?.delivery && selectedSerpItem.delivery.length > 0 && (
+                                  {mobileSelectedSerpItem?.delivery && mobileSelectedSerpItem.delivery.length > 0 && (
                                     <div className="flex items-center gap-1" style={{ marginTop: '3px' }}>
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                                      <span style={{ fontSize: '11px', color: selectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
-                                        {truncateDelivery(selectedSerpItem.delivery[0])}
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={mobileSelectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="15" height="11" rx="1"/><path d="M16 9h4l3 3v5h-7V9z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                                      <span style={{ fontSize: '11px', color: mobileSelectedSerpItem.delivery[0].toLowerCase().includes('free') ? '#1D9E75' : '#aaa' }}>
+                                        {truncateDelivery(mobileSelectedSerpItem.delivery[0])}
                                       </span>
                                     </div>
                                   )}
@@ -1363,34 +1408,34 @@ export default function ScanClient() {
                           </div>
                           <div className="flex-1" style={{ padding: '8px 6px' }}>
                             <p style={{ fontSize: '9px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1px' }}>net cost</p>
-                            <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{cardRate > 0 ? netCostFormatted : selected.priceFormatted}</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: '#1D9E75' }}>{mobileCardRate > 0 ? mobileNetCostFormatted : mobileSelected.priceFormatted}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Action buttons */}
                       <div>
-                        {selectedSerpItem && selectedId && !trackedIds.has(selectedId) && (
+                        {mobileSelectedSerpItem && mobileSelectedId && !trackedIds.has(mobileSelectedId) && (
                           <>
                             <button
-                              onClick={() => handleTrack(selectedSerpItem, false)}
-                              disabled={trackingInProgress.has(selectedId)}
+                              onClick={() => handleTrack(mobileSelectedSerpItem, false)}
+                              disabled={trackingInProgress.has(mobileSelectedId)}
                               className="w-full rounded-xl py-3 text-sm font-medium text-white"
                               style={{ backgroundColor: '#534AB7', marginBottom: '8px' }}
                             >
-                              {trackingInProgress.has(selectedId) ? 'Adding...' : 'Track price'}
+                              {trackingInProgress.has(mobileSelectedId) ? 'Adding...' : 'Track price'}
                             </button>
                             <div className="flex gap-2">
                               <button
-                                onClick={() => { if (isAggressiveEligible(selectedSerpItem)) handleTrack(selectedSerpItem, true) }}
-                                disabled={!isAggressiveEligible(selectedSerpItem) || trackingInProgress.has(selectedId)}
+                                onClick={() => { if (isAggressiveEligible(mobileSelectedSerpItem)) handleTrack(mobileSelectedSerpItem, true) }}
+                                disabled={!isAggressiveEligible(mobileSelectedSerpItem) || trackingInProgress.has(mobileSelectedId)}
                                 className="flex-1 rounded-xl py-3 text-sm text-center border disabled:opacity-40"
                                 style={{ color: '#555', borderColor: '#e0e0e0' }}
                               >
                                 Aggressively track
                               </button>
                               <a
-                                href={selected.url}
+                                href={mobileSelected.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex-1 rounded-xl py-3 text-sm text-center border no-underline"
@@ -1401,12 +1446,12 @@ export default function ScanClient() {
                             </div>
                           </>
                         )}
-                        {selectedId && trackedIds.has(selectedId) && (
+                        {mobileSelectedId && trackedIds.has(mobileSelectedId) && (
                           <div className="text-center text-sm font-medium" style={{ color: '#1D9E75' }}>Tracked ✓</div>
                         )}
-                        {selected.isShopping && (
+                        {mobileSelected.isShopping && (
                           <a
-                            href={(selected.item as ShoppingResult).productUrl}
+                            href={(mobileSelected.item as ShoppingResult).productUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block w-full rounded-xl py-3 text-sm font-medium text-white text-center no-underline"
