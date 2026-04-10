@@ -260,10 +260,21 @@ export default function ScanClient() {
     let isMounted = true
 
     setIsResuming(true)
+    setPreviewUrl(null)
+    setCurrentFile(null)
+    setErrorMsg(null)
+    setStoreState('idle')
     setDisplayedSerpResults([])
     setMatchResult(null)
     setProducts([])
     setShoppingResults([])
+    setExpandedResultId(null)
+    setTrackedIds(new Set())
+    setBestCardByResultId({})
+    setBestCardLoadingIds(new Set())
+    setKeepaDataByAsin({})
+    setKeepaLoadingAsins(new Set())
+    setKeepaRequestedAsins(new Set())
 
     const supabase = createClient()
     supabase
@@ -278,7 +289,7 @@ export default function ScanClient() {
           handleLoadHistoryEntry(data)
         }
         setIsResuming(false)
-        window.history.replaceState({}, '', '/scan')
+        window.history.replaceState({}, '', '/scan?resume=' + resumeId)
       }, () => {
         if (!isMounted) return
         setIsResuming(false)
@@ -322,7 +333,6 @@ export default function ScanClient() {
     setScanState('result')
     handleFindBestPrice(syntheticResult)
 
-    router.replace('/scan')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -336,12 +346,16 @@ export default function ScanClient() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || !scan.productName) return
 
-      await supabase.from('scan_history').insert({
+      const { data: insertedRow } = await supabase.from('scan_history').insert({
         user_id: user.id,
         product_name: scan.productName,
         category: scan.category ?? null,
         results_payload: matchResults as unknown as Record<string, unknown>,
-      })
+      }).select('id').single()
+
+      if (insertedRow?.id) {
+        window.history.pushState({}, '', '/scan?resume=' + insertedRow.id)
+      }
 
       // Refresh history list
       loadSearchHistory()
