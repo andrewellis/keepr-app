@@ -1697,7 +1697,7 @@ export default function ScanClient() {
 
                       {/* Reason bar */}
                       <div style={{ background: '#F8F8F6', borderRadius: '10px', padding: '14px 20px', fontSize: '13px', color: '#555', lineHeight: 1.6 }}>
-                        <span>{picks.pick.reason}</span>
+                        <span>{safePickIdx === 0 ? picks.cheapest.reason : safePickIdx === 1 ? picks.pick.reason : (picks.premium?.reason ?? picks.pick.reason)}</span>
                         {timingVerdict !== null && timingKeepa !== null && timingKeepa.percentVsAvg90 !== null && (
                           <span>{' '}Price is {Math.abs(timingKeepa.percentVsAvg90).toFixed(1)}% {timingKeepa.percentVsAvg90 < 0 ? 'below' : 'above'} the 90-day average, so timing is {timingVerdict === 'good' ? 'good' : timingVerdict === 'fair' ? 'fair' : 'worth watching'} regardless of which you choose.</span>
                         )}
