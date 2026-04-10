@@ -1222,18 +1222,27 @@ export default function ScanClient() {
                       <div className="bg-white border rounded-2xl overflow-hidden" style={{ borderColor: '#ebebeb' }}>
                         <div style={{ padding: '14px 14px 10px' }}>
                           <div className="flex items-start justify-between" style={{ marginBottom: '6px' }}>
-                            <div>
-                              {mobileSelectedFromPick ? (
-                                <>
-                                  <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, color: '#534AB7', backgroundColor: '#F0EEFF', borderRadius: 6, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, marginBottom: 4 }}>
-                                    {mobileSelectedFromPick.label}
-                                  </span>
-                                  <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{mobileSelectedFromPick.reason}</p>
-                                </>
-                              ) : null}
-                              <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
-                              </p>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
+                              {(() => {
+                                const heroThumb = mobileSelectedSerpItem?.thumbnail ?? (mobileSelected?.item && 'imageUrl' in mobileSelected.item ? (mobileSelected.item as ShoppingResult).imageUrl : null) ?? null
+                                return heroThumb ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={heroThumb} alt="" style={{ width: 52, height: 52, borderRadius: '8px', background: '#F8F8F6', objectFit: 'contain', flexShrink: 0 }} />
+                                ) : null
+                              })()}
+                              <div style={{ minWidth: 0 }}>
+                                {mobileSelectedFromPick ? (
+                                  <>
+                                    <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, color: '#534AB7', backgroundColor: '#F0EEFF', borderRadius: 6, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, marginBottom: 4 }}>
+                                      {mobileSelectedFromPick.label}
+                                    </span>
+                                    <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{mobileSelectedFromPick.reason}</p>
+                                  </>
+                                ) : null}
+                                <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                  {selectedPriceIdx === 0 ? 'Best verified price' : 'Vendor price'}
+                                </p>
+                              </div>
                             </div>
                             <button
                               onClick={async () => {
@@ -1690,6 +1699,7 @@ export default function ScanClient() {
                           const itemCard = bestCardByResultId[itemCardId] ?? null
                           const itemCardRate = itemCard?.rate ?? 0
                           const itemNetCost = item.price! * (1 - itemCardRate / 100)
+                          const itemThumb = item.thumbnail ?? null
                           return (
                             <div
                               onClick={() => setDesktopPickIdx(0)}
@@ -1702,6 +1712,10 @@ export default function ScanClient() {
                                 position: 'relative',
                               }}
                             >
+                              {itemThumb && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={itemThumb} alt="" style={{ width: 40, height: 40, borderRadius: '6px', background: '#F8F8F6', objectFit: 'contain', marginBottom: '8px' }} />
+                              )}
                               <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#1D9E75', marginBottom: '4px' }}>Lowest net cost</p>
                               <p style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '2px' }}>{item.retailerDomain.replace(/\.\w+$/, '')}</p>
                               <p style={{ fontSize: '24px', fontWeight: 700, color: '#1D9E75', marginBottom: '4px' }}>{formatCurrency(itemNetCost)}</p>
@@ -1726,6 +1740,7 @@ export default function ScanClient() {
                           const itemCard = bestCardByResultId[itemCardId] ?? null
                           const itemCardRate = itemCard?.rate ?? 0
                           const itemNetCost = item.price! * (1 - itemCardRate / 100)
+                          const itemThumb = item.thumbnail ?? null
                           return (
                             <div
                               onClick={() => setDesktopPickIdx(1)}
@@ -1738,6 +1753,10 @@ export default function ScanClient() {
                                 position: 'relative',
                               }}
                             >
+                              {itemThumb && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={itemThumb} alt="" style={{ width: 40, height: 40, borderRadius: '6px', background: '#F8F8F6', objectFit: 'contain', marginBottom: '8px' }} />
+                              )}
                               <div style={{ position: 'absolute', top: '-9px', left: '16px', background: '#534AB7', color: '#FFFFFF', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.06em' }}>K33pr pick</div>
                               <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#534AB7', marginBottom: '4px' }}>Best overall</p>
                               <p style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '2px' }}>{item.retailerDomain.replace(/\.\w+$/, '')}</p>
@@ -1763,6 +1782,7 @@ export default function ScanClient() {
                           const itemCard = bestCardByResultId[itemCardId] ?? null
                           const itemCardRate = itemCard?.rate ?? 0
                           const itemNetCost = item.price! * (1 - itemCardRate / 100)
+                          const itemThumb = item.thumbnail ?? null
                           return (
                             <div
                               onClick={() => setDesktopPickIdx(2)}
@@ -1775,6 +1795,10 @@ export default function ScanClient() {
                                 position: 'relative',
                               }}
                             >
+                              {itemThumb && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={itemThumb} alt="" style={{ width: 40, height: 40, borderRadius: '6px', background: '#F8F8F6', objectFit: 'contain', marginBottom: '8px' }} />
+                              )}
                               <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#999', marginBottom: '4px' }}>Premium</p>
                               <p style={{ fontSize: '16px', fontWeight: 700, color: '#1a1a1a', marginBottom: '2px' }}>{item.retailerDomain.replace(/\.\w+$/, '')}</p>
                               <p style={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a', marginBottom: '4px' }}>{formatCurrency(itemNetCost)}</p>
