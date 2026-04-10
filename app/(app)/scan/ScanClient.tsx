@@ -1551,9 +1551,12 @@ export default function ScanClient() {
                     </div>
 
                     {/* Affiliate disclosure */}
-                    <p className="text-xs text-center text-foreground-secondary" style={{ marginTop: '12px', paddingBottom: '20px' }}>
-                      K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
-                    </p>
+                     <p className="text-xs text-center text-foreground-secondary" style={{ marginTop: '12px', paddingBottom: '20px' }}>
+                       K33pr may earn a small commission when you make a purchase through links on this site. This does not affect the price you pay. Commissions help support the operation of K33pr.
+                     </p>
+                     <p style={{ fontSize: '11px', color: '#999', textAlign: 'center', padding: '12px 16px 4px', lineHeight: 1.4 }}>
+                       Prices may include affiliate links. K33pr earns a commission when you purchase through these links.
+                     </p>
                   </div>
                 )}
               </div>
@@ -1900,6 +1903,9 @@ export default function ScanClient() {
                   {/* 4. AFFILIATE DISCLOSURE */}
                   <p style={{ fontSize: '11px', color: '#bbb', textAlign: 'center', marginTop: '8px' }}>
                     K33pr may earn a commission when you purchase through links. This does not affect the price you pay.
+                  </p>
+                  <p style={{ fontSize: '11px', color: '#999', textAlign: 'center', padding: '12px 0 4px', lineHeight: 1.4 }}>
+                    Prices may include affiliate links. K33pr earns a commission when you purchase through these links.
                   </p>
                 </div>
 
