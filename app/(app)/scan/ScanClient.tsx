@@ -259,23 +259,6 @@ export default function ScanClient() {
 
     let isMounted = true
 
-    setIsResuming(true)
-    setPreviewUrl(null)
-    setCurrentFile(null)
-    setErrorMsg(null)
-    setStoreState('idle')
-    setDisplayedSerpResults([])
-    setMatchResult(null)
-    setProducts([])
-    setShoppingResults([])
-    setExpandedResultId(null)
-    setTrackedIds(new Set())
-    setBestCardByResultId({})
-    setBestCardLoadingIds(new Set())
-    setKeepaDataByAsin({})
-    setKeepaLoadingAsins(new Set())
-    setKeepaRequestedAsins(new Set())
-
     const supabase = createClient()
     supabase
       .from('scan_history')
@@ -287,12 +270,11 @@ export default function ScanClient() {
         console.log('[RESUME DEBUG] fetched row:', JSON.stringify(data, null, 2))
         if (!error && data && data.results_payload) {
           handleLoadHistoryEntry(data)
+          if (isResuming) setIsResuming(false)
         }
-        setIsResuming(false)
         window.history.replaceState({}, '', '/scan?resume=' + resumeId)
       }, () => {
         if (!isMounted) return
-        setIsResuming(false)
       })
 
     return () => {
