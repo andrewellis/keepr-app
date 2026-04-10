@@ -182,6 +182,8 @@ export default function ScanClient() {
   const resumeId = searchParams.get('resume')
   const loadedResumeIdRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const verdictStickyRef = useRef<HTMLDivElement>(null)
+  const [verdictHeight, setVerdictHeight] = useState(0)
   const [isResuming, setIsResuming] = useState(!!resumeId)
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -739,6 +741,18 @@ export default function ScanClient() {
       setShowHeroChart(true)
     }
   }, [keepaDataByAsin, storeState, displayedSerpResults, shoppingResults, showHeroChart, userDismissedChart])
+
+  useEffect(() => {
+    if (verdictStickyRef.current) {
+      const obs = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setVerdictHeight(entry.contentRect.height + 16)
+        }
+      })
+      obs.observe(verdictStickyRef.current)
+      return () => obs.disconnect()
+    }
+  }, [scanState])
 
   return (
     <div className="bg-background px-5 pt-4 pb-24 md:px-8">
@@ -1602,7 +1616,7 @@ export default function ScanClient() {
                 {/* LEFT COLUMN */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                  <div style={{ position: 'sticky', top: 58, zIndex: 10, background: '#FFFFFF', paddingBottom: '16px' }}>
+                  <div ref={verdictStickyRef} style={{ position: 'sticky', top: 58, zIndex: 10, background: '#FFFFFF', paddingBottom: '16px' }}>
                   {/* 1. VERDICT STRIP CARD — skip when picks is null, show fallback */}
                   {picks === null && storeState === 'done' && allPriced.length > 0 && (
                     <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E3', borderRadius: '16px', padding: '28px', textAlign: 'center' }}>
@@ -1759,9 +1773,9 @@ export default function ScanClient() {
                   </div>
                   </div>
 
-                  <div style={{ background: '#FFFFFF', borderRadius: '0 0 16px 16px', overflow: 'auto', border: '1px solid #E5E5E3', borderTop: 'none', padding: 0, maxHeight: 'calc(100vh - 480px)' }}>
+                  <div style={{ background: '#FFFFFF', borderRadius: '0 0 16px 16px', border: '1px solid #E5E5E3', borderTop: 'none', padding: 0, marginTop: '-16px' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
+                      <thead style={{ position: 'sticky', top: 58 + verdictHeight, zIndex: 9, background: '#FAFAF8' }}>
                         <tr style={{ background: '#FAFAF8', borderBottom: '1px solid #E5E5E3' }}>
                           <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' }}>Retailer / product</th>
                           <th style={{ fontSize: '10px', textTransform: 'uppercase', color: '#999', fontWeight: 600, letterSpacing: '0.05em', padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>Price</th>
