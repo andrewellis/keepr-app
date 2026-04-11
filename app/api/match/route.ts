@@ -269,7 +269,12 @@ export async function POST(req: NextRequest) {
     try {
       // Deduplicate SERP results
       if (serpSearchResult) {
-        dedupedSerpResults = dedupeResults(serpSearchResult.results, productName)
+        const hasImmersiveResults = serpSearchResult.results.some(r => r.engine === 'google_immersive_product')
+        const nonGoogleShoppingResults = serpSearchResult.results.filter(r => r.engine !== 'google_shopping')
+        const resultsForDedup = hasImmersiveResults && nonGoogleShoppingResults.length > 0
+          ? nonGoogleShoppingResults
+          : serpSearchResult.results
+        dedupedSerpResults = dedupeResults(resultsForDedup, productName)
 
         // Filter out dismissed results for this user and product
         if (userId) {
