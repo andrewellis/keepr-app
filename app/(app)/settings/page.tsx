@@ -29,12 +29,12 @@ export default async function SettingsPage() {
   )
 
   const sectionLabel = (text: string) => (
-    <div style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', marginLeft: 20, marginBottom: 6, marginTop: 16 }}>
+    <div style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.05em', marginLeft: 4, marginBottom: 6, marginTop: 16 }}>
       {text}
     </div>
   )
 
-  const card = { background: '#fff', border: '0.5px solid #ebebeb', borderRadius: 12, marginLeft: 16, marginRight: 16, overflow: 'hidden' } as const
+  const card = { background: '#fff', border: '0.5px solid #ebebeb', borderRadius: 12, marginLeft: 0, marginRight: 0, overflow: 'hidden' } as const
   const row = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px' } as const
   const rowLabel = { fontSize: 13, color: '#111' } as const
   const rowValue = { fontSize: 13, color: '#aaa' } as const
@@ -42,7 +42,9 @@ export default async function SettingsPage() {
 
   return (
     <div style={{ backgroundColor: '#f8f8f8', minHeight: '100vh', paddingBottom: 100, paddingTop: 8 }}>
-      <div style={{ maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', width: '100%' }}>
+      <div className="w-full max-w-[480px] md:max-w-[1120px] mx-auto px-4 md:px-6">
+        <div className="md:grid md:grid-cols-2 md:gap-6">
+          <div>
 
       {/* PROFILE — no section label */}
       <div style={card}>
@@ -82,6 +84,9 @@ export default async function SettingsPage() {
           <span style={{ fontSize: 13, color: '#ccc' }}>Coming soon</span>
         </div>
       </div>
+
+          </div>
+          <div>
 
       {/* ACCOUNT */}
       {sectionLabel('Account')}
@@ -139,6 +144,8 @@ export default async function SettingsPage() {
         v0.3.0
       </div>
 
+          </div>
+        </div>
       </div>
     </div>
   )
