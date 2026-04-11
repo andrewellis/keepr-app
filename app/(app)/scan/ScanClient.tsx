@@ -450,6 +450,31 @@ export default function ScanClient() {
     setScanState('preview')
   }
 
+  function shouldDisambiguate(results: LensResult[]): boolean {
+    if (results.length <= 1) return false
+    const stopwords = new Set(['with', 'and', 'the', 'for', 'in', 'of'])
+    const tokenize = (title: string): Set<string> => {
+      const cleaned = title.replace(/\s*[|–—-]\s*[^|–—-]+$/, '').trim().toLowerCase()
+      const tokens = cleaned.split(/[\s\-\/\(\)\+&]+/).filter(t => t.length >= 2 && !stopwords.has(t))
+      return new Set(tokens)
+    }
+    const sets = results.map(r => tokenize(r.title))
+    let total = 0
+    let count = 0
+    for (let i = 0; i < sets.length; i++) {
+      for (let j = i + 1; j < sets.length; j++) {
+        const arrI = Array.from(sets[i])
+        const arrJ = Array.from(sets[j])
+        const inter = arrI.filter(t => sets[j].has(t)).length
+        const union = new Set([...arrI, ...arrJ]).size
+        total += union > 0 ? inter / union : 0
+        count++
+      }
+    }
+    const avgJaccard = count > 0 ? total / count : 0
+    return avgJaccard < 0.5
+  }
+
   async function handleProcess(fileOverride?: File) {
     const file = fileOverride || currentFile
     if (!file) return
@@ -493,9 +518,23 @@ export default function ScanClient() {
       setStoreState('idle')
       setProducts([])
       if (data.lensResults && data.lensResults.length > 1) {
-        setLensResults(data.lensResults)
-        setScanState('disambiguation')
-        // Do NOT call handleFindBestPrice yet
+        if (shouldDisambiguate(data.lensResults)) {
+          // Heterogeneous results — show grid for user to pick
+          setLensResults(data.lensResults)
+          setScanState('disambiguation')
+        } else {
+          // Homogeneous results — skip grid, use Lens data directly if prices exist
+          const converted = lensResultsToSerpResults(data.lensResults)
+          if (converted.length >= 3) {
+            setDisplayedSerpResults(converted)
+            setStoreState('done')
+            setScanState('result')
+          } else {
+            // Not enough Lens prices — fall back to text search
+            setScanState('result')
+            handleFindBestPrice(data)
+          }
+        }
       } else {
         setScanState('result')
         handleFindBestPrice(data)
