@@ -6,6 +6,11 @@ export interface LensResult {
   url: string;
   thumbnail: string;
   confidence?: number;
+  source?: string;
+  price?: number;
+  inStock?: boolean;
+  rating?: number;
+  reviews?: number;
 }
 
 /**
@@ -47,6 +52,14 @@ export async function googleLensSearch(imageUrl: string): Promise<LensResult[]> 
         url: String(item.link ?? ''),
         thumbnail: String(item.thumbnail ?? ''),
         confidence: typeof item.confidence === 'number' ? item.confidence : undefined,
+        source: typeof item.source === 'string' ? item.source : undefined,
+        price: (() => {
+          const p = item.price as Record<string, unknown> | undefined;
+          return p && typeof p.extracted_value === 'number' ? p.extracted_value : undefined;
+        })(),
+        inStock: typeof item.in_stock === 'boolean' ? item.in_stock : undefined,
+        rating: typeof item.rating === 'number' ? item.rating : undefined,
+        reviews: typeof item.reviews === 'number' ? item.reviews : undefined,
       }));
 
     } catch {
