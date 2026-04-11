@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { LensResult, googleLensSearch } from '@/lib/affiliates/google-lens'
+import { uploadScanImage } from '@/lib/affiliates/upload-scan-image'
 
 interface ScanResult {
   productName: string | null
   category: string | null
   confidence: number
   searchTerms: string[]
+  lensResults: LensResult[]
   error: string | null
 }
 
@@ -40,7 +43,7 @@ function mapToCategory(labels: string[], webEntities: string[]): string {
 }
 
 function errorResult(error: string): ScanResult {
-  return { productName: null, category: null, confidence: 0, searchTerms: [], error }
+  return { productName: null, category: null, confidence: 0, searchTerms: [], lensResults: [], error }
 }
 
 async function identifyProductWithClaude(
@@ -159,6 +162,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
       category: 'General',
       confidence: 0.85,
       searchTerms: ['mock product'],
+      lensResults: [],
       error: null,
     })
   }
@@ -166,6 +170,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
     let imageBase64: string
+    let uploadBuffer: Buffer
 
     if (buffer.length > 1_000_000) {
       const sharp = (await import('sharp')).default
@@ -179,14 +184,17 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
             .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
             .jpeg({ quality: 60 })
             .toBuffer()
+          uploadBuffer = smaller
           imageBase64 = smaller.toString('base64')
         } else {
+          uploadBuffer = resized
           imageBase64 = resized.toString('base64')
         }
       } catch {
         return NextResponse.json(errorResult('Image too large'), { status: 400 })
       }
     } else {
+      uploadBuffer = buffer
       imageBase64 = buffer.toString('base64')
     }
 
@@ -194,63 +202,87 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 20_000)
 
-    const url = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        requests: [{
-          image: { content: imageBase64 },
-          features: [
-            { type: 'LABEL_DETECTION', maxResults: 10 },
-            { type: 'WEB_DETECTION', maxResults: 10 },
-            { type: 'TEXT_DETECTION' },
-          ],
-        }],
-      }),
-      signal: controller.signal,
-    })
+    const visionUrl = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`
 
-    clearTimeout(timeout)
+    const [visionClaudeResult, lensResultsRaw] = await Promise.all([
+      // Branch A: Vision API fetch then Claude call
+      (async () => {
+        const res = await fetch(visionUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requests: [{
+              image: { content: imageBase64 },
+              features: [
+                { type: 'LABEL_DETECTION', maxResults: 10 },
+                { type: 'WEB_DETECTION', maxResults: 10 },
+                { type: 'TEXT_DETECTION' },
+              ],
+            }],
+          }),
+          signal: controller.signal,
+        })
 
-    if (!res.ok) {
-      console.error('Vision API error:', await res.text())
+        clearTimeout(timeout)
+
+        if (!res.ok) {
+          console.error('Vision API error:', await res.text())
+          return { error: 'recognition_failed' as const }
+        }
+
+        const data = await res.json()
+        const result = data.responses?.[0] ?? {}
+
+        const labels: string[] = (result.labelAnnotations ?? [])
+          .map((l: { description: string }) => l.description)
+
+        const detectedText: string[] = result.textAnnotations?.[0]?.description
+          ? [result.textAnnotations[0].description]
+          : []
+
+        const webEntitiesRaw: { description?: string; score?: number }[] =
+          result.webDetection?.webEntities ?? []
+
+        // Filter to entities with score >= 0.7 per spec §8.1
+        const filteredEntities = webEntitiesRaw.filter(
+          (e) => e.description && (e.score ?? 0) >= 0.7
+        )
+        const webEntityNames = filteredEntities.map(e => e.description as string)
+
+        const bestGuess: string | null =
+          result.webDetection?.bestGuessLabels?.[0]?.label ?? webEntityNames[0] ?? null
+
+        const topScore = filteredEntities.length > 0
+          ? Math.max(...filteredEntities.map(e => e.score ?? 0))
+          : 0
+
+        // Second pass: use Claude for specific product identification
+        const claudeResult = await identifyProductWithClaude(
+          imageBase64,
+          file.type || 'image/jpeg',
+          labels,
+          bestGuess
+        )
+
+        return { labels, detectedText, webEntityNames, bestGuess, topScore, claudeResult }
+      })(),
+      // Branch B: upload image then Google Lens search
+      (async (): Promise<LensResult[]> => {
+        const uploadedUrl = await uploadScanImage(uploadBuffer, file.type || 'image/jpeg')
+        if (uploadedUrl !== null) {
+          return googleLensSearch(uploadedUrl)
+        }
+        return []
+      })(),
+    ])
+
+    const lensResults = lensResultsRaw.slice(0, 6)
+
+    if ('error' in visionClaudeResult) {
       return NextResponse.json(errorResult('recognition_failed'))
     }
 
-    const data = await res.json()
-    const result = data.responses?.[0] ?? {}
-
-    const labels: string[] = (result.labelAnnotations ?? [])
-      .map((l: { description: string }) => l.description)
-
-    const detectedText: string[] = result.textAnnotations?.[0]?.description
-      ? [result.textAnnotations[0].description]
-      : []
-
-    const webEntitiesRaw: { description?: string; score?: number }[] =
-      result.webDetection?.webEntities ?? []
-
-    // Filter to entities with score >= 0.7 per spec §8.1
-    const filteredEntities = webEntitiesRaw.filter(
-      (e) => e.description && (e.score ?? 0) >= 0.7
-    )
-    const webEntityNames = filteredEntities.map(e => e.description as string)
-
-    const bestGuess: string | null =
-      result.webDetection?.bestGuessLabels?.[0]?.label ?? webEntityNames[0] ?? null
-
-    const topScore = filteredEntities.length > 0
-      ? Math.max(...filteredEntities.map(e => e.score ?? 0))
-      : 0
-
-    // Second pass: use Claude for specific product identification
-    const claudeResult = await identifyProductWithClaude(
-      imageBase64,
-      file.type || 'image/jpeg',
-      labels,
-      bestGuess
-    )
+    const { labels, detectedText, webEntityNames, bestGuess, topScore, claudeResult } = visionClaudeResult
 
     if (claudeResult) {
       // Claude identified a specific product — use its output
@@ -261,6 +293,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
         confidence: Math.round(topScore * 100) / 100,
         searchTerms: claudeResult.searchTerms,
         visionLabels: [...labels, ...webEntityNames, ...detectedText],
+        lensResults,
         error: null,
       })
     }
@@ -279,6 +312,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
           category: null,
           confidence: 0,
           searchTerms: [],
+          lensResults,
           error: 'Could not identify a product. Try a clearer photo of a product with a visible label.',
         })
       }
@@ -290,6 +324,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ScanResult>> 
         confidence: Math.round(topScore * 100) / 100,
         searchTerms,
         visionLabels: [...labels, ...webEntityNames, ...detectedText],
+        lensResults,
         error: null,
       })
   } catch (err) {
