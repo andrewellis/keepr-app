@@ -134,6 +134,31 @@ function getPriceRange(category: string | null): string {
   return PRICE_RANGES[category] ?? PRICE_RANGES['Other']
 }
 
+function lensResultsToSerpResults(results: LensResult[]): SerpResult[] {
+  return results
+    .filter(r => r.price != null && r.price > 0)
+    .map(r => {
+      let domain = ''
+      try {
+        domain = new URL(r.url).hostname.replace(/^www\./, '')
+      } catch { /* ignore */ }
+      return {
+        engine: 'google_shopping_light' as SerpResult['engine'],
+        title: r.title.replace(/\s*[|–—-]\s*[^|–—-]+$/, '').trim(),
+        price: r.price ?? null,
+        currency: 'USD',
+        url: r.url,
+        thumbnail: r.thumbnail,
+        retailerDomain: domain,
+        confidence: r.confidence,
+        in_stock: r.inStock,
+        rating: r.rating,
+        reviews: r.reviews,
+        seller: r.source,
+      }
+    })
+}
+
 function cleanDomain(raw: string): string {
   return raw
     .replace(/^www\./i, '')
@@ -1006,9 +1031,27 @@ export default function ScanClient() {
                 key={idx}
                 className="rounded-xl bg-white border border-gray-200 hover:border-[#534AB7] transition cursor-pointer overflow-hidden"
                 onClick={() => {
+                  const serpResults = lensResultsToSerpResults(lensResults)
                   const cleaned = cleanLensTitle(item.title)
+                  setScanResult(prev => prev ? { ...prev, productName: cleaned } : prev)
+                  setDisplayedSerpResults(serpResults)
+                  setShoppingResults([])
+                  setProducts([])
+                  setMatchResult({
+                    results: [],
+                    shoppingResults: [],
+                    serpResults: serpResults,
+                  })
+                  setStoreState('done')
                   setScanState('result')
-                  handleFindBestPrice({ ...scanResult, productName: cleaned, searchTerms: [cleaned] })
+                  // Fire-and-forget: save to history
+                  if (scanResult) {
+                    saveToHistory(
+                      { ...scanResult, productName: cleaned },
+                      { results: [], shoppingResults: [], serpResults: serpResults }
+                    )
+                    notifyScanSaved()
+                  }
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
