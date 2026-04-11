@@ -48,14 +48,17 @@ export default async function DashboardPage() {
 
   const displayName = profile?.display_name ?? user.email ?? 'there'
   const firstName = displayName.split(' ')[0]
+  void firstName
 
   const { count: trackedCount } = await supabase
     .from('tracked_items')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('is_active', true)
+  void trackedCount
 
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  void today
 
   const { data: recentScans } = await supabase
     .from('scan_history')
@@ -147,24 +150,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="bg-background min-h-screen md:h-screen md:overflow-hidden">
-      <div className="max-w-[1120px] mx-auto px-4 md:px-6 pt-3 md:pt-4 pb-24 md:pb-3 md:h-screen md:flex md:flex-col">
+      <div className="max-w-[1120px] mx-auto px-4 md:px-6 pt-2 md:pt-3 pb-24 md:pb-3 md:h-screen md:flex md:flex-col">
 
-        <header className="pb-2 flex items-center justify-between md:flex-shrink-0">
-          <div>
-            <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              GOOD DAY
-            </p>
-            <p style={{ fontSize: '18px', fontWeight: 500, color: '#111' }}>{firstName}</p>
-          </div>
-          <div className="text-right">
-            <p style={{ fontSize: '11px', color: '#aaa' }}>{today}</p>
-            <p style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500 }}>
-              {trackedCount ?? 0} tracked
-            </p>
-          </div>
-        </header>
-
-        <div className="bg-white border border-border mt-2 md:flex-shrink-0" style={{ borderRadius: '12px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="bg-white border border-border mt-0 md:flex-shrink-0" style={{ borderRadius: '12px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ flexShrink: 0 }}>
             <p style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>TOTAL SAVINGS</p>
             <p style={{ fontSize: '22px', fontWeight: 500, color: '#534AB7', letterSpacing: '-0.02em' }}>$0.00</p>
@@ -186,10 +174,10 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-3 md:flex-1 md:min-h-0">
+        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-3 md:flex-1 md:min-h-0">
 
           <div className="bg-white border border-border rounded-2xl p-3 md:flex md:flex-col md:min-h-0 md:overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>TRACKED ITEMS</p>
               <Link href="/tracking" style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500, textDecoration: 'none' }}>See all →</Link>
             </div>
@@ -229,23 +217,23 @@ export default async function DashboardPage() {
           </div>
 
           <div className="bg-white border border-border rounded-2xl p-3 md:flex md:flex-col md:min-h-0 md:overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>EARNINGS</p>
               <Link href="/settings/payout" style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500, textDecoration: 'none' }}>Payout settings →</Link>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0">
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div style={{ background: '#f8f8f6', borderRadius: '8px', padding: '10px' }}>
+              <div style={{ background: '#f8f8f6', borderRadius: '8px', padding: '8px' }}>
                 <p style={{ fontSize: '11px', color: '#aaa' }}>Balance</p>
-                <p style={{ fontSize: '18px', fontWeight: 500, color: '#111', marginTop: '2px' }}>{fmt(balanceCents)}</p>
+                <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', marginTop: '2px' }}>{fmt(balanceCents)}</p>
               </div>
-              <div style={{ background: '#f8f8f6', borderRadius: '8px', padding: '10px' }}>
+              <div style={{ background: '#f8f8f6', borderRadius: '8px', padding: '8px' }}>
                 <p style={{ fontSize: '11px', color: '#aaa' }}>Processing</p>
-                <p style={{ fontSize: '18px', fontWeight: 500, color: '#111', marginTop: '2px' }}>{fmt(processingCents)}</p>
+                <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', marginTop: '2px' }}>{fmt(processingCents)}</p>
               </div>
-              <div style={{ background: '#f8f8f6', borderRadius: '8px', padding: '10px' }}>
+              <div style={{ background: '#f8f8f6', borderRadius: '8px', padding: '8px' }}>
                 <p style={{ fontSize: '11px', color: '#aaa' }}>All time</p>
-                <p style={{ fontSize: '18px', fontWeight: 500, color: '#111', marginTop: '2px' }}>{fmt(totalEarnedCents)}</p>
+                <p style={{ fontSize: '16px', fontWeight: 500, color: '#111', marginTop: '2px' }}>{fmt(totalEarnedCents)}</p>
               </div>
             </div>
             <div>
@@ -262,7 +250,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="bg-white border border-border rounded-2xl p-3 md:flex md:flex-col md:min-h-0 md:overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>MY CARDS</p>
               <Link href="/settings" style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500, textDecoration: 'none' }}>Manage cards →</Link>
             </div>

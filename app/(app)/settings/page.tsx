@@ -42,9 +42,7 @@ export default async function SettingsPage() {
 
   return (
     <div style={{ backgroundColor: '#f8f8f8', minHeight: '100vh', paddingBottom: 100, paddingTop: 8 }}>
-      <div className="w-full max-w-[480px] md:max-w-[1120px] mx-auto px-4 md:px-6">
-        <div className="md:grid md:grid-cols-2 md:gap-6">
-          <div>
+      <div className="w-full max-w-[480px] md:max-w-[640px] mx-auto px-4 md:px-6">
 
       {/* PROFILE — no section label */}
       <div style={card}>
@@ -84,9 +82,6 @@ export default async function SettingsPage() {
           <span style={{ fontSize: 13, color: '#ccc' }}>Coming soon</span>
         </div>
       </div>
-
-          </div>
-          <div>
 
       {/* ACCOUNT */}
       {sectionLabel('Account')}
@@ -144,8 +139,6 @@ export default async function SettingsPage() {
         v0.3.0
       </div>
 
-          </div>
-        </div>
       </div>
     </div>
   )
