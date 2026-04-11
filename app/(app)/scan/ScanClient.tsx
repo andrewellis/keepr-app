@@ -21,6 +21,8 @@ import type { PickSet } from '@/lib/search/pick-selector'
 import { getRetailerTrust } from '@/lib/search/retailer-trust'
 import { getBuyTiming, getBuyTimingColor, getBuyTimingLabel } from '@/lib/keepa/buy-timing'
 import CameraViewfinder from '@/components/CameraViewfinder'
+import { clusterProducts } from '@/lib/search/product-cluster'
+import type { ProductCluster } from '@/lib/search/product-cluster'
 
 type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error' | 'disambiguation'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
@@ -249,6 +251,9 @@ export default function ScanClient() {
   const [desktopTableExpanded, setDesktopTableExpanded] = useState(false)
   const [mobileInputMode, setMobileInputMode] = useState<'camera' | 'search'>('camera')
   const [textSearchQuery, setTextSearchQuery] = useState('')
+  const [clarifyMessages, setClarifyMessages] = useState<{ role: 'user' | 'assistant'; content: string; suggestions?: string[] }[]>([])
+  const [clarifyLoading, setClarifyLoading] = useState(false)
+  const [productClusters, setProductClusters] = useState<ProductCluster[]>([])
 
   useEffect(() => {
     setSelectedPriceIdx(0)
@@ -351,7 +356,7 @@ export default function ScanClient() {
     setPreviewUrl(null)
     setCurrentFile(null)
     setErrorMsg(null)
-    setStoreState('idle')
+    setStoreState('loading')
     setProducts([])
     setShoppingResults([])
     setDisplayedSerpResults([])
@@ -363,9 +368,13 @@ export default function ScanClient() {
     setKeepaDataByAsin({})
     setKeepaLoadingAsins(new Set())
     setKeepaRequestedAsins(new Set())
+    setProductClusters([])
+    setLensResults([])
 
     setMobileInputMode('camera')
     setTextSearchQuery('')
+    setClarifyMessages([])
+    setClarifyLoading(false)
 
     const syntheticResult: ScanResult = {
       productName: textQuery,
@@ -376,8 +385,49 @@ export default function ScanClient() {
     }
 
     setScanResult(syntheticResult)
-    setScanState('result')
-    handleFindBestPrice(syntheticResult)
+    setScanState('processing')
+
+    const matchBody = {
+      productName: textQuery,
+      category: 'General',
+      searchTerms: [textQuery],
+      visionLabels: [],
+    }
+
+    fetch('/api/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(matchBody),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('match failed')
+        return res.json()
+      })
+      .then((matchData: MatchResults) => {
+        const serpResults = matchData.serpResults ?? []
+        const clusters = clusterProducts(serpResults)
+
+        setProducts(matchData.results ?? [])
+        setShoppingResults(matchData.shoppingResults ?? [])
+        setDisplayedSerpResults(serpResults)
+        setMatchResult(matchData)
+
+        if (clusters.length >= 2) {
+          setProductClusters(clusters)
+          setStoreState('done')
+          setScanState('disambiguation')
+        } else {
+          setStoreState('done')
+          setScanState('result')
+          saveToHistory(syntheticResult, matchData)
+          notifyScanSaved()
+        }
+      })
+      .catch(() => {
+        setStoreState('error')
+        setScanState('error')
+        setErrorMsg('Search failed. Please try again.')
+      })
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
@@ -749,6 +799,40 @@ export default function ScanClient() {
     setKeepaLoadingAsins(new Set())
     setKeepaRequestedAsins(new Set())
     setLensResults([])
+    setClarifyMessages([])
+    setClarifyLoading(false)
+    setProductClusters([])
+  }
+
+  async function handleClarify(userMessage: string) {
+    const newMessages = [...clarifyMessages, { role: 'user' as const, content: userMessage }]
+    setClarifyMessages(newMessages)
+    setTextSearchQuery('')
+    setClarifyLoading(true)
+
+    try {
+      const apiMessages = newMessages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }))
+      const res = await fetch('/api/clarify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: newMessages[0].content, messages: apiMessages.slice(1) }),
+      })
+      if (!res.ok) throw new Error('clarify failed')
+      const data = await res.json()
+
+      if (data.action === 'search') {
+        setClarifyMessages([])
+        setClarifyLoading(false)
+        router.push(`/scan?q=${encodeURIComponent(data.refinedQuery)}`)
+      } else {
+        setClarifyMessages([...newMessages, { role: 'assistant' as const, content: data.message, suggestions: data.suggestions }])
+        setClarifyLoading(false)
+      }
+    } catch {
+      setClarifyMessages([])
+      setClarifyLoading(false)
+      router.push(`/scan?q=${encodeURIComponent(userMessage)}`)
+    }
   }
 
   function handleLoadHistoryEntry(entry: SearchHistoryEntry) {
@@ -925,53 +1009,137 @@ export default function ScanClient() {
               />
             )}
             {mobileInputMode === 'search' && (
-              <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 10, padding: '10px 12px', border: textSearchQuery ? '1.5px solid #534AB7' : '1px solid #e5e5e3' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={textSearchQuery ? '#534AB7' : '#aaa'} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                  <input
-                    type="text"
-                    value={textSearchQuery}
-                    onChange={(e) => setTextSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && textSearchQuery.trim()) {
-                        router.push(`/scan?q=${encodeURIComponent(textSearchQuery.trim())}`)
-                      }
-                    }}
-                    placeholder="Search by product name..."
-                    autoFocus
-                    style={{ flex: 1, fontSize: 14, color: '#111', border: 'none', outline: 'none', background: 'transparent' }}
-                  />
-                  {textSearchQuery && (
-                    <button onClick={() => setTextSearchQuery('')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, overflowY: 'auto' }}>
+                {clarifyMessages.length === 0 ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 10, padding: '10px 12px', border: textSearchQuery ? '1.5px solid #534AB7' : '1px solid #e5e5e3' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={textSearchQuery ? '#534AB7' : '#aaa'} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                      <input
+                        type="text"
+                        value={textSearchQuery}
+                        onChange={(e) => setTextSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && textSearchQuery.trim()) {
+                            handleClarify(textSearchQuery.trim())
+                          }
+                        }}
+                        placeholder="Search by product name..."
+                        autoFocus
+                        style={{ flex: 1, fontSize: 14, color: '#111', border: 'none', outline: 'none', background: 'transparent' }}
+                      />
+                      {textSearchQuery && (
+                        <button onClick={() => setTextSearchQuery('')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (textSearchQuery.trim()) {
+                          handleClarify(textSearchQuery.trim())
+                        }
+                      }}
+                      disabled={!textSearchQuery.trim()}
+                      style={{
+                        width: '100%',
+                        padding: '12px 0',
+                        background: textSearchQuery.trim() ? '#534AB7' : '#e5e5e3',
+                        color: textSearchQuery.trim() ? '#fff' : '#aaa',
+                        border: 'none',
+                        borderRadius: 10,
+                        fontSize: 14,
+                        fontWeight: 500,
+                        cursor: textSearchQuery.trim() ? 'pointer' : 'default',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Find best price
                     </button>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    if (textSearchQuery.trim()) {
-                      router.push(`/scan?q=${encodeURIComponent(textSearchQuery.trim())}`)
-                    }
-                  }}
-                  disabled={!textSearchQuery.trim()}
-                  style={{
-                    width: '100%',
-                    padding: '12px 0',
-                    background: textSearchQuery.trim() ? '#534AB7' : '#e5e5e3',
-                    color: textSearchQuery.trim() ? '#fff' : '#aaa',
-                    border: 'none',
-                    borderRadius: 10,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    cursor: textSearchQuery.trim() ? 'pointer' : 'default',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Find best price
-                </button>
-                <div style={{ marginTop: 16, padding: '10px 12px', background: '#f5f5f3', borderRadius: 10 }}>
-                  <p style={{ fontSize: 12, color: '#888', margin: 0, lineHeight: 1.5 }}>Include brand, model, and size for better results.</p>
-                </div>
+                    <div style={{ marginTop: 16, padding: '10px 12px', background: '#f5f5f3', borderRadius: 10 }}>
+                      <p style={{ fontSize: 12, color: '#888', margin: 0, lineHeight: 1.5 }}>Include brand, model, and size for better results.</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {clarifyMessages.map((msg, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                          <div style={{
+                            maxWidth: '80%',
+                            padding: '10px 14px',
+                            borderRadius: 14,
+                            fontSize: 13,
+                            lineHeight: 1.5,
+                            background: msg.role === 'user' ? '#534AB7' : '#f5f5f3',
+                            color: msg.role === 'user' ? '#fff' : '#333',
+                          }}>
+                            {msg.content}
+                          </div>
+                        </div>
+                      ))}
+                      {clarifyLoading && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                          <div style={{ padding: '10px 14px', borderRadius: 14, background: '#f5f5f3', fontSize: 13, color: '#999' }}>
+                            Thinking...
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {!clarifyLoading && clarifyMessages.length > 0 && clarifyMessages[clarifyMessages.length - 1].role === 'assistant' && (
+                      <>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                          {(clarifyMessages[clarifyMessages.length - 1].suggestions ?? []).map((s, i) => (
+                            <button
+                              key={i}
+                              onClick={() => handleClarify(s)}
+                              style={{
+                                padding: '8px 16px',
+                                borderRadius: 20,
+                                border: '1.5px solid #534AB7',
+                                background: '#fff',
+                                color: '#534AB7',
+                                fontSize: 13,
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, background: '#fff', borderRadius: 10, padding: '10px 12px', border: textSearchQuery ? '1.5px solid #534AB7' : '1px solid #e5e5e3' }}>
+                          <input
+                            type="text"
+                            value={textSearchQuery}
+                            onChange={(e) => setTextSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && textSearchQuery.trim()) {
+                                handleClarify(textSearchQuery.trim())
+                              }
+                            }}
+                            placeholder="Or type your answer..."
+                            autoFocus
+                            style={{ flex: 1, fontSize: 14, color: '#111', border: 'none', outline: 'none', background: 'transparent' }}
+                          />
+                          <button
+                            onClick={() => { if (textSearchQuery.trim()) handleClarify(textSearchQuery.trim()) }}
+                            disabled={!textSearchQuery.trim()}
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: textSearchQuery.trim() ? 'pointer' : 'default', display: 'flex' }}
+                          >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={textSearchQuery.trim() ? '#534AB7' : '#ccc'} strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                    <button
+                      onClick={() => { setClarifyMessages([]); setTextSearchQuery('') }}
+                      style={{ background: 'none', border: 'none', fontSize: 12, color: '#999', cursor: 'pointer', marginTop: 4, padding: 0 }}
+                    >
+                      Start over
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1155,55 +1323,99 @@ export default function ScanClient() {
 
       {scanState === 'disambiguation' && scanResult && (
         <div className="md:hidden">
-          <p className="text-lg font-semibold text-center mb-4">Which product did you scan?</p>
+          <p className="text-lg font-semibold text-center mb-4">
+            {productClusters.length > 0 ? 'Which product are you looking for?' : 'Which product did you scan?'}
+          </p>
           <div className="grid grid-cols-3 gap-3">
-            {lensResults.slice(0, 6).map((item, idx) => (
-              <div
-                key={idx}
-                className="rounded-xl bg-white border border-gray-200 hover:border-[#534AB7] transition cursor-pointer overflow-hidden"
-                onClick={() => {
-                  const serpResults = lensResultsToSerpResults(lensResults)
-                  const cleaned = cleanLensTitle(item.title)
-                  setScanResult(prev => prev ? { ...prev, productName: cleaned } : prev)
-                  setDisplayedSerpResults(serpResults)
-                  setShoppingResults([])
-                  setProducts([])
-                  setMatchResult({
-                    results: [],
-                    shoppingResults: [],
-                    serpResults: serpResults,
-                  })
-                  setStoreState('done')
-                  setScanState('result')
-                  // Fire-and-forget: save to history
-                  if (scanResult) {
-                    saveToHistory(
-                      { ...scanResult, productName: cleaned },
-                      { results: [], shoppingResults: [], serpResults: serpResults }
-                    )
-                    notifyScanSaved()
-                  }
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  className="w-full aspect-square object-contain bg-gray-50"
-                />
-                <p className="text-xs line-clamp-2 px-2 py-1.5">{cleanLensTitle(item.title)}</p>
-              </div>
-            ))}
+            {productClusters.length > 0 ? (
+              productClusters.map((cluster, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl bg-white border border-gray-200 hover:border-[#534AB7] transition cursor-pointer overflow-hidden"
+                  onClick={() => {
+                    setScanResult(prev => prev ? { ...prev, productName: cluster.label } : prev)
+                    setDisplayedSerpResults(cluster.results)
+                    setShoppingResults([])
+                    setProducts([])
+                    setMatchResult({
+                      results: [],
+                      shoppingResults: [],
+                      serpResults: cluster.results,
+                    })
+                    setProductClusters([])
+                    setStoreState('done')
+                    setScanState('result')
+                    if (scanResult) {
+                      saveToHistory(
+                        { ...scanResult, productName: cluster.label },
+                        { results: [], shoppingResults: [], serpResults: cluster.results }
+                      )
+                      notifyScanSaved()
+                    }
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={cluster.thumbnail}
+                    alt={cluster.label}
+                    className="w-full aspect-square object-contain bg-gray-50"
+                  />
+                  <p className="text-xs line-clamp-2 px-2 py-1.5">{cluster.label}</p>
+                </div>
+              ))
+            ) : (
+              lensResults.slice(0, 6).map((item, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl bg-white border border-gray-200 hover:border-[#534AB7] transition cursor-pointer overflow-hidden"
+                  onClick={() => {
+                    const serpResults = lensResultsToSerpResults(lensResults)
+                    const cleaned = cleanLensTitle(item.title)
+                    setScanResult(prev => prev ? { ...prev, productName: cleaned } : prev)
+                    setDisplayedSerpResults(serpResults)
+                    setShoppingResults([])
+                    setProducts([])
+                    setMatchResult({
+                      results: [],
+                      shoppingResults: [],
+                      serpResults: serpResults,
+                    })
+                    setStoreState('done')
+                    setScanState('result')
+                    if (scanResult) {
+                      saveToHistory(
+                        { ...scanResult, productName: cleaned },
+                        { results: [], shoppingResults: [], serpResults: serpResults }
+                      )
+                      notifyScanSaved()
+                    }
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.thumbnail}
+                    alt={item.title}
+                    className="w-full aspect-square object-contain bg-gray-50"
+                  />
+                  <p className="text-xs line-clamp-2 px-2 py-1.5">{cleanLensTitle(item.title)}</p>
+                </div>
+              ))
+            )}
           </div>
           <div className="text-center mt-4">
             <button
               className="text-sm text-gray-500 underline"
               onClick={() => {
-                setScanState('result')
-                handleFindBestPrice(scanResult)
+                if (productClusters.length > 0) {
+                  setProductClusters([])
+                  setScanState('result')
+                } else {
+                  setScanState('result')
+                  handleFindBestPrice(scanResult)
+                }
               }}
             >
-              None of these →
+              {productClusters.length > 0 ? 'Show all results →' : 'None of these →'}
             </button>
           </div>
         </div>
