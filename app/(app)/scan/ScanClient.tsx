@@ -879,7 +879,7 @@ export default function ScanClient() {
 
       {!isResuming && scanState === 'idle' && (
         <>
-          <div className="md:hidden" style={{ margin: '0 -20px -96px', minHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+          <div className="md:hidden" style={{ margin: '0 -20px 0', height: 'calc(100vh - 120px - env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '0 20px', flexShrink: 0 }}>
               <div style={{ display: 'flex', background: '#f5f5f3', borderRadius: 10, padding: 3, marginBottom: 10 }}>
                 <button
