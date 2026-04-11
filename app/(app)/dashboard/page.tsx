@@ -147,14 +147,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-4 md:pt-8 pb-24 md:pb-8">
+      <div className="max-w-[960px] mx-auto px-4 md:px-6 pt-3 md:pt-4 pb-24 md:pb-4">
 
-        <header className="pb-3 flex items-center justify-between">
+        <header className="pb-2 flex items-center justify-between">
           <div>
             <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               GOOD DAY
             </p>
-            <p style={{ fontSize: '22px', fontWeight: 500, color: '#111' }}>{firstName}</p>
+            <p style={{ fontSize: '18px', fontWeight: 500, color: '#111' }}>{firstName}</p>
           </div>
           <div className="text-right">
             <p style={{ fontSize: '11px', color: '#aaa' }}>{today}</p>
@@ -164,36 +164,36 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        <div className="bg-white border border-border rounded-2xl p-4 mt-3">
-          <p style={{ fontSize: '12px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
-            TOTAL SAVINGS
-          </p>
-          <p style={{ fontSize: '28px', fontWeight: 500, color: '#534AB7', letterSpacing: '-0.02em', marginBottom: '16px' }}>
-            $0.00
-          </p>
-          <div className="flex md:grid md:grid-cols-3" style={{ borderTop: '1.5px solid #f0f0f0', paddingTop: '12px' }}>
-            <div className="flex-1 text-center">
-              <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS WEEK</p>
+        <div className="bg-white border border-border mt-2" style={{ borderRadius: '12px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ flexShrink: 0 }}>
+            <p style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>TOTAL SAVINGS</p>
+            <p style={{ fontSize: '22px', fontWeight: 500, color: '#534AB7', letterSpacing: '-0.02em' }}>$0.00</p>
+          </div>
+          <div style={{ width: '0.5px', height: '24px', background: '#e0e0e0', flexShrink: 0 }} />
+          <div style={{ display: 'flex', flex: 1, gap: '24px' }}>
+            <div>
+              <p style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>WEEK</p>
               <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
             </div>
-            <div className="flex-1 text-center">
-              <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>THIS MONTH</p>
+            <div>
+              <p style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>MONTH</p>
               <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
             </div>
-            <div className="flex-1 text-center">
-              <p style={{ fontSize: '9px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ALL TIME</p>
+            <div>
+              <p style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ALL TIME</p>
               <p style={{ fontSize: '13px', fontWeight: 500, color: '#111' }}>$0.00</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
 
-          <div className="bg-white border border-border rounded-2xl p-4">
+          <div className="bg-white border border-border rounded-2xl p-3 md:h-[240px] md:flex md:flex-col">
             <div className="flex items-center justify-between mb-3">
               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>TRACKED ITEMS</p>
               <Link href="/tracking" style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500, textDecoration: 'none' }}>See all →</Link>
             </div>
+            <div className="flex-1 overflow-y-auto min-h-0">
             {(!trackedItems || trackedItems.length === 0) ? (
               <div className="flex items-center justify-center py-6">
                 <p style={{ fontSize: '12px', color: '#aaa' }}>No tracked items yet</p>
@@ -219,17 +219,21 @@ export default async function DashboardPage() {
                 </div>
               ))
             )}
+            </div>
           </div>
 
-          <div className="bg-white border border-border rounded-2xl p-4 overflow-hidden">
-            <RecentScans scans={scansFormatted} noMargins />
+          <div className="bg-white border border-border rounded-2xl p-3 md:h-[240px] md:flex md:flex-col">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <RecentScans scans={scansFormatted} noMargins />
+            </div>
           </div>
 
-          <div className="bg-white border border-border rounded-2xl p-4">
+          <div className="bg-white border border-border rounded-2xl p-3 md:h-[240px] md:flex md:flex-col">
             <div className="flex items-center justify-between mb-3">
               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>EARNINGS</p>
               <Link href="/settings/payout" style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500, textDecoration: 'none' }}>Payout settings →</Link>
             </div>
+            <div className="flex-1 overflow-y-auto min-h-0">
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div style={{ background: '#f8f8f6', borderRadius: '8px', padding: '10px' }}>
                 <p style={{ fontSize: '11px', color: '#aaa' }}>Balance</p>
@@ -254,13 +258,15 @@ export default async function DashboardPage() {
               </div>
               <p style={{ fontSize: '11px', color: '#aaa', marginTop: '4px' }}>IRS 1099 threshold</p>
             </div>
+            </div>
           </div>
 
-          <div className="bg-white border border-border rounded-2xl p-4">
+          <div className="bg-white border border-border rounded-2xl p-3 md:h-[240px] md:flex md:flex-col">
             <div className="flex items-center justify-between mb-3">
               <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>MY CARDS</p>
               <Link href="/settings" style={{ fontSize: '11px', color: '#534AB7', fontWeight: 500, textDecoration: 'none' }}>Manage cards →</Link>
             </div>
+            <div className="flex-1 overflow-y-auto min-h-0">
             {userCards.length === 0 ? (
               <div className="flex items-center justify-center py-6">
                 <p style={{ fontSize: '12px', color: '#aaa' }}>No cards configured</p>
@@ -282,6 +288,7 @@ export default async function DashboardPage() {
             )}
             <div style={{ marginTop: '8px', padding: '10px', background: '#f8f8f6', borderRadius: '8px' }}>
               <p style={{ fontSize: '12px', color: '#aaa' }}>Card savings are applied automatically to scan results. Add more cards to improve recommendations.</p>
+            </div>
             </div>
           </div>
 

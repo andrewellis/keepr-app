@@ -36,7 +36,7 @@ export default function RecentScans({ scans, noMargins = false }: { scans: ScanI
 
   return (
     <>
-      <div className={`${noMargins ? '' : 'mx-5'} mt-4 flex items-center justify-between`}>
+      <div className={`${noMargins ? '' : 'mx-5 mt-4'} flex items-center justify-between`}>
         <p style={{ fontSize: '10px', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           RECENT SCANS
         </p>
@@ -49,7 +49,7 @@ export default function RecentScans({ scans, noMargins = false }: { scans: ScanI
           </button>
         )}
       </div>
-      <div className={`bg-white border border-border rounded-2xl ${noMargins ? '' : 'mx-5'}`} style={{ marginTop: '8px', maxHeight: expanded ? '60vh' : 'none', overflowY: expanded ? 'auto' : 'hidden', borderRadius: '16px', WebkitOverflowScrolling: 'touch' }}>
+      <div className={`${noMargins ? '' : 'bg-white border border-border rounded-2xl mx-5'}`} style={{ maxHeight: expanded ? '60vh' : 'none', overflowY: expanded ? 'auto' : 'hidden', ...(noMargins ? {} : { marginTop: '8px', borderRadius: '16px' }), WebkitOverflowScrolling: 'touch' as const }}>
         {visible.length === 0 ? (
           <div className="flex items-center justify-center py-6">
             <p style={{ fontSize: '12px', color: '#aaa' }}>No scans yet</p>
