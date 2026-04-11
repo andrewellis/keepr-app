@@ -4,6 +4,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Camera } from 'lucide-react'
+import type { LensResult } from '@/lib/affiliates/google-lens'
 import type { AffiliateResult } from '@/lib/affiliates/types'
 import type { ShoppingResult } from '@/lib/shopping/types'
 import type { SerpResult } from '@/lib/search/serp-multi-search'
@@ -21,7 +22,7 @@ import { getRetailerTrust } from '@/lib/search/retailer-trust'
 import { getBuyTiming, getBuyTimingColor, getBuyTimingLabel } from '@/lib/keepa/buy-timing'
 import CameraViewfinder from '@/components/CameraViewfinder'
 
-type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error'
+type ScanState = 'idle' | 'preview' | 'processing' | 'result' | 'error' | 'disambiguation'
 type StoreState = 'idle' | 'loading' | 'done' | 'error'
 
 interface ScanResult {
@@ -31,6 +32,7 @@ interface ScanResult {
   searchTerms: string[]
   visionLabels?: string[]
   error: string | null
+  lensResults?: LensResult[]
 }
 
 interface MatchResults {
@@ -185,6 +187,7 @@ export default function ScanClient() {
   const verdictStickyRef = useRef<HTMLDivElement>(null)
   const [verdictHeight, setVerdictHeight] = useState(0)
   const [isResuming, setIsResuming] = useState(!!resumeId)
+  const [lensResults, setLensResults] = useState<LensResult[]>([])
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [currentFile, setCurrentFile] = useState<File | null>(null)
@@ -464,8 +467,14 @@ export default function ScanClient() {
       setScanResult(data)
       setStoreState('idle')
       setProducts([])
-      setScanState('result')
-      handleFindBestPrice(data)
+      if (data.lensResults && data.lensResults.length > 1) {
+        setLensResults(data.lensResults)
+        setScanState('disambiguation')
+        // Do NOT call handleFindBestPrice yet
+      } else {
+        setScanState('result')
+        handleFindBestPrice(data)
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
       setScanState('error')
@@ -649,6 +658,9 @@ export default function ScanClient() {
     }
   }
 
+  const cleanLensTitle = (title: string) =>
+    title.replace(/\s*[|–—-]\s*[^|–—-]+$/, '').trim()
+
   function handleReset() {
     setPreviewUrl(null)
     setCurrentFile(null)
@@ -667,6 +679,7 @@ export default function ScanClient() {
     setKeepaDataByAsin({})
     setKeepaLoadingAsins(new Set())
     setKeepaRequestedAsins(new Set())
+    setLensResults([])
   }
 
   function handleLoadHistoryEntry(entry: SearchHistoryEntry) {
@@ -982,6 +995,44 @@ export default function ScanClient() {
             </div>
           </div>
         </>
+      )}
+
+      {scanState === 'disambiguation' && scanResult && (
+        <div className="md:hidden">
+          <p className="text-lg font-semibold text-center mb-4">Which product did you scan?</p>
+          <div className="grid grid-cols-3 gap-3">
+            {lensResults.slice(0, 6).map((item, idx) => (
+              <div
+                key={idx}
+                className="rounded-xl bg-white border border-gray-200 hover:border-[#534AB7] transition cursor-pointer overflow-hidden"
+                onClick={() => {
+                  const cleaned = cleanLensTitle(item.title)
+                  setScanState('result')
+                  handleFindBestPrice({ ...scanResult, productName: cleaned, searchTerms: [cleaned] })
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.thumbnail}
+                  alt={item.title}
+                  className="w-full aspect-square object-contain bg-gray-50"
+                />
+                <p className="text-xs line-clamp-2 px-2 py-1.5">{cleanLensTitle(item.title)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-4">
+            <button
+              className="text-sm text-gray-500 underline"
+              onClick={() => {
+                setScanState('result')
+                handleFindBestPrice(scanResult)
+              }}
+            >
+              None of these →
+            </button>
+          </div>
+        </div>
       )}
 
       {scanState === 'error' && (
