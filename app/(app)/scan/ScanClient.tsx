@@ -247,6 +247,8 @@ export default function ScanClient() {
   const [desktopPickIdx, setDesktopPickIdx] = useState<number>(1)
   const [mobilePickIdx, setMobilePickIdx] = useState<number>(1)
   const [desktopTableExpanded, setDesktopTableExpanded] = useState(false)
+  const [mobileInputMode, setMobileInputMode] = useState<'camera' | 'search'>('camera')
+  const [textSearchQuery, setTextSearchQuery] = useState('')
 
   useEffect(() => {
     setSelectedPriceIdx(0)
@@ -361,6 +363,9 @@ export default function ScanClient() {
     setKeepaDataByAsin({})
     setKeepaLoadingAsins(new Set())
     setKeepaRequestedAsins(new Set())
+
+    setMobileInputMode('camera')
+    setTextSearchQuery('')
 
     const syntheticResult: ScanResult = {
       productName: textQuery,
@@ -874,13 +879,100 @@ export default function ScanClient() {
 
       {!isResuming && scanState === 'idle' && (
         <>
-          {/* Mobile: live camera viewfinder */}
           <div className="md:hidden" style={{ margin: '0 -20px -96px', minHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            {isMobileViewport && (
+            <div style={{ padding: '0 20px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', background: '#f5f5f3', borderRadius: 10, padding: 3, marginBottom: 10 }}>
+                <button
+                  onClick={() => setMobileInputMode('camera')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 0',
+                    fontSize: 13,
+                    fontWeight: mobileInputMode === 'camera' ? 600 : 400,
+                    color: mobileInputMode === 'camera' ? '#fff' : '#888',
+                    backgroundColor: mobileInputMode === 'camera' ? '#534AB7' : 'transparent',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Camera
+                </button>
+                <button
+                  onClick={() => setMobileInputMode('search')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 0',
+                    fontSize: 13,
+                    fontWeight: mobileInputMode === 'search' ? 600 : 400,
+                    color: mobileInputMode === 'search' ? '#fff' : '#888',
+                    backgroundColor: mobileInputMode === 'search' ? '#534AB7' : 'transparent',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+            {mobileInputMode === 'camera' && isMobileViewport && (
               <CameraViewfinder
                 onCapture={handleCameraFrameCapture}
                 onLibrarySelect={handleLibraryFileSelect}
               />
+            )}
+            {mobileInputMode === 'search' && (
+              <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 10, padding: '10px 12px', border: textSearchQuery ? '1.5px solid #534AB7' : '1px solid #e5e5e3' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={textSearchQuery ? '#534AB7' : '#aaa'} strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  <input
+                    type="text"
+                    value={textSearchQuery}
+                    onChange={(e) => setTextSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && textSearchQuery.trim()) {
+                        router.push(`/scan?q=${encodeURIComponent(textSearchQuery.trim())}`)
+                      }
+                    }}
+                    placeholder="Search by product name..."
+                    autoFocus
+                    style={{ flex: 1, fontSize: 14, color: '#111', border: 'none', outline: 'none', background: 'transparent' }}
+                  />
+                  {textSearchQuery && (
+                    <button onClick={() => setTextSearchQuery('')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    if (textSearchQuery.trim()) {
+                      router.push(`/scan?q=${encodeURIComponent(textSearchQuery.trim())}`)
+                    }
+                  }}
+                  disabled={!textSearchQuery.trim()}
+                  style={{
+                    width: '100%',
+                    padding: '12px 0',
+                    background: textSearchQuery.trim() ? '#534AB7' : '#e5e5e3',
+                    color: textSearchQuery.trim() ? '#fff' : '#aaa',
+                    border: 'none',
+                    borderRadius: 10,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: textSearchQuery.trim() ? 'pointer' : 'default',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Find best price
+                </button>
+                <div style={{ marginTop: 16, padding: '10px 12px', background: '#f5f5f3', borderRadius: 10 }}>
+                  <p style={{ fontSize: 12, color: '#888', margin: 0, lineHeight: 1.5 }}>Include brand, model, and size for better results.</p>
+                </div>
+              </div>
             )}
           </div>
 
